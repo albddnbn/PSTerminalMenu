@@ -1,2 +1,76 @@
-# PSTerminalMenu
- Powershell script that presents menu to user to choose functions to execute.
+# PS Terminal Menu
+
+### Created by Alex B.
+
+## Description
+
+This powershell menu was created to be able to execute functions quickly and efficiently on groups of target machine(s). The project was started in mid 2023, and is still in development.
+
+When a new issue is encountered that allows for a scripted solution - resolution of the issue can be automated by adding the script/function to this menu.
+
+## Table of Contents (Optional)
+
+- [Startup](#startup)
+- [Usage](#usage)
+- [Credits](#credits)
+- [License](#license)
+
+## Startup
+
+After cloning or downloading the repository to your computer, open an Admin powershell window and change directory to where the menu.ps1 file is located. Then run the following:
+
+    ```
+    Set-ExecutionPolicy Bypass
+    ./menu.ps1
+    ```
+
+## Usage
+
+Here are some examples of usage.
+
+```
+./menu.ps1 > Scans > Get-ComputerDetails
+```
+
+Parameter input:
+| TargetComputer | OutputFile |
+| --- | --- |
+| t-client-01 | client-01-details |
+
+## Credits
+
+List your collaborators, if any, with links to their GitHub profiles.
+
+If you used any third-party assets that require attribution, list the creators with links to their primary web presence in this section.
+
+If you followed tutorials, include links to those here as well.
+
+## License
+
+The last section of a high-quality README file is the license. This lets other developers know what they can and cannot do with your project. If you need help choosing a license, refer to [https://choosealicense.com/](https://choosealicense.com/).
+
+---
+
+🏆 The previous sections are the bare minimum, and your project will ultimately determine the content of this document. You might also want to consider adding the following sections.
+
+## Badges
+
+![badmath](https://img.shields.io/github/languages/top/lernantino/badmath)
+
+Badges aren't necessary, per se, but they demonstrate street cred. Badges let other developers know that you know what you're doing. Check out the badges hosted by [shields.io](https://shields.io/). You may not understand what they all represent now, but you will in time.
+
+## Features
+
+If your project has a lot of features, list them here.
+
+## How to Contribute
+
+If you created an application or package and would like other developers to contribute it, you can include guidelines for how to do so. The [Contributor Covenant](https://www.contributor-covenant.org/) is an industry standard, but you can always write your own if you'd prefer.
+
+## Tests
+
+Go the extra mile and write tests for your application. Then provide examples on how to run them here.
+
+```
+
+```
