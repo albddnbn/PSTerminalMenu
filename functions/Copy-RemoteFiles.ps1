@@ -39,10 +39,10 @@ function Copy-RemoteFiles {
 
     BEGIN {
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
             $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
         }
+        ## If it's a string - check for commas, try to get-content, then try to ping.
         elseif ($TargetComputer -is [string]) {
             if ($TargetComputer -in @('', '127.0.0.1')) {
                 $TargetComputer = @('127.0.0.1')
@@ -63,15 +63,15 @@ function Copy-RemoteFiles {
                     return
                 }
             }
-        
-            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-            # Safety catch to make sure
-            if ($null -eq $TargetComputer) {
-                # user said to end function:
-                return
-            }
+
         }
-    
+            
+        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+        # Safety catch to make sure
+        if ($null -eq $TargetComputer) {
+            # user said to end function:
+            return
+        }
         # allow user to submit comma-separated list of paths?
         if ($TargetPath.GetType().name -eq 'String') {
             if ($TargetPath -like "*,*") {
@@ -83,9 +83,9 @@ function Copy-RemoteFiles {
             # if its an array
         }
 
+        ## Chop preceding drive letters from targetpath(s)
         $temptargetpath = [system.collections.arraylist]::new()
         ForEach ($single_path in $TargetPath) {
-            # chop off any drive letters that have been included
             if ($single_path -match '[A-Za-z]:\\*') {
                 $single_path = $single_path.substring(3)
             }
@@ -120,12 +120,11 @@ function Copy-RemoteFiles {
             }
         }
     }
-
+    ## Open output folder, pause.
     END {
         if (Test-Path "$Outputpath" -erroraction SilentlyContinue) {
             Invoke-item "$Outputpath"
         }
-
         Read-Host "Press enter to continue."
     }
 }

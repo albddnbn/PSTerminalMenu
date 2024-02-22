@@ -32,7 +32,7 @@ function Send-Reboots {
         if ($reply.ToLower() -eq 'y') {
     
             ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-            if (($TargetComputer -is [System.Collections.IEnumerable])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }

@@ -13,6 +13,7 @@
         ],
         "filesystem_operations": [
             "Copy-Remotefiles",
+            "Copy-RemotefilesProcess",
             "Send-Files",
             "Format-SecondaryDrive",
             "Scan-ForAppOrFilePath"

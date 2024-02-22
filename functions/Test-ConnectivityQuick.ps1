@@ -19,12 +19,19 @@ function Test-ConnectivityQuick {
     .NOTES
         abuddenb / 2024
     #>
+    [CmdletBinding()]
     param(
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer
     )
     BEGIN {
+        ## SCRIPT WILL USE THIS AMOUNT OF PINGS TO DETERMINE TARGET NETWORK RESPONSIVENESS.
+        $PING_COUNT = 1
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
             $null
             ## If it's a string - check for commas, try to get-content, then try to ping.
         }
@@ -60,22 +67,24 @@ function Test-ConnectivityQuick {
         $list_of_online_computers = [system.collections.arraylist]::new()
         $list_of_offline_computers = [system.collections.arraylist]::new()
     }
+
+    ## Ping target machines $PingCount times and log result to terminal.
     PROCESS {
 
         ForEach ($single_computer in $Targetcomputer) {
             ## Ping target machine(s) 1 time, add result object to corresponding list.
             # PROCESS {
-            $connection_result = Test-Connection $single_computer -count 1 -Quiet
-            if ($connection_result -eq $false) {
+            $connection_result = Test-Connection $single_computer -count $PING_COUNT -Quiet
+            if ($connection_result) {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online." -foregroundcolor green
+                $list_of_online_computers.add($single_computer) | Out-Null
+            }
+            else {
+
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
                 Write-Host "$single_computer is not online." -foregroundcolor red
                 $list_of_offline_computers.add($single_computer) | Out-Null
             }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online." -foregroundcolor green
-                $list_of_online_computers.add($single_computer) | Out-Null
-            }
-            # }
         }
     }
     ## Try to create sensible output file path from one of the hostnames pinged.
@@ -95,9 +104,6 @@ function Test-ConnectivityQuick {
         Start-Sleep -Seconds 2
 
         Invoke-Item "$env:PSMENU_DIR\output\"
-
-
-
         Read-Host "Press Enter when you're done reading the output."
     }
 }

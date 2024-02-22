@@ -33,6 +33,7 @@ function Send-Files {
     .NOTES
         Function validates the input Computer name by pinging it one time, if it fails - function fails to execute.
     #>
+    [CmdletBinding()]
     param(
         [string]$sourcepath,
         [string]$destinationpath,
@@ -40,7 +41,7 @@ function Send-Files {
     )
     BEGIN {
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
             $null
             ## If it's a string - check for commas, try to get-content, then try to ping.
         }

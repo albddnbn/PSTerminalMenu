@@ -1,6 +1,6 @@
 # PS Terminal Menu
 
-### Created by Alex B.
+![PowerShell](https://img.shields.io/badge/PowerShell-%235391FE.svg?style=for-the-badge&logo=powershell&logoColor=white)
 
 ## Description
 
@@ -26,7 +26,7 @@ After cloning or downloading the repository to your computer, open an Admin powe
 
 ## Usage
 
-Here are some examples of usage.
+1. Get basic computer details from single computer: t-client-01, and output report to file containing 'client-01-details' as part of filename.
 
 ```
 ./menu.ps1 > Scans > Get-ComputerDetails
@@ -36,14 +36,30 @@ Parameter input:
 | TargetComputer | OutputFile |
 | --- | --- |
 | t-client-01 | client-01-details |
+<br><br> 2. Search for any functions offered in the menu containing the word 'Intune'. Select the **Get-IntuneHardwareIDs** function and enter parameter values to collect Intune hardware IDs from all devices with hostnames starting with 's-pc-'.<br><br>Add GroupTag 'EmployeePCs' to all device hwids. Output to file containing 's-pc-hwids'.
+
+```
+./menu.ps1 > Search > 'Intune' > Get-IntuneHardwareIDs
+```
+
+Parameter input:
+| TargetComputer | DeviceGroupTag | OutputFile |
+| --- | ---| --- |
+| s-pc- | EmployeePCs | s-pc-hwids |
 
 ## Credits
 
-List your collaborators, if any, with links to their GitHub profiles.
+This project was created by Alex B. in 2023.
 
-If you used any third-party assets that require attribution, list the creators with links to their primary web presence in this section.
+### Powershell modules used:
 
-If you followed tutorials, include links to those here as well.
+**PS-MENU**: https://github.com/chrisseroka/ps-menu
+**IMPORTEXCEL**: https://github.com/dfinke/ImportExcel
+**PSADT**: https://psappdeploytoolkit.com/
+
+### Scripts:
+
+**Get-WindowsAutoPilotInfo.ps1**: https://github.com/Dattics/GetWindowsAutopilot
 
 ## License
 
@@ -51,26 +67,17 @@ The last section of a high-quality README file is the license. This lets other d
 
 ---
 
-🏆 The previous sections are the bare minimum, and your project will ultimately determine the content of this document. You might also want to consider adding the following sections.
-
-## Badges
-
-![badmath](https://img.shields.io/github/languages/top/lernantino/badmath)
-
-Badges aren't necessary, per se, but they demonstrate street cred. Badges let other developers know that you know what you're doing. Check out the badges hosted by [shields.io](https://shields.io/). You may not understand what they all represent now, but you will in time.
-
 ## Features
 
-If your project has a lot of features, list them here.
+1. Gather details from groups of computers and generate reports.
+2. Run scripts to perform software installations and maintenance tasks.
+3. Search for specific details across groups of computers.
+4. Easily incorporate new functions into the menu.
 
-## How to Contribute
-
-If you created an application or package and would like other developers to contribute it, you can include guidelines for how to do so. The [Contributor Covenant](https://www.contributor-covenant.org/) is an industry standard, but you can always write your own if you'd prefer.
+---
 
 ## Tests
 
-Go the extra mile and write tests for your application. Then provide examples on how to run them here.
+---
 
-```
-
-```
+### Created by Alex B.
