@@ -1,0 +1,5 @@
+param(
+    $ComputerList
+)
+
+Invoke-Command

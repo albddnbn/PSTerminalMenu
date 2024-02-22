@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
+  <link rel="stylesheet" type="text/css" href="./supportfiles/w3.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="main.css">
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Powershell functions menu</title>
+</head>
+
+<body>
+  <div class="container">
+    <a href="index.html" class="w3-right w3-margin">
+      <button class="w3-button w3-round w3-large animated-button menubutton">
+        <i class="fa fa-home"></i>
+      </button>
+    </a>
+    <h1 style="margin-bottom: 35px">Powershell functions menu</h1>
+    <style>
+      .topnav {
+        overflow: hidden;
+        background-color: #333;
+      }
+
+      .topnav a {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        font-size: 17px;
+      }
+
+      .topnav a:hover {
+        background-color: #ddd;
+        color: black;
+      }
+
+      .topnav a.active {
+        background-color: #04aa6d;
+        color: white;
+      }
+
+      .topnav .icon {
+        display: none;
+      }
+
+      @media screen and (max-width: 600px) {
+        .topnav a:not(:first-child) {
+          display: none;
+        }
+
+        .topnav a.icon {
+          float: right;
+          display: block;
+        }
+      }
+
+      @media screen and (max-width: 600px) {
+        .topnav.responsive {
+          position: relative;
+        }
+
+        .topnav.responsive .icon {
+          position: absolute;
+          right: 0;
+          top: 0;
+        }
+
+        .topnav.responsive a {
+          float: none;
+          display: block;
+          text-align: left;
+        }
+      }
+    </style>
+    <style>
+      span.guide-section-subheading {
+        font-size: 1.5em;
+        color: #008ed4;
+        margin-right: 6px;
+      }
+
+      .boldblue {
+        color: #008ed4;
+        font-weight: bold;
+      }
+
+      ul li p span.dir-list-item {
+        color: #008ed4;
+        font-size: 1.25em;
+      }
+
+      div.navbar {
+        padding: 0px;
+        /* padding: 1em;
+          padding-left: 2em; */
+        border-radius: 5px;
+        background: linear-gradient(to right, #06a0ec, #0088cc);
+      }
+
+      /* first child */
+      #firstnav {
+        margin-left: 15px;
+      }
+
+      div.navbar>div {
+        display: inline-block;
+        padding-top: 1em;
+        padding-bottom: 1em;
+        padding-left: 3px;
+        padding-right: 3px;
+        cursor: pointer;
+      }
+
+      div.navbar a {
+        text-decoration: none;
+      }
+
+      div.navbar>div:hover {
+        color: #90adbc;
+        background: linear-gradient(to right, #06a0ec, #0088cc);
+      }
+
+      body {
+        background-color: #222;
+        color: #fff;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #00aaff;
+        text-align: center;
+        font-size: 36px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #00aaff;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+
+      .button:hover {
+        background-color: #0088cc;
+      }
+
+      /* ol {
+          list-style-type: none;
+          counter-reset: item;
+          padding: 0;
+        } */
+
+      li {
+        counter-increment: item;
+        margin-top: 12px;
+        margin-bottom: 12px;
+      }
+
+      ol.inner-list>li::before {
+        content: counters(section, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      ol {
+        list-style-type: none;
+      }
+
+      ol.other-list>li::before {
+        content: counters(item, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      ol.add-function li::before {
+        content: counters(additem, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      h2 {
+        margin-top: 2em;
+        margin-bottom: 1em;
+        color: #0088cc;
+        text-align: center;
+      }
+
+      h4 {
+        margin-top: 2em;
+        margin-bottom: 1em;
+        color: #0088cc;
+        font-size: 1.5em;
+      }
+
+      .undernav {
+        background-color: #333;
+        margin-top: 1em;
+        padding: 5px;
+        border-radius: 5px;
+        padding: 5px;
+        padding-left: 2em;
+      }
+
+      .undernav:hover {
+        background-color: #555;
+        margin-top: 1em;
+        border-radius: 5px;
+      }
+
+      /* For Chrome, Safari, and Opera */
+      ::-webkit-scrollbar {
+        width: 0.5em;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #303030;
+        /* Dark background */
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, #008ed4, #0090d3, #0071a4);
+        /* Blue gradient */
+        border-radius: 6px;
+      }
+
+      /* For Internet Explorer and Edge */
+      body {
+        scrollbar-face-color: #008ed4;
+        /* Blue scrollbar */
+        scrollbar-track-color: #303030;
+        /* Dark background */
+      }
+    </style>
+    <div class="topnav w3-container" id="myTopnav">
+      <a onclick="document.getElementById('basicuse').scrollIntoView({behavior: 'smooth'});" style="cursor:pointer;">add
+        category</a>
+      <a onclick="document.getElementById('basicuse').scrollIntoView({behavior: 'smooth'});" style="cursor:pointer;">add
+        function</a>
+      <a onclick="document.getElementById('installsoftware').scrollIntoView({behavior: 'smooth'});"
+        style="cursor:pointer;">Install software</a>
+      <a onclick="document.getElementById('printerlogicfunctions').scrollIntoView({behavior: 'smooth'});"
+        style="cursor:pointer;">PrinterLogic</a>
+      <!-- <a onclick="document.getElementById('printerlogicfunctions').scrollIntoView({behavior: 'smooth'});"
+        style="cursor:pointer;">Bios Updates</a> -->
+      <a href="javascript:void(0);" class="icon" onclick="myFunction()">
+        <i class="fa fa-bars"></i>
+      </a>
+    </div>
+    <div class="undernav" style=""> <a style="cursor:pointer;text-decoration:none;" href="config-file-explanation.html"
+        target="_blank">
+        Adding a new function to the
+        menu</a>
+    </div>
+    <p>
+      <b>.\Menu.ps1</b> is an interactive terminal menu that executes
+      Powershell/.ps1 scripts stored in the
+      <i>'functions'</i>
+      directory, and prompts the user to input values for function parameters.
+    </p>
+    <div class="key-functions">
+      <p><span class="guide-section-subheading">Features:</span></p>
+      <ul class="intro-table">
+        <li>A number of <b>information-gathering scripts</b> to gather details like: BIOS version, asset tag, serial
+          number,
+          connected printers, logged in user, and others for a single or group of target computers.</li>
+        <li><b>Software installations</b> using the PS App Deployment Toolkit</li>
+        <li>Scans including a <b>general scan/search</b> function that checks a group of computers for existence of a
+          file/folder or application, the <b>network connectivity/ping test</b> that pings a group of computers a
+          specified
+          number of times and creates excel report.</li>
+        <li><b>PrinterLogic</b>: connect a remote computer to a printerlogic printer or create an executable that will
+          create the connection (for users & computers that aren't remotely accessible, like dockings stations).</li>
+        <li>Copy frequently used strings of text to clipboard quickly/easily, including <b>canned responses</b> that
+          have the
+          potential for variable values including the ticket owner's name.</li>
+      </ul>
+    </div>
+    <hr>
+    <h4>Using the menu:</h4>
+    <ol class="other-list">
+      <li>
+        Either double-click <b>menu.exe</b>, or open an admin Powershell
+        window and run <b>.\menu.ps1</b>.
+      </li>
+      <li>
+        Select a category. You can get an idea of which functions are in which
+        categories by looking in
+        <b>.\config.json</b>
+      </li>
+      <li>
+        Select a function, the script will prompt for values for any
+        parameters defined in the .ps1 file.
+      </li>
+      <ul>
+        <li>
+          Right now, the script doesn't prompt for the common variables (see
+          comments in script, it'd be good to improve that whole section to
+          deal with more complex functions)
+        </li>
+      </ul>
+    </ol>
+    <hr />
+    <!-- Basic directions section - adding category and option to menu -->
+    <div id="basicuse">
+      <p><span class="guide-section-subheading">To add a category:</span> write the name of the
+        category into config.json, similar
+        to the
+        picture below.</p>
+      <p><span class="guide-section-subheading">To add a an option to the menu:</span> write the
+        name of the file (without
+        extension) into config.json,
+        similar to the picture below. If you add the filename into the "scans" section of the config
+        file, it will appear after choosing the 'scans' category in the
+        terminal menu.</p>
+    </div>
+    <!-- End basic directions section -->
+
+    <!-- Environment variables set towards beginning of menu.ps1, so they'll be accessible whenever running the functions. -->
+    <div>
+      <p><span class="guide-section-subheading">Menu.ps1 environment variables:</span></p>
+      <ul>
+        <li><b>$env:DNS_SUFFIX</b> value is read from the 'dns_suffix' key in the <b>menu's configuration file</b>:
+          <i>config.json</i>.
+          The
+          DNS Suffix is appended to hostnames if not already present.
+        </li>
+        <li><b>$env:PSMENU_DIR</b> is the full/absolute path to the menu's root directory.</li>
+        <li><b>$env:SUPPORTFILES_DIR</b> is the full/absolute path to the menu's 'supportfiles' directory, a
+          subdirectory of $env:PSMENU_DIR.</li>
+      </ul>
+
+    </div>
+
+    <div class="w3-container">
+      <p><span class="guide-section-subheading">Directory structure:</span></p>
+      <div
+        style="background-color: #333;border-radius:5px;padding-left:12px;padding-right:12px;padding-top:6px;padding-bottom:3px;margin:12px auto;max-width:100%;">
+        <ul style='list-style-type: none;'>
+          <li>
+            <p><span class='dir-list-item'>canned_responses</span> .html files which can be pasted into
+              OSTicket to quickly respond to frequently occurring issues.</p>
+          </li>
+          <li>
+            <p><span class='dir-list-item'>deploy</span> holds the 'applications' folder, which contains ps app
+              deployment toolkit folders to install applications.</p>
+          </li>
+          <ul>
+            <li>
+              <p><span class='dir-list-item'>applications</span> PS App Deployment Toolkit deployment folders
+                which are used to install software.</p>
+            </li>
+          </ul>
+          <!-- <li>
+            <p><span class='dir-list-item'>not_in_menu</span> code and functions that are not included in the menu,
+              but
+              still may be useful at some point (may eventually be incorporated into menu).</p>
+          </li> -->
+
+          <li>
+            <p><span class='dir-list-item'>localscripts</span>scripts that are run on local computer, through use of
+              'wrapper' functions stored in the functions directory.</p>
+          </li>
+          <!-- <li>
+            <p><span class='dir-list-item'>printer_logic_executables</span> compiled executables that will
+              connect a computer to a printerlogic printer.</p>
+          </li> -->
+          <li>
+            <p><span class='dir-list-item'>reports</span> exported .csv/.xlsx reports. Directly inside the
+              'reports' directory is a folder for each day in the format: yyyy-MM-dd / 1991-08-02. Any function that
+              creates a report file will export the file into 'today's directory.</p>
+          </li>
+          <li>
+            <p><span class='dir-list-item'>scripts</span> powershell scripts that are definitely useful, but
+              can't be factored into the menu for one reason or another at this point in time.</p>
+          </li>
+          <li>
+            <p><span class='dir-list-item'>snippets</span> .txt files, which are copied to clipboard using the
+              Clipboard
+              > Copy-SnippetToClipboard option in the menu.</p>
+          </li>
+          <li>
+            <p><span class='dir-list-item'>supportfiles</span> various files used by the app, including the
+              powershell avatar icon used when compiling menu.ps1 into menu.exe, and the ps-menu powershell module
+              file
+              needed to display interactive menus in the terminal.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+
+    <!-- Showing the recommended format for any added .ps1 files -->
+    <div class="w3-container">
+      <p><span class="guide-section-subheading">
+          Typical .ps1 file format:</span> <br>
+      <p>Every function/file in the functions directory should have a <b>function
+          name</b> that <b>matches it's file name</b>.</p>
+      <p>In order to have the function and parameter descriptions display in terminal when the function is chosen, a
+        multi-line comment should be present at the top.</p>
+      </p>
+      <div
+        style="background-color:#333;color:#fff;border-radius:5px;padding-left:12px;padding-right:12px;padding-top:6px;padding-bottom:3px;margin:12px auto;max-width:80%;">
+        <p style="margin-bottom:0px;padding-bottom:0px;">
+          Function <b>Function-Name</b> {</p>
+        <p style="margin-bottom:0px;padding-bottom:0px;">
+          &lt;#</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;padding-top:0px;margin-top:0xp"><b>.SYNOPSIS</b></p>
+        <p style="margin-top: 0px;">Checks for a user logged in to a remote computer using the get-process cmdlet to
+          check
+          explorer.exe.</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;"><b>.DESCRIPTION</b></p>
+        <p style="margin-top: 0px;">If the process doesn't exist, it returns false, because any user currently logged
+          in
+          to the PC will have
+          explorer.exe running.</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;"><b>.PARAMETER ComputerName</b></p>
+        <p style="margin-top: 0px;">DNS Hostname of remote computer. Ex: 's-a227-26'</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;"><b>.EXAMPLE</b></p>
+        <p style="margin-top: 0px;">Get-User</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;"><b>.EXAMPLE</b></p>
+        <p style="margin-top: 0px;">Get-User -ComputerName "s-a227-28"</p>
+        <p style="margin-bottom: 0px;padding-bottom:0px;"><b>.NOTES</b></p>
+        <p style="margin-top: 0px;">Additional notes about the function.</p>
+        <p>#&gt;</p>
+        <p>Write-Host "This is the function code"</p>
+        <p>}</p>
+
+      </div>
+      <br>
+      <h4>Typical function parameters:</h4>
+      <p>Most functions have at least these two parameters: <b class="boldblue">TargetComputer</b>, and
+        <b class="boldblue">Outputfile</b>.
+      </p>
+      <ol>
+        <li>
+          <p> <b class="boldblue">TargetComputer</b> is roughly equivalent to ComputerName in many powershell
+            functions.
+            It's value can be a...</p>
+          <ul>
+            <li>single string hostname</li>
+            <li>single string path to hostname list .txt file</li>
+            <li>an Array/ArrayList of hostnames</li>
+          </ul>
+
+          <p>There
+            is a
+            'processing' section at the beginning of most .ps1 files in './functions' that filters the input
+            $TargetComputer to only leave 'live' hosts.</p>
+          <p>After the filtering process, TargetComputer is often passed into the ComputerName parameter of the
+            function: <b>Invoke-Command</b>, which can be used to quickly run the same block of code on multiple
+            computers concurrently.</p>
+        </li>
+        <li>
+          Outputfile is the path to the file that the function will write to. If the file already exists, it will be
+          overwritten. Most functions will attempt to create an output filename if one isn't supplied. Most output
+          is
+          directed to the ./reports/ subdirectories.
+        </li>
+      </ol>
+
+    </div>
+    <br>
+    <div id="installsoftware">
+      <p><span class="guide-section-subheading">Installing software using the menu:</span> choose 'software
+        management',
+        and then 'Install ApponRemotePC'. You will be presented with a menu of the application folders contained in
+        the
+        'deploy/applications' directory.
+      <p>From here, you can select the application you want to install, and the PS App Deployment Toolkit script will
+        run after copying application files to target PC(s).</p>
+      </p>
+
+    </div>
+    <br>
+    <div id="printerlogicfunctions">
+      <p><span class="guide-section-subheading">PrinterLogic functions:</span>
+      </p>
+      <p>Connect a remote computer to a printerlogic printer.</p>
+      <p>Create an executable to connect a computer that's <i>not</i> remotely accessible to a printerlogic printer.
+      </p>
+    </div>
+    <br>
+    <!-- Hoping for a more reliable way to do bios updates - possibly through Dell Command software -->
+    <!-- Executing bios executable like this can be temperamental -->
+    <!-- <div id="biosupdates">
+      <p><span class="guide-section-subheading">Updating BIOS on groups of computers:</span></p>
+      <p>This script depends on the 'bios' directory, which contains latest BIOS executable files for that PC model
+        (matches folder name).</p>
+      <p>The script executes the BIOS executable on each target remote computer, but <b>doesn't force a reboot
+          immediately</b>.</p>
+      <p>It checks for any user logged in, and then allows the script-user to send reboots to all remote PCs w/o users
+        logged in.</p>
+      <p><b>Computers with users logged in:</b> the BIOS update was still
+        executed, and the BIOS was still 'flashed' into volatile memory. Once the PC reboots (whenever it does next),
+        the PC should attempt to install the new firmware.</p>
+    </div> -->
+    <div>
+      <h2>Scanning Inventory:</h2>
+      <p>The inventory-scanning functionality is <b>meant to <i>mostly</i> be used for creation of the initial
+          inventory
+          spreadsheet.</b></p>
+      <p>For example, it's alot quicker to use the Scan-Inventory option to create a spreadsheet containing a list of
+        items, named exactly how they're named on the box, with upc/other codes that can be linked to that item and
+        have
+        been verified by an IIT professional...than to manually create a spreadsheet like this. The item lookup API
+        takes care of alot of the time wasted searching for information, and simplifies the input process.</p>
+      <p><b>When employees are removing items, like toner, to service a printer</b>, it's unlikely they'll want to
+        stop
+        to use any type of 'toner inventory app' to record the change. They can just quickly make the change in the
+        corresponding item's stock value in a shared version of the inventory spreadsheet.</p>
+    </div>
+    <div>
+      <h2>After making changes to code in the 'menu.ps1' file...</h2>
+      <p>If you want the executable to reflect the changes you just made, you have to recompile the menu.ps1 file into
+        an executable using the <b>PS2EXE</b> powershell module (<a
+          href="https://github.com/MScholtes/PS2EXE">https://github.com/MScholtes/PS2EXE</a>)</p>
+      <p>The file: 'compile_menups1_into_executable.ps1' will attempt to complete the re-compiling process for you if
+        executed.</p>
+      <p><b>*You don't have to recompile after making changes to any of the functions files unless they're factored
+          into
+          the compilation of menu.ps1 (they are <i>not</i> factored in in the compile_menups1_into_executable.ps1
+          script).</b>
+      </p>
+    </div>
+    <div class="w3-container">
+      <div class="w3-card-4 w3-padding" style="
+          background-color: #333;
+          border-radius: 5px;
+          margin-top: 3%;
+          margin-bottom: 1%;
+        ">
+        <p style="text-align: center">
+          <i>Please don't hesitate to make your own changes to the script, contact abuddenb@gmail.com with any
+            suggestions,
+            improvements, or situations where the menu has behaved unexpectedly.</i>
+        </p>
+      </div>
+    </div>
+</body>
+
+</html>

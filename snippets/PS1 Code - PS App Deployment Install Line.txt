@@ -1,0 +1,1 @@
+Powershell.exe -ExecutionPolicy Bypass .\Deploy-Application.ps1 -DeploymentType "Install" -DeployMode "Silent"

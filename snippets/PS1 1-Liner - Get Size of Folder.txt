@@ -1,0 +1,1 @@
+dir -path C:\Scripts -file -recurse -force | measure-object length -sum -max -average | Select-Object @{name="Total Files";Expression={$_.count}},@{name="Largest File(MB)";Expression={"{0:F2}" -f ($_.maximum/1MB)}},@{name="Average Size(MB)";Expression={"{0:F2}" -f ($_.average/1MB)}},@{name="Total Size(MB)";Expression={"{0:F2}" -f ($_.sum/1MB)}}

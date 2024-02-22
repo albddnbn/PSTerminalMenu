@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #0088cc;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .titlesectionholder {
+            margin-top: 24px;
+            background-color: #0088cc;
+            color: #f0f0f0;
+        }
+
+        .titlesectionholder h1 {
+            margin-top: 0px;
+            padding-bottom: 0px;
+            text-align: center;
+        }
+
+        .titlesectionholder p {
+            margin-top: 0px;
+            padding-bottom: 12px;
+            text-align: center;
+        }
+
+        h1 {
+            background-color: #0088cc;
+            color: #f0f0f0;
+            padding: 20px;
+            text-align: center;
+            transition: background-color 0.5s;
+        }
+
+        h1:hover {
+            background-color: #0088cc;
+        }
+
+        section {
+            padding: 20px;
+            border-bottom: 1px solid #0088cc;
+            transition: background-color 0.5s;
+        }
+
+        section:hover {
+            background-color: #2a2a2a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="titlesectionholder">
+        <h1>Terminal Menu Configuration</h1>
+        <p>Written 12/8/23 - contact point for any questions/comments - abuddenb@dtcc.edu</p>
+    </div>
+    <section>
+        <h2>Supportfiles\config.json</h2>
+        <p>The owner value is not being used right now.</p>
+        <p>dns_suffix (testing) is defined as the $env:DNS_SUFFIX variable, and the Return-TargetComputer functions in
+            the utils directory append it to all hostnames if they don't already have it.</p>
+        <p>
+            filter_targets - <b>isn't used</b>
+        </p>
+        <p>
+            <b>categories:</b> allows you to define the categories listed when running the menu, after it's loaded
+            modules/etc.
+        </p>
+        <img style="margin: 0 auto;max-height: 25em;" src=".\config-001-categories.png">
+        <p>To add a new category that would appear in the terminal menu as 'Example Function category', create a new key
+            in categories that has a list as a value like this:</p>
+        <img style="margin: 0 auto;max-height: 25em;" src=".\config-002-new-category.png">
+        <p>*Don't forget the <b>comma</b> before the new category entry.</p>
+
+        <p>Each category has a list as it's value, and each element in the list appears as an option after selecting
+            list's category.</p>
+        <p>Menu.ps1 replaces any - with spaces to make it look a bit nicer, but it <b>needs to be able to use
+                Get-Command and Get-Help to get info on a function, to work properly.</b></p>
+    </section>
+    <section>
+        <h2>Adding a new function option to the menu:</h2>
+        <p>Basic steps include:</p>
+        <ol>
+            <li>Create a .ps1 file in the 'functions' directory of the menu.</li>
+            <li>Create a function, ideally with same name as the .ps1 file, inside of it.</li>
+            <li>Create comment block at the beginning of the file, underneath the beginning of the function and above
+                parameters, that gives a basic description of the function and any parameters therein.</li>
+            <p>The text underneath each .SECTION in the comment block, must be indented. Parameter names must be one
+                space after .PARAMETER on the same line.</p>
+            <img style="margin: 2em auto;max-height: 25em;" src=".\config-003-function-file-format.png">
+
+            <li>Add the name of the function to whichever category it should appear in, in the menu:</li>
+            <img style="margin: 2em auto;max-height: 25em;" src=".\config-004-adding-function-name-to-config.png">
+            <p>It's ok to put the function name into multiple categories, it will just appear after choosing any of
+                those categories in the menu.</p>
+        </ol>
+    </section>
+</body>
+
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<title>Terminal Menu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="main.css">
+
+<style>
+    body {
+        background-color: #444;
+        color: white;
+    }
+
+    .w3-button:hover {
+        color: #000;
+        background-color: #fff;
+    }
+
+    .buttoncontainer button {
+        background-color: #008ed4 !important;
+    }
+
+    h1#pagetitle {
+        color: #008ed4;
+
+    }
+
+    .menubutton {
+        width: 25%;
+        margin-left: 1em;
+        margin-right: 1em;
+    }
+
+    .buttoncontainer a button {
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        background: linear-gradient(to bottom right, #00aee7, #008ed4, #0071a4);
+
+    }
+
+    .buttoncontainer a button:hover {
+        background: linear-gradient(to bottom right, #fafcfd, #e9f1f5, #c5cbce);
+    }
+
+    /* For Chrome, Safari, and Opera */
+    ::-webkit-scrollbar {
+        width: 0.5em;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #303030;
+        /* Dark background */
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, #008ed4, #0090d3, #0071a4);
+        /* Blue gradient */
+        border-radius: 6px;
+    }
+
+    /* For Internet Explorer and Edge */
+    body {
+        scrollbar-face-color: #008ed4;
+        /* Blue scrollbar */
+        scrollbar-track-color: #303030;
+        /* Dark background */
+    }
+</style>
+
+<body>
+
+    <div class="w3-container w3-center w3-padding-50">
+        <h1 id="pagetitle" class="w3-xxlarge"><b>Terminal Menu Tool</b></h1>
+        <p class="w3-large">A configurable and efficient way to run Powershell functions.</p>
+
+        <div class="w3-container w3-padding-12 w3-margin buttoncontainer">
+            <a href="overview.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Overview</button></a>
+
+        </div>
+        <div class="w3-container w3-padding-12 w3-margin buttoncontainer">
+            <a href="config.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Configuration</button></a>
+            <a href="printers.html" target="_blank">
+                <button class="w3-button  w3-round w3-large animated-button menubutton">Printers</button></a>
+        </div>
+        <div class="w3-container w3-padding-12 w3-margin buttoncontainer">
+            <a href="intune.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Intune</button></a>
+            <a href="canned_responses.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Canned
+                    Responses</button></a>
+        </div>
+        <div class="w3-container w3-padding-12 w3-margin buttoncontainer">
+            <a href="reports.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Reports</button></a>
+            <a href="software_installations.html" target="_blank"> <button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Software Installations</button></a>
+        </div>
+        <div class="w3-container w3-padding-12 w3-margin buttoncontainer">
+            <a href="scans.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Scans</button></a>
+            <a href="computeroperations.html" target="_blank"><button
+                    class="w3-button  w3-round w3-large animated-button menubutton">Computer Operations</button></a>
+        </div>
+        <div id="credits" class="w3-round w3-center w3-margin"
+            style="border-color:#008ed4!important;border-width:1px!important;border-style: solid;max-width: 96%;text-align:left!important;position: fixed; bottom: 0; width: 100%; background-color: rgba(0,0,0,0.5);padding-left: 2em;font-size:0.75em;">
+            <p>Author: abuddenb </p>
+            <p><i>Please email with any questions or ideas for improvements. You can edit the code / add
+                    things in yourself or message me on Teams to collaborate.</i></p>
+        </div>
+
+</body>
+
+</html>

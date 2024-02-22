@@ -1,0 +1,136 @@
+<#
+.SYNOPSIS
+Connects remote computer(s) to a printer located in printerlogic.
+
+.DESCRIPTION
+The PrinterLogic Printer Installer Client must be installed on the remote computer, and that installation has to be tied to your organization's printerlogic instance? ex: how the printerlogic MSI in intune has code embedded as parameter, domain installations look like they use command line argument during installation.
+
+.PARAMETER TargetComputer
+DNS Hostname of remote computer. Ex: 's-a227-26', a substring like 's-a227-' that other hostnames can match, a path to txt file, or array/arraylist of hostnames
+
+.PARAMETER PrinterName
+Name of the printer in printerlogic. Ex: 's-prt-c136-01', you can use the name or the full 'path' to the printer, ex: 'STANTON\B WING..\s-prt-b220-01'
+
+.EXAMPLE
+Connect-PrinterLogicPrinter -TargetComputer "s-a227-28" -PrinterName "s-prt-c136-01"
+
+.NOTES
+Function validates the input Computer name by pinging it one time, if it fails - function fails to execute.
+#>
+[CmdletBinding()]
+param (
+    $TargetComputer,
+    [string]$PrinterName
+)
+if (($targetcomputer -eq '') -or ($null -eq $targetcomputer)) {
+    # write-host "assigning localhost value to targetcomputer" -foregroundcolor magenta
+    $targetcomputer = @('127.0.0.1')
+    Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Targetcomputer value determined to be " -NoNewLine
+    Write-Host "$targetcomputer" -ForegroundColor Green -NoNewline
+    Write-Host "."
+}
+else {
+    # Deal with TARGETCOMPUTER --------------------------
+    $targetcomputer_typeobj = $targetcomputer.gettype()
+    $targetcomputer_typename = $targetcomputer_typeobj | select -exp name
+    # $targetcomputer_basetype = $targetcomputer_typeobj | select -exp basetype
+    # if its a string
+    try {
+        $ADCheck = Get-ADComputer $targetcomputer
+    }
+    catch {
+        Write-Host "Unable to get AD Computer."
+    }
+    if ($targetcomputer_typename -eq 'string') {
+        if (Test-Path $targetcomputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Targetcomputer value determined to be a file of hostnames, getting content."
+            $targetcomputer = Get-Content $targetcomputer
+        }
+        elseif ($ADCheck) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Targetcomputer value determined to be a single hostname, getting content."
+            $targetcomputer = $Targetcomputer
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: SearchAD = 'y', Searching AD for computers using the provided string: " -NoNewLine
+            Write-Host "$targetcomputer..." -foregroundcolor Green
+        
+            $targetcomputer = $targetcomputer + "x"
+            $targetcomputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$targetcomputer*" } | Select -Exp DNShostname
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found these matching computer names in AD: " -NoNewline
+            Write-Host "$($targetcomputer -join ', ')" -Foregroundcolor Green  
+        
+        }
+
+    }
+}
+
+# Test connection to computers using ONE PING (wont always be right)
+$connection_results = Test-Connection $targetcomputer -count 1
+# get successes
+$targetcomputer = $connection_results | where-object { $_.StatusCode -eq 0 } | Select -Exp Address
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Live hosts determined:" -Nonewline
+Write-Host "$($targetcomputer -join ', ')" -foregroundcolor green
+
+$thedate = get-date -format 'yyyy-MM-dd'
+
+# Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Target computer(s): " -NoNewLine
+# Write-Host "$($targetcomputer -join '')" -Foregroundcolor Green
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Connecting printer: " -NoNewLine
+Write-Host "$printername" -Foregroundcolor Yellow
+Write-Host ""
+
+ForEach ($single_computer in $targetcomputer) {
+    Write-Host "Starting loop on $single_computer" -foregroundcolor Magenta
+    # CHECK FOR PRINTERLOGIC / install if it's not already there
+    $check_remotepc_printerlogic = Test-Path "\\$single_computer\c$\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin\PrinterInstallerConsole.exe"
+    if (-not $check_remotepc_printerlogic) {
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: PrinterLogic PrinteInstallerConsole.exe was not found on $single_computer..." -Foregroundcolor Red
+        # try to get printerlogic deployment folder:
+        $PrinterLogic_Deployment_Folder = Get-ChildItem -PAth "$($env:PSMENU_DIR)\deploy\applications" -Filter "PrinterLogic" -Directory -ErrorAction SilentlyContinue
+        if ($PrinterLogic_Deployment_Folder) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($PrinterLogic_Deployment_Folder.FullName), copying to target computer..."
+
+            Copy-Item "$($PrinterLogic_Deployment_Folder.fullname)" -Destination \\$single_computer\C$\temp\ -recurse -Force
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: PrinterLogic deployment folder copied to C:\temp on $single_computer, proceeding to execution."
+
+            Invoke-Command -ComputerName $single_computer -Scriptblock {
+                # unblock-files
+                Get-ChildItem -Path "C:\Temp\PrinterLogic" -Recurse | Unblock-file
+                # get the install script
+                $PrinterLogicInstallScript = Get-ChildItem -Path "C:\Temp\PrinterLogic" -Filter "Deploy-PrinterLogic.ps1" -File -ErrorAction SilentlyContinue
+                if ($PrinterLogicInstallScript) {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($PrinterLogicInstallScript.FullName), installing now..."
+                    Powershell.exe -ExecutionPolicy Bypass "$($PRinterLogicInstallScript.FullNAME)" -DeploymentType "Install" -DeployMode "Silent"
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Couldn't find printerlogic install .ps1 script in C:\temp on $env:COMPUTERNAME."
+                    return
+                }
+            }
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Couldn't find a deployment folder for PrinterLogic, unable to install..." -Foregroundcolor Red
+            return
+        }
+
+        # PRINTERLOGIC is installed on target machine already
+    }
+    
+    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Connecting $single_computer to $printername..."    
+    Invoke-Command -ComputerName $single_computer -scriptblock {
+        $printer = $using:printername
+        # get installerconsole.exe
+        $exepath = get-childitem -path "C:\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin" -Filter "PrinterInstallerConsole.exe" -File -Erroraction SilentlyContinue
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($exepath.fullname), mapping $printer now..."
+        $map_result = (Start-Process "$($exepath.fullname)" -Argumentlist "InstallPrinter=$printer" -Wait -Passthru).ExitCode
+
+        # 0 = good, 1 = bad
+        if ($map_result -eq 0) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $env:COMPUTERNAME connected to $printer successfully." -Foregroundcolor Green
+            Write-Host "*Remember that this script does not set default printer, user must do that themselves."
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $env:COMPUTERNAME failed to connect to $printer." -Foregroundcolor Red
+        }
+    }
+}

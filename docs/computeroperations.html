@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<title>Computer Operations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="main.css">
+
+<body class="w3-dark-grey" style="background-color: #222!important;">
+
+    <div class="w3-container w3-card w3-round w3-margin mainContainer">
+        <a href="index.html" class="w3-right w3-margin">
+            <button class="w3-button w3-round w3-large animated-button menubutton">
+                <i class="fa fa-home"></i>
+            </button>
+        </a>
+        <h1 class="w3-xxlarge"><b>Computer Operations</b></h1>
+        <h5>Author : abuddenb</h5>
+        <h5>Updated : January 20, 2024</h5>
+
+        <hr class="w3-round">
+        <h5>The menu has a number of preloaded functions that perform various operations on target computer(s). Some of
+            which include functions to: clear temporary user folders, clear firefox profiles, and send files to and from
+            groups of remote computers easily.</h5>
+
+        <div class="w3-container w3-card w3-round w3-margin sectioncontainer"
+            style="border-color:#008ed4!important;border-width:3px!important;border-style: solid;">
+            <!-- <p class="sectionheading" style="color:#008ed4">Functions:</p> -->
+            <div class="w3-row-padding w3-margin functions-list w3-table">
+                <table class="w3-table" style="">
+
+                    <tr>
+                        <td onclick="document.getElementById('clearcorrupt').scrollIntoView({behavior: 'smooth'});">
+                            Clear-CorruptProfiles</td>
+                        <td onclick="document.getElementById('clearfirefox').scrollIntoView({behavior: 'smooth'});">
+                            Clear-FirefoxProfile</td>
+                        <td onclick="document.getElementById('copyremotefiles').scrollIntoView({behavior: 'smooth'});">
+                            Copy-RemoteFiles</td>
+                        <td onclick="document.getElementById('copysnippet').scrollIntoView({behavior: 'smooth'});">
+                            Copy-SnippetToClipboard</td>
+                    </tr>
+                    <tr>
+                        <td onclick="document.getElementById('formatdrive').scrollIntoView({behavior: 'smooth'});">
+                            Format-SecondaryDrive</td>
+                        <td onclick="document.getElementById('newdrivemapexe').scrollIntoView({behavior: 'smooth'});">
+                            New-DriveMappingExe</td>
+                        <td onclick="document.getElementById('scanforapps').scrollIntoView({behavior: 'smooth'});">
+                            Scan-ForAppOrFilepath</td>
+                        <td onclick="document.getElementById('sendfiles').scrollIntoView({behavior: 'smooth'});">
+                            Send-Files</td>
+                    </tr>
+                    <tr>
+                        <td onclick="document.getElementById('turnoffwifi').scrollIntoView({behavior: 'smooth'});">
+                            Stop-WifiAdapters</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+
+            </div>
+        </div>
+        <div id="clearcorrupt" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Corrupt profiles and temporary user folders:</p>
+            <div class="sectioncontent">
+                <div class="w3-container w3-row w3-margin-bottom">
+
+                </div>
+
+
+            </div>
+        </div>
+
+        <div id="clearfirefox" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Clearing Firefox profiles:</p>
+            <div class="sectioncontent">
+                <p><b>Clear-FirefoxProfile</b> can be used to resolve a common Firefox issue that arises when a user's
+                    firefox profile is missing or inaccessible.</p>
+                <p>More info: <a
+                        href="https://support.mozilla.org/en-US/kb/how-run-firefox-when-profile-missing-inaccessible"
+                        target="_blank">https://support.mozilla.org/en-US/kb/how-run-firefox-when-profile-missing-inaccessible</a>
+                </p>
+                <p>Clear-FirefoxProfile will delete the user's profiles.ini file, with option to delete the user's
+                    entire firefox profile folder, which should allow them to restart Firefox and load a/their profile
+                    successfully.</p>
+
+            </div>
+        </div>
+
+        <div id="sendfiles" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Sending files to and from computers:</p>
+            <div class="sectioncontent">
+                <p><b>Send-Files</b>: is a function that allows you to pick a file/folder on local computer, and send it
+                    to target filepath on remote computer(s).</p>
+                <p><b>Copy-Remotefiles</b>: allows you to specify a local filepath to look for on target remote
+                    computers. If found, script will copy file/folder back to local computer in specified output folder.
+                </p>
+
+            </div>
+        </div>
+        <div id="copysnippet" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Copy frequently used snippets of text to clipboard:</p>
+            <div class="sectioncontent">
+                <p><b>Send-Files</b>: is a function that allows you to pick a file/folder on local computer, and send it
+                    to target filepath on remote computer(s).</p>
+                <p><b>Copy-Remotefiles</b>: allows you to specify a local filepath to look for on target remote
+                    computers. If found, script will copy file/folder back to local computer in specified output folder.
+                </p>
+
+            </div>
+        </div>
+        <div id="formatdrive" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Format secondary storage on target computer(s):</p>
+            <div class="sectioncontent">
+                <p>At times, a computer will have it's main storage drive where the OS is installed, and a secondary
+                    storage drive.</p>
+                <p>For different reasons - students and instructors may have need of storage beyond the capacity of the
+                    main storage drive.</p>
+                <p><b>Format-SecondaryDrive</b> allows you to initialize and format any secondary drives on target
+                    systems.</p>
+                <p>The script will take a disk inventory of one of the computers in the target list and present menu to
+                    the user where they can choose the disk they'd like to format and other options.</p>
+                <p><b>For the reason above, all computers in the target list have to have the same kind of secondary
+                        storage.</b></p>
+                <p>Ex: I had a classroom full of new Optiplex 7660's that all had the same secondary storage / SSD
+                    drive, I used this function to format the drives quickly to make them accessible to
+                    students/instructors.</p>
+
+
+            </div>
+        </div>
+        <div id="newdrivemapexe" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Create executable to map shared folder for a user:</p>
+            <div class="sectioncontent">
+                <p><b>New-DriveMappingExe</b>: lets you specify the UNC path of a shared folder, and the drive letter
+                    you'd like for it to be assigned when mapped.</p>
+                <p>Then it uses the <a href="https://github.com/MScholtes/PS2EXE"><b>PS2exe</b> module to compile an
+                        executable from a powershell script that tries to map the folder for whoever double-clicks
+                        it.</a></p>
+                <p><b>Copy-Remotefiles</b>: allows you to specify a local filepath to look for on target remote
+                    computers. If found, script will copy file/folder back to local computer in specified output folder.
+                </p>
+
+            </div>
+        </div>
+        <div id="scanforapps" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Scan for applications or files/folders:</p>
+            <div class="sectioncontent">
+                <p>See the <a href="scans.html"><b>Scans page</b> for more info.</a></p>
+
+            </div>
+        </div>
+        <div id="turnoffwifi" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Turn off and optionally disable Wi-Fi adapters:</p>
+            <div class="sectioncontent">
+                <p>Sometimes computers with existing/active wired connections to the network can also have active
+                    wireless connections, which can impact a computer's performance for end-user.</p>
+                <p><b>Stop-WifiAdapters</b> will disable and stop any wireless adapters on target computers, <b>but only
+                        if the computer has active Ethernet connection.</b></p>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>

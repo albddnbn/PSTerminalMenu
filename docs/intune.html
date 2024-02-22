@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<title>Intune / Menu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="main.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<body class="w3-dark-grey" style="background-color: #222!important;">
+
+    <div class="w3-container w3-card w3-round w3-margin mainContainer">
+        <a href="index.html" class="w3-right w3-margin">
+            <button class="w3-button w3-round w3-large animated-button menubutton">
+                <i class="fa fa-home"></i>
+            </button>
+        </a>
+        <h1 class="w3-xxlarge"><b>Terminal menu - Intune</b></h1>
+        <h5>Author : abuddenb</h5>
+        <h5>Updated : January 20, 2024</h5>
+
+        <hr class="w3-round">
+
+        <div class="w3-container w3-card w3-round w3-margin sectioncontainer"
+            style="border-color:#008ed4!important;border-width:3px!important;border-style: solid;">
+            <!-- <p class="sectionheading" style="color:#008ed4">Functions:</p> -->
+            <div class="w3-row-padding w3-margin functions-list w3-table">
+                <table class="w3-table" style="">
+
+                    <tr>
+                        <td onclick="document.getElementById('gethardwareids').scrollIntoView({behavior: 'smooth'});">
+                            Get-IntuneHardwareIDs</td>
+                        <td
+                            onclick="document.getElementById('newintunewin32app').scrollIntoView({behavior: 'smooth'});">
+                            New-IntuneWin32App</td>
+                        <td onclick="document.getElementById('newloandocs').scrollIntoView({behavior: 'smooth'});">
+                            New-TechLoanDocs</td>
+                        <td></td>
+                    </tr>
+
+                </table>
+
+            </div>
+        </div>
+        <div id="gethardwareids" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Getting device IDs for Autopilot:</p>
+            <div class="sectioncontent">
+                <div class="w3-container w3-row w3-margin-bottom">
+                    <div class="w3-half">
+                        <p>At it's core, the Get-IntuneHardwareIDs function uses Get-WindowsAutopilotInfo.ps1 <a
+                                href="https://github.com/DvirEzra/Add_Devices_to_Windows_Autopilot"
+                                target="_blank">https://github.com/DvirEzra/Add_Devices_to_Windows_Autopilot</a>.</p>
+                        <p>It uses the <b>ComputerName</b> parameter to target groups of remote computers, and allows
+                            you to
+                            set
+                            the group tag automatically so you don't have to remember to do this in Autopilot. There's
+                            an
+                            example below of what the output looks like when you use the <b>GroupTag</b> parameter.</p>
+                        <p>There is also an option to auto-import devices to Intune using Microsoft's Graph API.</p>
+                    </div>
+                    <div class="w3-container w3-half">
+                        <img class="w3-round w3-padding" src="img/autopilot-grouptag.png">
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <div id="newintunewin32app" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Generating an .intunewin package (Intune Win32 App):</p>
+            <div class="sectioncontent">
+                <p>You can target a PSADT (Powershell App Deployment Toolkit) folder to create an .intunewin package,
+                    for software deployment through Intune.</p>
+                <p><b>Technically, it can be any folder, that has an installer or installation script / source files in
+                        it.</b>
+                </p>
+            </div>
+        </div>
+
+        <div id="newloandocs" class="w3-container w3-card w3-round w3-margin sectioncontainer">
+            <p class="sectionheading">Generating Student Laptop Loan Documents:</p>
+            <div class="sectioncontent">
+                <p>The menu can generate copies of the Tech Loan Welcome Letter and Agreement Form.</p>
+                <p>It will ask you to input the student's name, 700 number, and the device's serial number.</p>
+                <p><b>New-TechLoanDocs will check the 'Techloan/laptops.csv' file to attempt to auto-match the serial
+                        number with an asset tag and device model.</b></p>
+                <p>If the script can't make a match - it will ask for input for asset tag and device model.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Add your JavaScript code here
+    </script>
+
+</body>
+
+</html>
