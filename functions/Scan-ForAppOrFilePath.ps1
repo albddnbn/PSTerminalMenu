@@ -46,9 +46,9 @@ function Scan-ForAppOrFilePath {
         [ValidateSet('Path', 'App', 'File', 'Folder')]
         [String]$SearchType,
         [Parameter(Mandatory = $true)]
-        [String]$Item,
-        [ValidateSet('y', 'n', 'N', 'Y')]
-        [String]$ShowMisses
+        [String]$Item
+        # [ValidateSet('y', 'n', 'N', 'Y')]
+        # [String]$ShowMisses
         # [STring]$Outputfile
     )
     ############################################################################
@@ -173,7 +173,7 @@ function Scan-ForAppOrFilePath {
                     $obj.LastAccessTime = $details.LastAccessTime
                     $obj.Attributes = $details.Attributes
                 }
-                elseif (($show_misses.tolower()) -eq 'y') {
+                else {
                     $obj.PathPresent = "Filepath not found"
                 }
                 $obj
@@ -194,6 +194,7 @@ function Scan-ForAppOrFilePath {
                     "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
                     "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
                 )
+                $obj = $null
                 # Loop through each registry path and retrieve the list of subkeys
                 foreach ($path in $registryPaths) {
                     $uninstallKeys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
@@ -226,24 +227,20 @@ function Scan-ForAppOrFilePath {
                         }
                     }
                 }
-                $ShowMissedSearches = $using:ShowMisses
-                $ShowMissedSearches = $ShowMissedSearches.ToLower()
-                if ($ShowMissedSearches -eq 'y') {
-                    if (-not $obj) {
-                        $obj = [pscustomobject]@{
-                            DisplayName     = "$using:item not found"
-                            Uninstallstring = $uninstallString
-                            DisplayVersion  = $version
-                            Publisher       = $publisher
-                            ProductCode     = $productcode
-                            InstallLocation = $installlocation
-                        }
-                        $obj
+                if ($obj -eq $null) {
+                    $obj = [PSCustomObject]@{
+                        ComputerName    = $TargetComputer
+                        AppName         = "No matching apps found for $using:Item"
+                        AppVersion      = $null
+                        InstallDate     = $null
+                        InstallLocation = $null
+                        Publisher       = $null
+                        UninstallString = "No matching apps found"
                     }
+                    $obj
                 }
             } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
         }
-        $results
         $all_results.add($results) | out-null
     }
     ######################################################
