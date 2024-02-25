@@ -21,7 +21,9 @@ function Build-PrinterConnectionExe {
 
     .NOTES
         Executable will be created in the 'executables' directory.
-        abuddenb / 02-18-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param(
         [Parameter(Mandatory = $true)]

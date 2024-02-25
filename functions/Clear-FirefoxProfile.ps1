@@ -15,7 +15,9 @@ function Clear-FirefoxProfile {
         Submitting any other value will only target the profiles.ini file.
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param (

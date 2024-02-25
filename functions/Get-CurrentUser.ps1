@@ -29,7 +29,9 @@ function Get-CurrentUser {
         Get-CurrentUser -TargetComputer "t-client-28"
 
     .NOTES
-        abuddenb / 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param (

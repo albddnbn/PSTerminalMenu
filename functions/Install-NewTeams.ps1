@@ -19,12 +19,13 @@ Function Install-NewTeams {
         Install-NewTeams -TargetComputer "pc-a227-"
 
     .NOTES
-        abuddenb / 02-17-2024
         The script used for actual installation of the new Teams client was created by:
         Author:     Sassan Fanai
         Date:       2023-11-22
         *need to get a link to script on github to put here*
-        Doesn't work outside menu - 02-18-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(

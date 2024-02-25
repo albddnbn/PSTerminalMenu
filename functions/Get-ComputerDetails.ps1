@@ -26,7 +26,9 @@ function Get-ComputerDetails {
         Get-ComputerDetails -TargetComputer 'g-pc-0' -outputfile 'n'
 
     .NOTES
-        abuddenb / 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param (

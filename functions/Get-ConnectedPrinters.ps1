@@ -24,7 +24,9 @@ function Get-ConnectedPrinters {
         Get-ConnectedPrinters -TargetComputer 't-client-07'
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param(
         [Parameter(

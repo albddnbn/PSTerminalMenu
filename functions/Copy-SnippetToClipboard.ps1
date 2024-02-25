@@ -15,6 +15,11 @@ function Copy-SnippetToClipboard {
 
     .EXAMPLE
         Copy-SnippetToClipboard
+        
+    .NOTES
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     if (-not (Get-Module -ListAvailable -Name PS-Menu)) {
         # check for nuget

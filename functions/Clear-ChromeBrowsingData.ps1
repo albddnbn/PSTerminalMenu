@@ -1,30 +1,32 @@
 function Clear-ChromeBrowsingData {
     <#
-.SYNOPSIS
-    Deletes any 'Cache Data' folders found in the target user's Chrome profile(s) on target computer.
-    Browsing data is not necessarily only in the .\Google\Chrome\User Data\Default\Cache directory, organization-managed profiles may be stored elsewhere.
+    .SYNOPSIS
+        Deletes any 'Cache Data' folders found in the target user's Chrome profile(s) on target computer.
+        Browsing data is not necessarily only in the .\Google\Chrome\User Data\Default\Cache directory, organization-managed profiles may be stored elsewhere.
 
-.DESCRIPTION
-    Deletes all of target user's browsing data for all Chrome profiles stored on computer.
-    Browsing data, cookies, history - everything in browser cache.
+    .DESCRIPTION
+        Deletes all of target user's browsing data for all Chrome profiles stored on computer.
+        Browsing data, cookies, history - everything in browser cache.
 
-.PARAMETER Username
-    Target user. If username is not supplied, the script looks for currently logged in user on the TargetPC.
+    .PARAMETER Username
+        Target user. If username is not supplied, the script looks for currently logged in user on the TargetPC.
 
-.PARAMETER TargetPC
-    Target computer, if not specified the script assigns localhost (127.0.0.1) target.
+    .PARAMETER TargetPC
+        Target computer, if not specified the script assigns localhost (127.0.0.1) target.
 
-.PARAMETER UseCaution
-    'y' will display popup on target computer(s) asking for user consent to kill Chrome processes and delete browsing data.
-    'n' will kill Chrome processes and delete browsing data without prompting the user.
+    .PARAMETER UseCaution
+        'y' will display popup on target computer(s) asking for user consent to kill Chrome processes and delete browsing data.
+        'n' will kill Chrome processes and delete browsing data without prompting the user.
 
-.PARAMETER TargetAllProfiles
-    'y' targets ALL Chrome user profiles on target computer, for all users.
-    'n' targets only the latest Chrome profile on target computer.
+    .PARAMETER TargetAllProfiles
+        'y' targets ALL Chrome user profiles on target computer, for all users.
+        'n' targets only the latest Chrome profile on target computer.
 
-.NOTES
-    abuddenb / 2.15.24
-#>
+    .NOTES
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
+    #>
     # deleting profiles.ini in roaming profile fixed issue
     [CmdletBinding()]
     param (

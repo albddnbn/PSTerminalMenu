@@ -14,6 +14,9 @@ function Copy-CannedResponse {
 
     .NOTES
         One possible use for this function and it's companion function New-CannedResponse is to create canned responses for use in a ticket system, like OSTicket.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     # creates list of html files from the canned_responses directory
     $CannedResponses = Get-ChildItem -Path "$env:PSMENU_DIR\canned_responses" -Filter "*.html" -File

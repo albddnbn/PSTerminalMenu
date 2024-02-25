@@ -24,10 +24,12 @@ function Clear-CorruptProfiles {
         Clear-CorruptProfiles.ps1 -TargetComputer "t-client-" -Perform_deletions "enable"
 
     .NOTES
-        Author: abuddenb / 2023
         This script is a wrapper for the ./localscripts/Clear-CorruptProfiles.ps1 script.
         Clear-CorruptProfiles can be run locally on a single computer to clear out temporary folders.        
         02-18-2024 - Wrapper will not work outside of Terminal menu without edits, script in localscripts will work.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param (
