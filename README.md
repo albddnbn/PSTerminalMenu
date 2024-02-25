@@ -26,6 +26,9 @@ After cloning or downloading the repository to your computer, open an Admin powe
     ./menu.ps1
     ```
 
+At this point in time, if you're computer doesn't have access to the Internet to download the modules - you may have to install the ps-menu module in supportfiles using the install-module.ps1 script.
+
+
 ## Usage
 
 1. Get basic computer details from single computer: t-client-01, and output report to file containing 'client-01-details' as part of filename.
