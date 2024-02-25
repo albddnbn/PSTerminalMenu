@@ -215,12 +215,15 @@ while ($exit_program -eq $false) {
             ## TargetComputer in their own way.
             ## If the parameter is TargetComputer - have user enter value, run through get-targetcomputers now.
             if ($parameter -eq 'TargetComputer') {
-                Write-Host "Takes user input and returns a list of hostnames."
+                Write-Host "Takes user input and returns a list of hostnames." -foregroundcolor yellow
                 Write-Host "Input can be:"
                 Write-Host "    1. Single hostname string, ex: 's-a227-01'"
                 Write-Host "    2. Comma-separated list of hostnames, ex: s-a227-01,s-a227-02"
-                Write-Host "    3. Path to text file containing one hostname per line, ex: 'D:\computers.txt'"
-                Write-Host "    4. First section of a hostname to generate a list, ex: s-a227- will create a list of all hostnames that start with s-a227-."
+                Write-Host "    3. Path to text file containing one hostname per line, ex:" -NoNewline
+                Write-Host " 'D:\computers.txt'" -Foregroundcolor Yellow
+                Write-Host "    4. First section of a hostname to generate a list, ex: " -nonewline
+                Write-Host "s-a227-" -nonewline -foregroundcolor Yellow
+                Write-Host " will create a list of all hostnames that start with s-a227-."
                 $target_computers = read-host "Enter target computer value: "
                 $target_computers = Get-TargetComputers -TargetComputerInput $target_computers
 
