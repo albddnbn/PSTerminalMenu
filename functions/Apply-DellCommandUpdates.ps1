@@ -25,7 +25,7 @@ Function Apply-DellCommandUpdates {
     .NOTES
         Executing like this: Start-Process "$($dellcommandexe.fullname)" -argumentlist $params doesn't show output.
         Trying $result = (Start-process file -argumentlist $params -wait -passthru).exitcode -> this still rebooted s-c136-03
-                ---
+        ---
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>

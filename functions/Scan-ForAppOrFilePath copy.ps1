@@ -56,8 +56,7 @@ function Scan-ForAppOrFilePath {
     ## and handle TargetComputer input / filter offline hosts.
     ############################################################################
     BEGIN {
-        $thedate = Get-Date -Format 'yyyy-MM-dd'
-        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
+        $outputfile = ''
         ## If item is a filepath - have to get rid of drive letter and \ since script scans network paths
         if ($Item -match '[A-Za-z]:\\*') {
             $filename_substring = $Item.substring(3)
@@ -71,7 +70,6 @@ function Scan-ForAppOrFilePath {
         }
 
         $REPORT_DIRECTORY = "AppFileScan"
-        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
 
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
@@ -251,44 +249,30 @@ function Scan-ForAppOrFilePath {
     #######################################################
     END {
         $all_results = $all_results | sort -property pscomputername
-        # $all_results | export-csv "c:\temp\all_results.csv" -NoTypeInformation
+        $all_results | export-csv "c:\temp\all_results.csv" -NoTypeInformation
         if ($all_results) {
-
-            $all_results | export-csv "$outputfile.csv" -NoTypeInformation
-
-            if (Test-Path "$outputfile.csv" -ErrorAction SilentlyContinue) {
-                ## check for importexcel
-                if (get-module -name 'importexcel' -listavailable -erroraction silentlycontinue) {
-                    $params = @{
-                        AutoSize             = $true
-                        TitleBackgroundColor = 'Blue'
-                        TableName            = "$ReportTitle"
-                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
-                        BoldTopRow           = $true
-                        WorksheetName        = 'Users'
-                        PassThru             = $true
-                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
-                    }
-                    $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
-                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
-                    Close-ExcelPackage $xlsx
-    
-                    # $report_dir_path = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-    
-                    # Explorer.exe $report_dir_path
-                    # Invoke-Item "$outputfile.xlsx"
+            ## Sort the results
+            if ($outputfile.tolower() -eq 'n') {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($all_results.count -le 2) {
+                    $all_results | Format-List
+                    # $all_results | Out-GridView
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping creation of .xlsx file."
+                    $all_results | out-gridview
                 }
             }
+            else {
+                if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+                    Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
 
-            $outputfolder = "$outputfile.csv" | split-path -Parent
-
-            invoke-item "$outputfolder"
-
+                }
+                else {
+                    $all_results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                    notepad.exe "$outputfile.csv"
+                }
+            }
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."

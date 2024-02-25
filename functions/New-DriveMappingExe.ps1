@@ -15,8 +15,9 @@ function New-DriveMappingExe {
         Drive letter to map the path to. Ex: 'Z'
 
     .NOTES
-        abuddenb / 2024
-        Will not work outside of Terminal Menu right now - 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(

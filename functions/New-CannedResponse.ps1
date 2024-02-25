@@ -13,8 +13,9 @@ function New-CannedResponse {
         Options include: txt, html
 
     .NOTES
-        abuddenb / 2024
-        Will not work outside of Terminal Menu right now - 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param(
         [string]$FileType

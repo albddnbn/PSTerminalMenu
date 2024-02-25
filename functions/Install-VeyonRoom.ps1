@@ -20,8 +20,9 @@ function Install-VeyonRoom {
         The name of the master computer, Veyon installation is run without the /NoMaster switch on this computer.
 
     .NOTES
-        abuddenb / 2024
-        Will not work outside of Terminal Menu at this time: 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(

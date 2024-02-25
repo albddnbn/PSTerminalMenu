@@ -17,7 +17,9 @@ function Install-SMARTNotebookSoftware {
         Install-SMARTNotebookSoftware -TargetComputer "s-c136-02"
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(

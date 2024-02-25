@@ -15,8 +15,9 @@ function New-BrandedHTMLReport {
         String used to create the HTML report title and .html output filename.
 
     .NOTES
-        abuddenb / 2024
-        Will not work outside of Terminal Menu right now - 02-17-2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param (
         [string]$CSVFilePath,
