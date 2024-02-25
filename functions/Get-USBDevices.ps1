@@ -35,103 +35,133 @@ function Get-USBDevices {
         $TargetComputer,
         [String]$Outputfile
     )
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
-    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-    if (($TargetComputer -is [System.Collections.IEnumerable])) {
-        $null
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-    }
-    elseif ($TargetComputer -is [string]) {
-        if ($TargetComputer -in @('', '127.0.0.1')) {
-            $TargetComputer = @('127.0.0.1')
+    BEGIN {
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
+        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+            $null
+            ## If it's a string - check for commas, try to get-content, then try to ping.
         }
-        elseif ($Targetcomputer -like "*,*") {
-            $TargetComputer = $TargetComputer -split ','
-        }
-        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-            $TargetComputer = Get-Content $TargetComputer
-        }
-        else {
-            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-            if ($test_ping) {
-                $TargetComputer = @($TargetComputer)
+        elseif ($TargetComputer -is [string]) {
+            if ($TargetComputer -in @('', '127.0.0.1')) {
+                $TargetComputer = @('127.0.0.1')
+            }
+            elseif ($Targetcomputer -like "*,*") {
+                $TargetComputer = $TargetComputer -split ','
+            }
+            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                $TargetComputer = Get-Content $TargetComputer
             }
             else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                return
+                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                if ($test_ping) {
+                    $TargetComputer = @($TargetComputer)
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
+                    return
+                }
             }
         }
-    }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-    # Safety catch to make sure
-    if ($null -eq $TargetComputer) {
-        # user said to end function:
-        return
-    }
-    Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-    if ($TargetComputer.count -lt 20) {
-        ## If the Get-LiveHosts utility command is available
-        if (Get-Command -Name Get-LiveHosts -ErrorAction SilentlyContinue) {
-            $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+        # Safety catch to make sure
+        if ($null -eq $TargetComputer) {
+            # user said to end function:
+            return
         }
-    }
-
-    if ($outputfile.tolower() -ne 'n') {
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-            if ($Outputfile.toLower() -eq '') {
-                $outputfile = "CurrentUsers"
+        Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+        ## With this function - it's especially important to log offline computers, whose hardware IDs weren't taken.
+        if ($TargetComputer -ne '127.0.0.1') {
+            $online_hosts = [system.collections.arraylist]::new()
+            $offline_hosts = [system.collections.arraylist]::new()
+            ForEach ($single_computer in $TargetComputer) {
+                $ping_result = Test-Connection $single_computer -Count 1 -Quiet
+                if ($ping_result) {
+                    Write-Host "$single_computer is online." -Foregroundcolor Green
+                    $online_hosts.Add($single_computer) | Out-Null
+                }
+                else {
+                    Write-Host "$single_computer is offline." -Foregroundcolor Red
+                    $offline_hosts.add($single_computer) | out-null
+                }
             }
 
-            $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+            Write-Host "Copying offline hosts to clipboard." -foregroundcolor Yellow
+            "$($offline_hosts -join ', ')" | clip
+
+            $TargetComputer = $online_hosts
         }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            if ($outputfile.tolower() -eq '') {
-                $outputfile = "CurrentUsers-$thedate"
-            }
-        }
-    }
 
-    ###########################################
-    ## Getting USB info from target machine(s):
-    ###########################################
-    $results = Invoke-Command -Computername $targetcomputer -scriptblock {
-        $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
-
-        $connected_usb_devices
-    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName | Sort -Property PSComputerName
-
-    # outputs a file for each computer in the list
-    $unique_hostnames = $results | Select -exp PSComputerName -Unique
-    # script will create a .txt and/or .csv with result object per computer.
-
-    ForEach ($unique_hostname in $unique_hostnames) {
-        $computers_results = $results | where-object { $_.pscomputername -eq $unique_hostname }
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting $outputfile-$unique_hostname.csv/$outputfile-$unique_hostname.xlsx..."
         if ($outputfile.tolower() -ne 'n') {
-            if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
-                Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
+            ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $outputfile = "CurrentUsers"
+                }
+
+                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
-                $computers_results | Export-Csv -Path "$outputfile-$unique_hostname.csv" -NoTypeInformation -Force
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $outputfile = "CurrentUsers-$thedate"
+                }
+            }
+        }
+
+        $all_results = [system.collections.arraylist]::new()
+    }
+
+    PROCESS {
+        ###########################################
+        ## Getting USB info from target machine(s):
+        ###########################################
+        $results = Invoke-Command -Computername $targetcomputer -scriptblock {
+            $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
+
+            $connected_usb_devices
+        }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+
+        $all_results.add($results) | out-null
+    }
+
+    END {
+        if ($all_results) {
+            $all_results = $all_results | sort -property pscomputername
+            # outputs a file for each computer in the list
+            $unique_hostnames = $all_results | Select -exp PSComputerName -Unique
+            # script will create a .txt and/or .csv with result object per computer.
+
+            ForEach ($unique_hostname in $unique_hostnames) {
+                $computers_results = $all_results | where-object { $_.pscomputername -eq $unique_hostname }
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting $outputfile-$unique_hostname.csv/$outputfile-$unique_hostname.xlsx..."
+                if ($outputfile.tolower() -ne 'n') {
+                    if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
+                        Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
+                    }
+                    else {
+                        $computers_results | Export-Csv -Path "$outputfile-$unique_hostname.csv" -NoTypeInformation -Force
+                    }
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+    
+                    $computers_results |  format-table -autosize
+
+                    Read-Host "Press enter to show next computer's results"
+    
+                }
+            }
+            try {
+                Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
             }
         }
         else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    
-            $computers_results |  format-table -autosize
-
-            Read-Host "Press enter to show next computer's results"
-    
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
+        Read-Host "Press enter to continue."
     }
-    try {
-        Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
-    }
-    catch {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
-    }
-
-    Read-Host "Press enter to continue."
 }

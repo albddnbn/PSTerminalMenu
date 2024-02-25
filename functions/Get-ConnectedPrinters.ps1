@@ -182,28 +182,31 @@ function Get-ConnectedPrinters {
     }
 
     END {
+        if ($all_results) {
+            $all_results = $all_results | sort -property pscomputername
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Details on connected printers gathered, exporting to $outputfile.csv/.xlsx..."
 
-        $all_results = $all_results | sort -property pscomputername
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Details on connected printers gathered, exporting to $outputfile.csv/.xlsx..."
 
+            if ($outputfile.tolower() -ne 'n') {
 
-        if ($outputfile.tolower() -ne 'n') {
+                Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "Printers$thedate" -CSVFile $true -XLSXFile $true
 
-            Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "Printers$thedate" -CSVFile $true -XLSXFile $true
+                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
 
-            Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+                # if ($all_results.count -lt 2) {
+                $all_results | Format-Table -Wrap
+                # }
+                # else {
+                #     $all_results | Out-GridView
+                # }
+            }
         }
         else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-
-            # if ($all_results.count -lt 2) {
-            $all_results | Format-Table -Wrap
-            # }
-            # else {
-            #     $all_results | Out-GridView
-            # }
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-	
         Read-Host "Press enter to continue"
     }
 }

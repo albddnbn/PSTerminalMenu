@@ -145,31 +145,35 @@ function Get-CurrentUser {
     }
 
     END {
-        $all_results = $all_results | sort -property pscomputername
-        ## If Outputfile not desired:
-        if ($outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-            if ($results.count -le 2) {
-                $results | Format-List
+        if ($all_results) {
+            $all_results = $all_results | sort -property pscomputername
+            ## If Outputfile not desired:
+            if ($outputfile.tolower() -eq 'n') {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($results.count -le 2) {
+                    $results | Format-List
+                }
+                else {
+                    $results | out-gridview
+                }
             }
-            else {
-                $results | out-gridview
+            ## If Output-Reports is available:
+            elseif (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+                if ($outputfile.tolower() -ne 'n') {
+
+                    Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+                }
+            }
+            elseif ($outputfile -ne 'n') {
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+
+                notepad.exe "$outputfile.csv"
             }
         }
-        ## If Output-Reports is available:
-        elseif (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
-            if ($outputfile.tolower() -ne 'n') {
-
-                Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-            }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        elseif ($outputfile -ne 'n') {
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-            notepad.exe "$outputfile.csv"
-        }
-
         Read-Host "Press enter to continue."
     }
 }

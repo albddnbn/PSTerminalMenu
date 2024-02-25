@@ -157,27 +157,32 @@ function Get-ComputerDetails {
     ## END - Output of results to CSV, XLSX, terminal, or gridview depending on the $OutputFile parameter ##
     ########################################################################################################
     END {
-        ## Sort the results
-        if ($outputfile.tolower() -eq 'n') {
-            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-            if ($results.count -le 2) {
-                $results | Format-List
-                # $results | Out-GridView
+        if ($results) {
+            ## Sort the results
+            if ($outputfile.tolower() -eq 'n') {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($results.count -le 2) {
+                    $results | Format-List
+                    # $results | Out-GridView
+                }
+                else {
+                    $results | out-gridview
+                }
             }
             else {
-                $results | out-gridview
+                if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+                    Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+
+                }
+                else {
+                    $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                    notepad.exe "$outputfile.csv"
+                }
             }
         }
         else {
-            if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
-                Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-
-            }
-            else {
-                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-                notepad.exe "$outputfile.csv"
-            }
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
         Read-Host "Press enter to continue."
     }

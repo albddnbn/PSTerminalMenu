@@ -172,35 +172,38 @@ function Get-AssetInformation {
     }
 
     END {
+        if ($all_results) {
+            ## Sort results
+            $all_results = $all_results | Sort-Object -Property PSComputername
 
-        ## Sort results
-        $all_results = $all_results | Sort-Object -Property PSComputername
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Asset information gathered, exporting to $outputfile.csv/.xlsx..."
 
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Asset information gathered, exporting to $outputfile.csv/.xlsx..."
-
-        ## Terminal / gridview output
-        if ($outputfile -eq 'n') {
-            if ($all_results.count -le 2) { 
-                $all_results | Format-Table -AutoSize
+            ## Terminal / gridview output
+            if ($outputfile -eq 'n') {
+                if ($all_results.count -le 2) { 
+                    $all_results | Format-Table -AutoSize
+                }
+                else {
+                    $all_results | Out-GridView
+                }
             }
+            ## Report output, use Output-Reports if available
             else {
-                $all_results | Out-GridView
+                if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+
+                    Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+                }
+                else {
+                    $all_results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+
+                    notepad.exe "$outputfile.csv"        
+                }
             }
         }
-        ## Report output, use Output-Reports if available
         else {
-            if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
-
-                Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-            }
-            else {
-                $all_results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-                notepad.exe "$outputfile.csv"        
-            }
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-
         Read-Host "Press enter to continue."
     }
 }
