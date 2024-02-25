@@ -36,8 +36,9 @@ Function Install-NewTeams {
         $TargetComputer
     )
     BEGIN {
+        ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
             $null
             ## If it's a string - check for commas, try to get-content, then try to ping.
         }
@@ -57,8 +58,9 @@ Function Install-NewTeams {
                     $TargetComputer = @($TargetComputer)
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                    return
+                    $TargetComputerInput = $TargetComputerInput + "x"
+                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
                 }
             }
         }

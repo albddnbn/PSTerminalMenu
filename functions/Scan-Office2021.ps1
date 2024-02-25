@@ -28,24 +28,35 @@ function Scan-Office2021 {
 
     $REPORT_TITLE = 'Office2021Scan'
     $thedate = Get-Date -Format 'yyyy-MM-dd'
-
-    try {
-        $TargetComputer = Get-TargetComputers -TargetComputerInput $TargetComputer
+    ## TARGETCOMPUTER HANDLING:
+    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
+    if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+        $null
+        ## If it's a string - check for commas, try to get-content, then try to ping.
     }
-    catch {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-
-        if (Test-Path $TargetComputer -erroraction silentlycontinue) {
-            Write-Host "$TargetComputer is a file, getting content to create hostname list."
+    elseif ($TargetComputer -is [string]) {
+        if ($TargetComputer -in @('', '127.0.0.1')) {
+            $TargetComputer = @('127.0.0.1')
+        }
+        elseif ($Targetcomputer -like "*,*") {
+            $TargetComputer = $TargetComputer -split ','
+        }
+        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
             $TargetComputer = Get-Content $TargetComputer
         }
         else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not a valid hostname or file path." -Foregroundcolor Red
-            return
+            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+            if ($test_ping) {
+                $TargetComputer = @($TargetComputer)
+            }
+            else {
+                $TargetComputerInput = $TargetComputerInput + "x"
+                $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                $TargetComputerInput = $TargetComputerInput | Sort-Object   
+            }
         }
-    }     
-    
-    $TargetComputer = $TargetComputer | where-object { $_ -ne $null }
+    }
+    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
     if ($TargetComputer.count -lt 20) {
         $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
     }
