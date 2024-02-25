@@ -32,9 +32,11 @@ Function Get-IntuneHardwareIDs {
         Get-IntuneHardwareIDs -TargetComputer "t-client-01" -OutputFile "TClient01-ID"
 
     .NOTES
-        abuddenb / 02-17-2024
         Needs utility functions and menu environment variables to run at this point in time.
         Basically just a wrapper for the Get-WindowsAutopilotInfo function, not created by abuddenb.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param(
         [Parameter(
@@ -47,6 +49,9 @@ Function Get-IntuneHardwareIDs {
         [Parameter(Mandatory = $false)]
         [string]$DeviceGroupTag
     )
+    ############################################################################################
+    ## BEGIN - TargetComputer and Outputfile parameter handling, attempt to filter offline hosts
+    ############################################################################################
     $thedate = Get-Date -Format 'yyyy-MM-dd'
     $REPORT_DIRECTORY = "IntuneHardwareIDs"
     ## If Targetcomputer is an array or arraylist - it's already been sorted out.
@@ -107,6 +112,8 @@ Function Get-IntuneHardwareIDs {
 
         Write-Host "Copying offline hosts to clipboard." -foregroundcolor Yellow
         "$($offline_hosts -join ', ')" | clip
+
+        $TargetComputer = $online_hosts
     }
 
     ## Find Get-WindowsAutopilotInfo script and dot source - hopefully from Supportfiles, will check internet if necessary.
@@ -134,7 +141,7 @@ Function Get-IntuneHardwareIDs {
         Get-ChildItem "$env:SUPPORTFILES_DIR" -recurse | unblock-file
         . "$($getwindowsautopilotinfo.fullname)"
     }
-
+    
     if ($TargetComputer -eq '127.0.0.1') {
         # Get-WindowsAutopilotInfo -outputfile "$outputfile.csv"
         Run-GetWindowsAutopilotInfo -OutputFile "$outputfile.csv" -GroupTag $DeviceGroupTag
@@ -147,4 +154,5 @@ Function Get-IntuneHardwareIDs {
     Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
 
     Read-Host "Press enter to return to menu."
+    
 }

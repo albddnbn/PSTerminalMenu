@@ -40,119 +40,136 @@ function Get-CurrentUser {
         $TargetComputer,
         [string]$Outputfile
     )
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
-    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-    if (($TargetComputer -is [System.Collections.IEnumerable])) {
-        $null
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-    }
-    elseif ($TargetComputer -is [string]) {
-        if ($TargetComputer -in @('', '127.0.0.1')) {
-            $TargetComputer = @('127.0.0.1')
+    BEGIN {
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        ## TARGETCOMPUTER HANDLING:
+        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            $null
+            ## If it's a string - check for commas, try to get-content, then try to ping.
         }
-        elseif ($Targetcomputer -like "*,*") {
-            $TargetComputer = $TargetComputer -split ','
-        }
-        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-            $TargetComputer = Get-Content $TargetComputer
-        }
-        else {
-            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-            if ($test_ping) {
-                $TargetComputer = @($TargetComputer)
+        elseif ($TargetComputer -is [string]) {
+            if ($TargetComputer -in @('', '127.0.0.1')) {
+                $TargetComputer = @('127.0.0.1')
+            }
+            elseif ($Targetcomputer -like "*,*") {
+                $TargetComputer = $TargetComputer -split ','
+            }
+            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                $TargetComputer = Get-Content $TargetComputer
             }
             else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                return
+                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                if ($test_ping) {
+                    $TargetComputer = @($TargetComputer)
+                }
+                else {
+                    $TargetComputerInput = $TargetComputerInput + "x"
+                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                }
             }
         }
-    }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-    # Safety catch to make sure
-    if ($null -eq $TargetComputer) {
-        # user said to end function:
-        return
-    }
-    # Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-    if ($TargetComputer.count -lt 20) {
-        ## If the Get-LiveHosts utility command is available
-        if (Get-Command -Name Get-LiveHosts -ErrorAction SilentlyContinue) {
-            $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+        # Safety catch to make sure
+        if ($null -eq $TargetComputer) {
+            # user said to end function:
+            return
         }
-    }
+        # Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+        # if ($TargetComputer.count -lt 20) {
+        #     ## If the Get-LiveHosts utility command is available
+        #     if (Get-Command -Name Get-LiveHosts -ErrorAction SilentlyContinue) {
+        #         $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+        #     }
+        # }
 
-    if ($outputfile.tolower() -ne 'n') {
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-            if ($Outputfile.toLower() -eq '') {
-                $outputfile = "CurrentUsers"
-            }
-
-            $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-        }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            if ($outputfile.tolower() -eq '') {
-                $outputfile = "CurrentUsers-$thedate"
-            }
-        }
-    }
-
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting current users on: " -NoNewLine
-    Write-Host "$($targetcomputer -join ', ')" -Foregroundcolor Green
-
-    # Get Computers details and create an object
-    $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-        $model = (get-ciminstance -class win32_computersystem).model
-        # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
-        $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-        # see if teams and/or zoom are running
-        $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
-        $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
-        ForEach ($process_check in @($teams_running, $zoom_running)) {
-            if ($process_check) {
-                $process_check = $true
-            }
-            else {
-                $process_check = $false
-            }
-        }
-        $obj = [PSCustomObject]@{
-            Model        = $model
-            CurrentUser  = $current_user
-            TeamsRunning = $teams_running
-            ZoomRunning  = $zoom_running
-
-        }
-        $obj
-    } 
-	
-    $results = $results | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
-    $results = $results | Sort -Property PSComputerName
-
-    ## If Outputfile not desired:
-    if ($outputfile.tolower() -eq 'n') {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-        if ($results.count -le 2) {
-            $results | Format-List
-        }
-        else {
-            $results | out-gridview
-        }
-    }
-    ## If Output-Reports is available:
-    elseif (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
         if ($outputfile.tolower() -ne 'n') {
+            ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $outputfile = "CurrentUsers"
+                }
 
-            Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-            # Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $outputfile = "CurrentUsers-$thedate"
+                }
+            }
         }
-    }
-    elseif ($outputfile -ne 'n') {
-        $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
-        notepad.exe "$outputfile.csv"
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting current users on: " -NoNewLine
+        Write-Host "$($targetcomputer -join ', ')" -Foregroundcolor Green
+
+        $all_results = [system.collections.arraylist]::new()
     }
 
-    Read-Host "Press enter to continue."
+    PROCESS {
+        $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
+        if (-not ($ping_result)) {
+            Write-Host "$Targetcomputer didn't respond."
+            continue
+        }
+        # Get Computers details and create an object
+        $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+            $model = (get-ciminstance -class win32_computersystem).model
+            # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
+            $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+            # see if teams and/or zoom are running
+            $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
+            $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
+            ForEach ($process_check in @($teams_running, $zoom_running)) {
+                if ($process_check) {
+                    $process_check = $true
+                }
+                else {
+                    $process_check = $false
+                }
+            }
+            $obj = [PSCustomObject]@{
+                Model        = $model
+                CurrentUser  = $current_user
+                TeamsRunning = $teams_running
+                ZoomRunning  = $zoom_running
+
+            }
+            $obj
+        } 
+	
+        $results = $results | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
+        # $results = $results | Sort -Property PSComputerName
+        $all_results.add($results) | out-null
+    }
+
+    END {
+        $all_results = $all_results | sort -property pscomputername
+        ## If Outputfile not desired:
+        if ($outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+            if ($results.count -le 2) {
+                $results | Format-List
+            }
+            else {
+                $results | out-gridview
+            }
+        }
+        ## If Output-Reports is available:
+        elseif (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+            if ($outputfile.tolower() -ne 'n') {
+
+                Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+            }
+        }
+        elseif ($outputfile -ne 'n') {
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+
+            notepad.exe "$outputfile.csv"
+        }
+
+        Read-Host "Press enter to continue."
+    }
 }
