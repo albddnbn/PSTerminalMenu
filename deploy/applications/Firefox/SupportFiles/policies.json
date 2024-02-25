@@ -1,0 +1,18 @@
+{
+  "policies": {
+    "DisableAppUpdate": false,
+    "DisableProfileRefresh": true,
+    "DisableTelemetry": true,
+    "DontCheckDefaultBrowser": true,
+    "OverrideFirstRunPage": "https://my.dtcc.edu",
+    "OverridePostUpdatePage": "",
+    "FirefoxHome": {
+      "Search": true,
+      "TopSites": false,
+      "Highlights": false,
+      "Pocket": false,
+      "Snippets": false,
+      "Locked": false
+    }
+  }
+}
