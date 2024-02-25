@@ -8,6 +8,8 @@ This powershell menu was created to be able to execute functions quickly and eff
 
 When a new issue is encountered that allows for a scripted solution - resolution of the issue can be automated by adding the script/function to this menu.
 
+**I'm working on another repository with PSADT installation and other Powershell scripts that aren't included in this menu.**
+
 ## Table of Contents (Optional)
 
 - [Startup](#startup)
