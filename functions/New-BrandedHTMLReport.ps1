@@ -19,6 +19,7 @@ function New-BrandedHTMLReport {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param (
         [string]$CSVFilePath,
         [string]$ReportTitle

@@ -16,10 +16,16 @@ function Send-Reboots {
         Send-Reboot -TargetComputer "t-client-" -RebootMessage "This computer will reboot in 5 minutes." -RebootTimeInSeconds 300
 
     .NOTES
-        Additional notes about the function.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         [string]$TargetComputer,
         [Parameter(Mandatory = $false)]
         [string]$RebootMessage,

@@ -19,11 +19,17 @@ function Scan-Office2021 {
         Scan-Office2021 -ComputerName "t-client-28"
 
     .NOTES
-        Additional notes about the function.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param (
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer
-        # $Outputfile
     )
 
     $REPORT_TITLE = 'Office2021Scan'

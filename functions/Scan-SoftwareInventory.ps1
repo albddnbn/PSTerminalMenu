@@ -1,27 +1,29 @@
 function Scan-SoftwareInventory {
     <#
-.SYNOPSIS
-    Scans a group of computers for installed applications and exports results to .csv/.xlsx - one per computer.
+    .SYNOPSIS
+        Scans a group of computers for installed applications and exports results to .csv/.xlsx - one per computer.
 
-.DESCRIPTION
-    Scan-SoftwareInventory can handle a single string hostname as a target, a single string filepath to hostname list, or an array/arraylist of hostnames.
+    .DESCRIPTION
+        Scan-SoftwareInventory can handle a single string hostname as a target, a single string filepath to hostname list, or an array/arraylist of hostnames.
 
-.PARAMETER TargetComputer
-    Target computer or computers of the function.
-    Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
-    Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-    First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
-    g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
+    .PARAMETER TargetComputer
+        Target computer or computers of the function.
+        Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
+        Path to text file containing one hostname per line, ex: 'D:\computers.txt'
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
-.PARAMETER Outputfile
-    A string used to create the output .csv and .xlsx files. If not specified, a default filename is created.
+    .PARAMETER Outputfile
+        A string used to create the output .csv and .xlsx files. If not specified, a default filename is created.
 
-.EXAMPLE
-    Scan-SoftwareInventory -TargetComputer "t-client-28" -Title "tclient-28-details"
+    .EXAMPLE
+        Scan-SoftwareInventory -TargetComputer "t-client-28" -Title "tclient-28-details"
 
-.NOTES
-    Additional notes about the function.
-#>
+    .NOTES
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
+    #>
     [CmdletBinding()]
     param (
         [Parameter(

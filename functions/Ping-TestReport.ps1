@@ -27,9 +27,16 @@ function Ping-TestReport {
         Ping-TestReport -Targetcomputer "g-client-" -PingCount 2
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer,
         $PingCount,
         $Outputfile

@@ -33,7 +33,9 @@ function Scan-ForAppOrFilePath {
         Scan-ForAppOrFilePath -ComputerList 't-client-01' -SearchType 'app' -Item 'Microsoft Teams' -outputfile 'teams'
 
     .NOTES
-        Additional notes about the function
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param (
@@ -47,9 +49,6 @@ function Scan-ForAppOrFilePath {
         [String]$SearchType,
         [Parameter(Mandatory = $true)]
         [String]$Item
-        # [ValidateSet('y', 'n', 'N', 'Y')]
-        # [String]$ShowMisses
-        # [STring]$Outputfile
     )
     ############################################################################
     ## Create output filepath, clean any input file search paths that are local,  

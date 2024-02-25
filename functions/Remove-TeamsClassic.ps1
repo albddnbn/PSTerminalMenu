@@ -18,9 +18,16 @@ Function Remove-TeamsClassic {
         Remove-TeamsClassic
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer
     )
 

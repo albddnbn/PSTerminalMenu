@@ -1,4 +1,5 @@
 function Open-Guide {
+    [CmdletBinding()]
     <#
     .SYNOPSIS
         Opens the application guide in web browser. The guide explains the basics of using the menu.
@@ -8,7 +9,9 @@ function Open-Guide {
         The guide explains the menu's directory structure, functionality, and configuration.
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
 
     ##

@@ -20,9 +20,10 @@ function New-IntuneWin32App {
         Generate-IntuneWin32AppFromPSADT -ScriptFolder "C:\Users\williamwonka\Desktop\PSADT-Deployments\AdobeAcrobatReaderDC-2021.001.20155" -InstallationFile "C:\Users\abuddenb\Desktop\PSADT-Deployments\AdobeAcrobatReaderDC-2021.001.20155\Deploy-Application.ps1" -OutputFolder "C:\Users\abuddenb\Desktop\PSADT-Deployments\AdobeAcrobatReaderDC-2021.001.20155"
 
     .NOTES
-        abuddenb / 2024
-        Will not work outside of Terminal Menu right now - 02-17-2024
-    #>  
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
+    #>
     param(
         [string]$Scriptfolder,
         [string]$InstallationFile,

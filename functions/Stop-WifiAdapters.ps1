@@ -26,9 +26,16 @@ function Stop-WifiAdapters {
         Turns off Wi-Fi adapters on computers in room S-A227, without disabling them.
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer,
         [string]$DisableWifiAdapter
     )

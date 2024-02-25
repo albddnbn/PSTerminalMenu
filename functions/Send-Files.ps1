@@ -32,11 +32,18 @@ function Send-Files {
 
     .NOTES
         Function validates the input Computer name by pinging it one time, if it fails - function fails to execute.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(
         [string]$sourcepath,
         [string]$destinationpath,
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $targetcomputer
     )
     BEGIN {

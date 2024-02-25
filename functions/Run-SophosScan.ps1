@@ -25,11 +25,16 @@ Function Run-SophosScan {
         Output file for the function, if not specified will create a default filename.
 
     .NOTES
-        Additional notes about the function.
-        Author of the function.
-        Sources used to create function / credits.
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer,
         # should be comma separated list of target folders/files to scan for on target computers.
         $Targetpaths,

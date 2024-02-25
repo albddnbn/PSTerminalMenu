@@ -28,6 +28,7 @@ function Get-ConnectedPrinters {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
+    [CmdletBinding()]
     param(
         [Parameter(
             Mandatory = $true,
