@@ -70,6 +70,13 @@ function Get-ConnectedPrinters {
             return
         }
         Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+        
+        if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
+            if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
+                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+            }
+        }        
+        
         ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
             if ($Outputfile.toLower() -eq '') {
@@ -167,19 +174,16 @@ function Get-ConnectedPrinters {
             
             if ($getusername) {
                 $obj.Username = $getusername
-                $obj
             }
-            
-            
-        } | Select * -ExcludeProperty RunspaceId
+            $obj
+        } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
 
         $all_results.Add($results) | out-null
     }
 
     END {
-        # Clean up the results a bit
-        # $all_results = $all_results | Select * -ExcludeProperty RunspaceId | Sort -Property PSComputerName
-        $all_results = $all_results | where-object { $_.username -ne '' }
+
+        $all_results = $all_results | sort -property pscomputername
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Details on connected printers gathered, exporting to $outputfile.csv/.xlsx..."
 
 
