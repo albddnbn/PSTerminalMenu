@@ -165,13 +165,16 @@ function Get-AssetInformation {
     }
 
     PROCESS {
-        $results = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock
+        $results = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
         if ($results) {
             $all_results.add($results) | out-null
         }
     }
 
     END {
+
+        ## Sort results
+        $all_results = $all_results | Sort-Object -Property PSComputername
 
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Asset information gathered, exporting to $outputfile.csv/.xlsx..."
 

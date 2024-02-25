@@ -77,6 +77,11 @@ function Get-ComputerDetails {
             return
         }
         Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+        if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
+            if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
+                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+            }
+        }
 
         ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if ($outputfile.tolower() -eq 'n') {
@@ -142,10 +147,10 @@ function Get-ComputerDetails {
                 LastBoot        = $lastboottime
                 SystemUptime    = $system_uptime
             }
-            return $obj
+            $obj
         } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
 
-        $results.add($single_result)
+        $results.add($single_result) | out-null
     }
 
     ########################################################################################################
@@ -153,9 +158,8 @@ function Get-ComputerDetails {
     ########################################################################################################
     END {
         ## Sort the results
-        $results = $results | Sort -Property PSComputerName
         if ($outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
             if ($results.count -le 2) {
                 $results | Format-List
                 # $results | Out-GridView
@@ -167,6 +171,7 @@ function Get-ComputerDetails {
         else {
             if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
                 Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
 
             }
             else {

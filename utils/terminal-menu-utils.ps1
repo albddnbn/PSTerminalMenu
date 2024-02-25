@@ -171,13 +171,14 @@ Function Output-Reports {
     if ($CSVFile) {
         ## Make sure the parent path exists:
 
-        ## if content is an arraylist
-        if ($Content -is [System.Collections.ArrayList]) {
-            ForEach ($single_object in $Content) {
-                $single_object | Export-CSV -Path "$Filepath.csv" -NoTypeInformation -Append -Force
-            }
+        ## This was resolved by doing $results | sort -property pscomputername in the end block of functions that create \
+        ## reports
+        # if ($Content -is [System.Collections.ArrayList]) {
+        #     ForEach ($single_object in $Content) {
+        #         $single_object | Export-CSV -Path "$Filepath.csv" -NoTypeInformation -Append -Force
+        #     }
 
-        }
+        # }
         $files_created += "CSV"
     }
 
