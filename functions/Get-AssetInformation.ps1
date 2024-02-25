@@ -25,6 +25,9 @@ function Get-AssetInformation {
 
     .NOTES
         Monitor details show up in .csv but not .xlsx right now - 12.1.2023
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(
@@ -88,7 +91,7 @@ function Get-AssetInformation {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable])) {
+        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
             $null
             ## If it's a string - check for commas, try to get-content, then try to ping.
         }
@@ -108,14 +111,16 @@ function Get-AssetInformation {
                     $TargetComputer = @($TargetComputer)
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                    return
+                    $TargetComputerInput = $TargetComputerInput + "x"
+                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
                 }
             }
         }
         $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
         # Safety catch to make sure
         if ($null -eq $TargetComputer) {
+            Read-Host "No valid target computeres found. Press enter to continue."
             # user said to end function:
             return
         }
@@ -155,38 +160,39 @@ function Get-AssetInformation {
 
         Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
 
+        $all_results = [system.collections.arraylist]::new()
+
     }
 
     PROCESS {
-        if ($TargetComputer -eq '127.0.0.1') {
-            $results = Invoke-Command -Scriptblock $asset_info_scriptblock
-        }
-        else {
-            $results = Invoke-Command -Computername $Targetcomputer -Scriptblock $asset_info_scriptblock
+        $results = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock
+        if ($results) {
+            $all_results.add($results) | out-null
         }
     }
 
     END {
+
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Asset information gathered, exporting to $outputfile.csv/.xlsx..."
 
         ## Terminal / gridview output
         if ($outputfile -eq 'n') {
-            if ($results.count -le 2) { 
-                $results | Format-Table -AutoSize
+            if ($all_results.count -le 2) { 
+                $all_results | Format-Table -AutoSize
             }
             else {
-                $results | Out-GridView
+                $all_results | Out-GridView
             }
         }
         ## Report output, use Output-Reports if available
         else {
             if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
 
-                Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
+                Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
                 Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
             }
             else {
-                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                $all_results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
                 notepad.exe "$outputfile.csv"        
             }
