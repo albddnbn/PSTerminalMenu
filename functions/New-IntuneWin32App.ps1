@@ -73,7 +73,7 @@ function New-IntuneWin32App {
     Write-Host "$OutputFolder" -Foregroundcolor Cyan -NoNewline
     Write-Host "."
 
-    Start-Process -FilePath "$($Intunewinapputil_exe.fullname)" -ArgumentList "-c ""$ScriptFolder"" -s ""$Installationfile"" -o $OutputFolder -q" -Wait -NoNewWindow
+    Start-Process -FilePath "$($Intunewinapputil_exe.fullname)" -ArgumentList "-c ""$ScriptFolder"" -s ""$Installationfile"" -o $OutputFolder -q" -Wait
 
     Start-Sleep -Seconds 2
     Invoke-Item $OutputFolder

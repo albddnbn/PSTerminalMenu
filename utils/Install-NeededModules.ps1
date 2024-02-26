@@ -25,7 +25,7 @@ function Install-NeededModules {
         # Set-Location "$env:SUPPORTFILES_DIR"
         $module_depenedencies = @('ps-menu', 'importexcel', 'ps2exe')
         ForEach ($modulename in $module_depenedencies) {
-            $module_check = Get-Module -Name $modulename -ListAvailable
+            $module_check = Get-Module -Name $modulename -ListAvailable -erroraction SilentlyContinue
             if ($module_check) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $modulename"
                 ipmo $modulename | out-null
