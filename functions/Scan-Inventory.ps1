@@ -57,7 +57,7 @@ function Scan-Inventory {
             ean                 = $ean
         }
         # These property values are SKIPPED when item is scanned / prompting for new values:
-        $SKIPPED_PROPERTY_VALUES = @('upc', 'type', 'Compatible_printers', 'ean', 'yield', 'color')
+        # $SKIPPED_PROPERTY_VALUES = @('upc', 'type', 'Compatible_printers', 'ean', 'yield', 'color')
         $obj.PSObject.Properties | ForEach-Object {
             if ($_.Name -notin $SKIPPED_PROPERTY_VALUES) {
                 
@@ -85,7 +85,7 @@ function Scan-Inventory {
         New-Item -Path "$env:PSMENU_DIR\inventory\master-inventory.csv" -ItemType 'File' -Force | Out-Null
     }
     # get filesize of master csv file
-    $reply = Read-Host "Import items from $MASTER_CSV_FILE? (y/n)"
+    $reply = Read-Host "Import items from $MASTER_CSV_FILE ? (y/n)"
     if ($reply.tolower() -eq 'y') {
         try {
             $MASTER_ITEM_LIST = import-csv $MASTER_CSV_FILE
@@ -123,7 +123,10 @@ function Scan-Inventory {
         # CHECK CURRENT INVENTORY ARRAYLIST
         $CURRENT_INVENTORY | ForEach-Object {
             ## Search upc codes
-            if ($user_input -in @($_.upc)) {
+            write-host "checking $($_.upc), $($_.description)"
+            $upctest = $_.upc
+            $upctest.gettype().name
+            if ($user_input -eq ([string]$($_.upc))) {
                 Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
                 $ITEM_FOUND = $true
                 $player = New-Object System.Media.SoundPlayer
@@ -132,35 +135,35 @@ function Scan-Inventory {
                 $player.Play()
             }
             ## Search EAN codes
-            elseif ($user_input -in @($_.ean)) {
-                Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-                $ITEM_FOUND = $true
+            # elseif ($user_input -in @($_.ean)) {
+            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
+            #     $ITEM_FOUND = $true
 
-                $player = New-Object System.Media.SoundPlayer
-                $player.SoundLocation = $POSITIVE_BEEP_PATH
-                $player.Load()
-                $player.Play()
-            }
-            ## Search item/part number codes
-            elseif ($user_input -in @($_.code)) {
-                Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-                $ITEM_FOUND = $true
+            #     $player = New-Object System.Media.SoundPlayer
+            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
+            #     $player.Load()
+            #     $player.Play()
+            # }
+            # ## Search item/part number codes
+            # elseif ($user_input -in @($_.code)) {
+            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
+            #     $ITEM_FOUND = $true
 
-                $player = New-Object System.Media.SoundPlayer
-                $player.SoundLocation = $POSITIVE_BEEP_PATH
-                $player.Load()
-                $player.Play()
-            }
-            ## Search part numbers
-            elseif ($user_input -in @($_.part_num)) {
-                Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-                $ITEM_FOUND = $true
+            #     $player = New-Object System.Media.SoundPlayer
+            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
+            #     $player.Load()
+            #     $player.Play()
+            # }
+            # ## Search part numbers
+            # elseif ($user_input -in @($_.part_num)) {
+            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
+            #     $ITEM_FOUND = $true
 
-                $player = New-Object System.Media.SoundPlayer
-                $player.SoundLocation = $POSITIVE_BEEP_PATH
-                $player.Load()
-                $player.Play()
-            }
+            #     $player = New-Object System.Media.SoundPlayer
+            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
+            #     $player.Load()
+            #     $player.Play()
+            # }
 
             # if item was found - get index of item
             if ($ITEM_FOUND) {
@@ -249,9 +252,14 @@ function Scan-Inventory {
                 $chosen_item_color = $chosen_item_name.color
 
                 $obj = Create-NewItemObject -Description $chosen_item_name -code $chosen_item_code -UPC $chosen_item_upc -Part_num $chosen_item_part_num -color $chosen_item_color -brand $chosen_item_brand -ean $chosen_item_ean
-
+                $obj
+                read-host "press enter to continue"
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Adding the object to inventory_csv variable.."
                 $CURRENT_INVENTORY.add($obj) | Out-Null
+
+                $CURRENT_INVENTORY
+                Read-Host "This is current inventory"
+
             }
             else {
 
