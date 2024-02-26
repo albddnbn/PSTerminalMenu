@@ -17,6 +17,7 @@ function Add-PrinterLogicPrinter {
     .PARAMETER PrinterName
         Name of the printer in printerlogic. Ex: 't-prt-lib-01', you can use the name or the full 'path' to the printer, ex: 'STANTON\B WING..\s-prt-b220-01'
         Name must match the exact 'name' of the printer, as listed in PrinterLogic.
+
     .EXAMPLE
         Connect single remote target computer to t-prt-lib-01 printer:
         Add-PrinterLogicPrinter -TargetComputer "t-client-28" -PrinterName "t-prt-lib-01"
@@ -30,7 +31,7 @@ function Add-PrinterLogicPrinter {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    [CmdletBinding()]
+    # [CmdletBinding()]
     param (
         [Parameter(
             Mandatory = $true,
@@ -38,8 +39,43 @@ function Add-PrinterLogicPrinter {
         )]
         $TargetComputer,
         [string]$PrinterName
-    )   
-    $TargetComputer = $TargetComputer | where-object { $_ -ne $null }
+    )
+    # BEGIN {
+    $thedate = Get-Date -Format 'yyyy-MM-dd'
+    ## TARGETCOMPUTER HANDLING:
+    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
+    if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+        $null
+        ## If it's a string - check for commas, try to get-content, then try to ping.
+    }
+    elseif ($TargetComputer -is [string]) {
+        if ($TargetComputer -in @('', '127.0.0.1')) {
+            $TargetComputer = @('127.0.0.1')
+        }
+        elseif ($Targetcomputer -like "*,*") {
+            $TargetComputer = $TargetComputer -split ','
+        }
+        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+            $TargetComputer = Get-Content $TargetComputer
+        }
+        else {
+            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+            if ($test_ping) {
+                $TargetComputer = @($TargetComputer)
+            }
+            else {
+                $TargetComputerInput = $TargetComputerInput + "x"
+                $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                $TargetComputerInput = $TargetComputerInput | Sort-Object   
+            }
+        }
+    }
+    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+    # Safety catch to make sure
+    if ($null -eq $TargetComputer) {
+        # user said to end function:
+        return
+    }
     
     $connect_to_printer_block = {
         param(
@@ -79,8 +115,9 @@ function Add-PrinterLogicPrinter {
 
     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Connecting printer: " -NoNewLine
     Write-Host "$printername" -Foregroundcolor Yellow
-    Write-Host ""
-
+    Write-Host "targetcomputer value : $TargetComputer" -foregroundcolor cyan
+    # }
+    # PROCESS {
     if ($TargetComputer -eq '127.0.0.1') {
         $results = Invoke-Command -Scriptblock $connect_to_printer_block -ArgumentList $PrinterName
         $results | add-member -MemberType NoteProperty -Name 'PSComputerName' -Value $env:COMPUTERNAME
@@ -88,7 +125,6 @@ function Add-PrinterLogicPrinter {
     else {
         $results = Invoke-Command -ComputerName $TargetComputer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
     }
-
     $need_software_installed = ($results | where-object { $_.clientsoftware -eq 'NO' }).PSComputerName
 
     $failed_connections = ($results | Where-Object { $_.connectstatus -eq 'NO' }).PSComputerName
@@ -114,5 +150,9 @@ function Add-PrinterLogicPrinter {
         # Write-Host "$($failed_connections -join ', ')" -Foregroundcolor red
         $failed_connections
     }
+    # }
+    # END {
+
     Read-Host "Press enter to continue."
+    # }
 }
