@@ -16,14 +16,30 @@ function Scan-Inventory {
 
     .PARAMETER ScanTitle
         Title of the scan, will be used to name the output file(s).
+    
+    .PARAMETER ScanList
+        Absolute path to a file containing codes scanned using barcode scanner.
+        You can scan all codes to a text file and then submit them as a list to speed things up.
+        Note to add catch in the list scanning - functionality so user can make sure items don't look off.
+        For Ex: I've scanned some printer-related items, and RARELY had a wierd item returned, like Denim Jeans.
+        This isn't common, especially for major brand toner-related items - Dell, HP, Lexmark, Brother.
 
     .NOTES
-        abuddenb / 2024
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
     param(
-        [String]$ScanTitle = 'Inventory'
+        [String]$ScanTitle = 'Inventory',
+        [string]$ScanList
     )
+    # if (-not (Get-Module -Name 'PSADT' -ListAvailable)) {
+    #     Install-Module -Name 'PSADT' -Force
+    # }
+    # ipmo psadt
+
+
     ## Creates item with specified properties (in parameters) and then prompts user to keep or change each value, 
     ## returns changed object
     Function Create-NewItemObject {
@@ -39,8 +55,10 @@ function Scan-Inventory {
             $yield = '',
             $type = '',
             $comments = '',
-            $ean = ''
+            $ean = '',
+            $Seek_input = $true
         )
+        ## "description","compatible_printers","code","upc","stock","part_num","color","brand","yield","type","comments","ean"
         $obj = [pscustomobject]@{
             Description         = $Description
             Compatible_printers = $Compatible_printers
@@ -56,13 +74,16 @@ function Scan-Inventory {
             comments            = $comments
             ean                 = $ean
         }
+        if (-not $Seek_input) {
+            return $obj
+        }
         # These property values are SKIPPED when item is scanned / prompting for new values:
-        # $SKIPPED_PROPERTY_VALUES = @('upc', 'type', 'Compatible_printers', 'ean', 'yield', 'color')
+        $SKIPPED_PROPERTY_VALUES = @('upc', 'type', 'Compatible_printers', 'ean', 'yield', 'color', 'stock')
         $obj.PSObject.Properties | ForEach-Object {
             if ($_.Name -notin $SKIPPED_PROPERTY_VALUES) {
                 
                 $current_value = $_.Value
-                Write-Host "Current value of $($_.Name) is: $($_.Value), enter 'keep' to retain value."
+                Write-Host "Current value of $($_.Name) is: $($_.Value), enter 'k' to retain value."
                 $_.Value = Read-Host "Enter value for $($_.Name)"
                 if ($_.Value -eq 'k') {
                     $_.Value = $current_value
@@ -84,6 +105,7 @@ function Scan-Inventory {
     if (-not (Test-path "$env:PSMENU_DIR\inventory\master-inventory.csv" -erroraction SilentlyContinue)) {
         New-Item -Path "$env:PSMENU_DIR\inventory\master-inventory.csv" -ItemType 'File' -Force | Out-Null
     }
+    # New-File -Path "$env:PSMENU_DIR\inventory\master-inventory.csv"
     # get filesize of master csv file
     $reply = Read-Host "Import items from $MASTER_CSV_FILE ? (y/n)"
     if ($reply.tolower() -eq 'y') {
@@ -105,117 +127,224 @@ function Scan-Inventory {
     Write-Host "Output file(s) will be at: $outputfile .csv and/or .xlsx" -foregroundcolor green
     
     ## Holds items scanned during this run of the function, will be output to report .csv/.xlsx
-    $CURRENT_INVENTORY = [System.collections.arraylist]::new() 
+    $CURRENT_INVENTORY = [System.collections.arraylist]::new()
 
-    # Begin 'scan loop' where user scans items.
+    ## add items from master item list to current inventory, set stock to 0
+    $MASTER_ITEM_LIST | ForEach-Object {
+        $_.stock = '0'
+        $CURRENT_INVENTORY.Add($_) | Out-Null
+    }
 
-    ## First - the scanned code is checked against the master item list, 
-    ## If it's not found, the script sends a request to the API URL with scanned code to try to get details.
-    while ($true) {
-        $ITEM_FOUND = $false
-        $ITEM_HANDLED = $false
+    Function Get-ScannedItems {
+        param(
+            $scanned_codes,
+            $inventory_list
+        )
 
-        $user_input = Read-Host "Scan code, or type 'exit' to quit"
-        if ($user_input.ToLower() -eq 'exit') {
-            break
-        }
+        $missed_items = [System.Collections.ArrayList]::new()
 
-        # CHECK CURRENT INVENTORY ARRAYLIST
-        $CURRENT_INVENTORY | ForEach-Object {
-            ## Search upc codes
-            write-host "checking $($_.upc), $($_.description)"
-            $upctest = $_.upc
-            $upctest.gettype().name
-            if ($user_input -eq ([string]$($_.upc))) {
-                Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-                $ITEM_FOUND = $true
-                $player = New-Object System.Media.SoundPlayer
-                $player.SoundLocation = $POSITIVE_BEEP_PATH
-                $player.Load()
-                $player.Play()
-            }
-            ## Search EAN codes
-            # elseif ($user_input -in @($_.ean)) {
-            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-            #     $ITEM_FOUND = $true
-
-            #     $player = New-Object System.Media.SoundPlayer
-            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
-            #     $player.Load()
-            #     $player.Play()
-            # }
-            # ## Search item/part number codes
-            # elseif ($user_input -in @($_.code)) {
-            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-            #     $ITEM_FOUND = $true
-
-            #     $player = New-Object System.Media.SoundPlayer
-            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
-            #     $player.Load()
-            #     $player.Play()
-            # }
-            # ## Search part numbers
-            # elseif ($user_input -in @($_.part_num)) {
-            #     Write-Host "Found match for $user_input in current inventory, increasing stock by 1."
-            #     $ITEM_FOUND = $true
-
-            #     $player = New-Object System.Media.SoundPlayer
-            #     $player.SoundLocation = $POSITIVE_BEEP_PATH
-            #     $player.Load()
-            #     $player.Play()
-            # }
-
-            # if item was found - get index of item
-            if ($ITEM_FOUND) {
-                $matched_item_index = $CURRENT_INVENTORY.IndexOf($_)
-                $matched_item = $CURRENT_INVENTORY[$matched_item_index]
-                Write-Host "Set matched item to: $($matched_item.description)"
-
-                $CURRENT_INVENTORY | ForEach-Object {
-                    if ($matched_item.description -eq $_.description) {
-                        $_.stock = [string]$([int]$_.stock + 1)
-                        Write-Host "`rIncreased stock of $($_.description) by 1, to: $($_.stock).`n"
-                    }
-                }
-                    
-                $ITEM_HANDLED = $true
-            }
-        }
-
-        ## FOR MASTER LIST - only checks against UPC column for now.
-        ## may be able to take the current list and master list, loop through the two - and then run the same 
-        ## if/elseif structure in loop
-        if (-not ($ITEM_FOUND)) {
-            Write-Host "Item not found in current inventory, checking master list.."
-
-            $MASTER_ITEM_LIST | ForEach-Object {
-                if ($user_input -in @($_.upc, $_.ean, $_.code, $_.part_num)) {
-                    # if ($user_input -in @($_.upc)) {
-                    Write-Host "Found match in master list for $($user_input), adding item to current list. "
-                    $CURRENT_INVENTORY.Add($_) | Out-Null
-                    $ITEM_FOUND = $true
-
+        # if api lookup can't recognize a code, the code won't be looked up again.
+        $invalid_upcs = [System.Collections.ArrayList]::new()
+        $API_LOOKUP_LIMIT_REACHED = $false
+        ForEach ($scanned_code in $scanned_codes) {
+            write-host "Checking: $scanned_code"
+            $ITEM_FOUND = $false
+            # CHECK CURRENT INVENTORY ARRAYLIST
+            $inventory_list | ForEach-Object {
+                ## Search upc codes
+                # write-host "checking $($_.upc), $($_.description)"
+                $upctest = $_.upc
+                $upctest.gettype().name
+                if ($scanned_code -eq ([string]$($_.upc))) {
+                    Write-Host "Found match for $scanned_code in upc/ean columns of current inventory, increasing stock by 1."
                     $player = New-Object System.Media.SoundPlayer
                     $player.SoundLocation = $POSITIVE_BEEP_PATH
                     $player.Load()
                     $player.Play()
-                }
-                
-                # if item was found - get index of item
-                if ($ITEM_FOUND) {
-                    $matched_item_index = $MASTER_ITEM_LIST.IndexOf($_)
-                    $matched_item = $MASTER_ITEM_LIST[$matched_item_index]
 
-                    Write-Host "Adding the item from master list to current inventory list with stock of 1."
-                    $matched_item.stock = '1'
-                    $CURRENT_INVENTORY.Add($matched_item) | Out-Null
-                    $ITEM_HANDLED = $true
+                    $matched_item_index = $inventory_list.IndexOf($_)
+                    $matched_item = $inventory_list[$matched_item_index]
+                    Write-Host "Set matched item to: $($matched_item.description)"
+
+                    $inventory_list | ForEach-Object {
+                        if ($matched_item.description -eq $_.description) {
+                            $_.stock = [string]$([int]$_.stock + 1)
+                            Write-Host "`rIncreased stock of $($_.description) by 1, to: $($_.stock).`n"
+                        }
+                    }
+                    $ITEM_FOUND = $true
                 }
-            } 
+            }
+
+            ## Continue to next iteration / scanned item if item was found
+            if ($ITEM_FOUND) {
+                continue
+            }
+            else {
+                ## If the API has already said the code is invalid, or returned an 'exceeded limit' response
+                ## - no point in continuing
+                if ($scanned_code -in $invalid_upcs) {
+                    Write-Host "Skipping $scanned_code, it was already determined to be an invalid upc." -foregroundcolor yellow
+                    $missed_items.add($scanned_code) | Out-Null
+                    continue
+                }
+                elseif ($API_LOOKUP_LIMIT_REACHED) {
+                    Write-Host "API LOOKUP LIMIT REACHED FOR THE DAY! (~100 for free last checked)" -Foregroundcolor red
+                    $missed_items.add($scanned_code) | Out-Null
+                    continue
+                }
+
+                ## If CODE not 'invalid' / limit not reached - continue with API lookup
+
+                Write-Host "input: $scanned_code not found in current inventory list, checking api.."
+                ## API LOOKUP
+                ## Play 'BAD BEEP'       
+                $player = New-Object System.Media.SoundPlayer
+                $player.SoundLocation = $NEGATIVE_BEEP_PATH
+                $player.Load()
+                $player.Play()
+                # if reaches this point, then item is not already in the lists so API has to be checked.
+                try {
+                    $api_response = Invoke-WebRequest -URI "$API_URL$($scanned_code)"
+                }
+                catch [System.Net.WebException] {
+                    # Handle WebException here
+                    Write-Host "API response was for invalud upc or to slow down."
+                    ## if the exception error message contains TOO_FAST - start - sleep 15 seconds
+                    Write-Host "This is the exception:`n$($_.errordetails)"
+                    if ($($_.errordetails) -like "*INVALID_UPC*") {
+                        Write-Host "API returned INVALID UPC for: $scanned_code." -Foregroundcolor Yellow
+                        $missed_items.add($scanned_code) | Out-Null
+                        $invalid_upcs.add($scanned_code) | Out-Null
+
+                        Write-Host "Adding: $scanned_code to list of items that need to be accounted for manually." -foregroundcolor yellow
+                    }
+                    ## Sending API lookups too fast - slow down for 90s
+                    elseif ($($_.errordetails) -like "*TOO_FAST*") {
+                        Write-Host "API returned TOO_FAST for: $scanned_code." -Foregroundcolor Yellow
+                        $missed_items.add($scanned_code) | Out-Null
+                        Write-Host "Slowing down for 90 seconds." -foregroundcolor yellow
+                        Start-Sleep -Seconds 90
+                    }
+                    ## API Lookup limit reached for the day - api lookups won't continue in next loop iterations
+                    elseif ($($_.errordetails) -like "*EXCEED_LIMIT*") {
+                        Write-Host "API LOOKUP LIMIT REACHED FOR THE DAY! (~100 for free last checked)" -Foregroundcolor red
+                        $missed_items.add($scanned_code) | Out-Null
+                        Write-Host "Slowing down for 90 seconds." -foregroundcolor yellow
+                        $API_LOOKUP_LIMIT_REACHED = $true
+                    }
+                    continue
+                }
+                # convert api_response content from json
+                $json_response_content = $api_response | ConvertFrom-Json
+                # make sure response was 'ok'
+                ## if the items.title isn't a system/object (psobject)?
+                if (($([string]($json_response_content.code)) -eq 'OK') -and ($json_response_content.items.title)) {
+                    Write-Host "API response for $scanned_code was 'OK'" -Foregroundcolor Green
+                    $menu_options = $json_response_content.items.title | sort
+                    ## "description","compatible_printers","code","upc","stock","part_num","color","brand","yield","type","comments","ean"
+                    ## this gets info from first result
+                    # present menu - user can choose between multiple item results (theoretically):
+                    $chosen_item_name = $Menu_options | select -first 1
+
+                    # get item object - translate it to new object
+                    $item_obj = $json_response_content.items | where-object { $_.title -eq $chosen_item_name }
+
+                    ## create item object using default / values from the itenm object
+                    $obj = Create-NewItemObject -Description $chosen_item_name -code $item_obj.model -stock '1' -UPC $item_obj.upc -Part_num $item_obj.model -color $item_obj.color -brand $item_obj.brand -ean $item_obj.ean -seek_input $false
+                    # read-host "press enter to continue"
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Adding the object to inventory_csv variable.." -ForegroundColor green
+                    $inventory_list.add($obj) | Out-Null
+
+                }
+                else {
+                    $missed_items.add($scanned_code) | Out-Null
+                    Write-Host "Adding: $scanned_code to list of items that need to be accounted for manually." -foregroundcolor yellow
+                }
+            }
         }
 
-        ## API LOOKUP IF ALL ELSE FAILS:
-        if (-not $ITEM_FOUND) {
+        ## Safety export of inventory_list to csv (in case changes messed up how list is passed back out to report creation)
+        $inventory_list | export-csv "inventoryscan-$(get-date -format 'yyyy-MM-dd-hh-mm-ss').csv" -NoTypeInformation -Force
+        
+        $return_obj = [pscustomobject]@{
+            misseditems   = $missed_items
+            inventorylist = $inventory_list
+        }
+        
+        return $return_obj
+    }
+
+    if (test-path $Scanlist -erroraction SilentlyContinue) {
+        read-host "scan list detected."
+        $scanned_codes = Get-Content $Scanlist
+
+        $results = Get-ScannedItems -scanned_codes $scanned_codes -inventory_list $CURRENT_INVENTORY
+        $missed_items = $results.misseditems
+        # $written_inventory_list = $results.inventorylist
+        # # Write-Host "This is the missed items array: $missed_items"
+        # # Write-Host "This is inventory list $written_inventory_list"
+        # # Read-Host "The results array and inventory lists should be above this."
+
+        if ($missed_items) {
+
+            $datetimestring = get-date -format 'yyyy-MM-dd-hh-mm-ss'
+            "These items were missed during scan at: $datetimestring`r" | Out-File "$env:PSMENU_DIR\inventory\missed_items-$datetimestring.txt"
+            $missed_items | Out-File "$env:PSMENU_DIR\inventory\missed_items-$datetimestring.txt" -Append
+            Write-Host "Items that were not found in the master list or API lookup have been saved to $env:PSMENU_DIR\inventory\missed_items-$datetimestring.txt"
+        
+            Invoke-item "$env:PSMENU_DIR\inventory\"
+        }
+        else {
+            Write-Host "All items were found in the master list or API lookup." -Foregroundcolor Green
+        
+        }
+        $CURRENT_INVENTORY = $results.inventorylist
+    }
+    else {
+        # Begin 'scan loop' where user scans items.
+        ## First - the scanned code is checked against the master item list, 
+        ## If it's not found, the script sends a request to the API URL with scanned code to try to get details.
+        while ($true) {
+
+            $user_input = Read-Host "Scan code, or type 'exit' to quit"
+            if ($user_input.ToLower() -eq 'exit') {
+                break
+            }
+            $ITEM_FOUND = $false
+
+            # CHECK CURRENT INVENTORY ARRAYLIST
+            $CURRENT_INVENTORY | ForEach-Object {
+                ## Search upc codes
+                write-host "checking $($_.upc), $($_.description)"
+                $upctest = $_.upc
+                $upctest.gettype().name
+                if (($user_input -eq ([string]$($_.upc))) -or ($user_input -eq ([string]$($_.ean)))) {
+                    Write-Host "Found match for $user_input in upc/ean columns of current inventory, increasing stock by 1."
+                    $player = New-Object System.Media.SoundPlayer
+                    $player.SoundLocation = $POSITIVE_BEEP_PATH
+                    $player.Load()
+                    $player.Play()
+
+                    $matched_item_index = $CURRENT_INVENTORY.IndexOf($_)
+                    $matched_item = $CURRENT_INVENTORY[$matched_item_index]
+                    Write-Host "Set matched item to: $($matched_item.description)"
+
+                    $CURRENT_INVENTORY | ForEach-Object {
+                        if ($matched_item.description -eq $_.description) {
+                            $_.stock = [string]$([int]$_.stock + 1)
+                            Write-Host "`rIncreased stock of $($_.description) by 1, to: $($_.stock).`n"
+                        }
+                    }
+                    $ITEM_FOUND = $true
+                }
+            }
+
+            ## Continue to next iteration / scanned item if item was found
+            if ($ITEM_FOUND) {
+                continue
+            }
+            ## API LOOKUP
             ## Play 'BAD BEEP'       
             $player = New-Object System.Media.SoundPlayer
             $player.SoundLocation = $NEGATIVE_BEEP_PATH
@@ -231,9 +360,11 @@ function Scan-Inventory {
                 Write-Host "API response for $user_input was 'OK', here are the results:" -Foregroundcolor Green
                 Write-Host ""
                 $menu_options = $json_response_content.items.title | sort
-
+                ## "description","compatible_printers","code","upc","stock","part_num","color","brand","yield","type","comments","ean"
+                ## this gets info from first result
                 $item_details = $json_response_content.items | where-object { $_.title -eq $($menu_options | select -first 1) }
-                $useful_details = $item_details | Select ean, title, description, upc, brand, model, color, dimension, category
+                $useful_details = $item_details | Select title, description, model, upc, color, brand, ean, dimension, category
+                # $useful_details = $item_details | Select ean, title, description, upc, brand, model, color, dimension, category
 
                 $useful_details | Format-List
 
@@ -243,16 +374,12 @@ function Scan-Inventory {
 
                 $chosen_item_name = Menu $menu_options
 
-                Write-Host ""
-                $chosen_item_code = $chosen_item_name.model
-                $chosen_item_part_num = $chosen_item_name.model
-                $chosen_item_upc = $chosen_item_name.upc
-                $chosen_item_ean = $chosen_item_name.ean
-                $chosen_item_brand = $chosen_item_name.brand
-                $chosen_item_color = $chosen_item_name.color
+                # get item object - translate it to new object
+                $item_obj = $json_response_content.items | where-object { $_.title -eq $chosen_item_name }
 
-                $obj = Create-NewItemObject -Description $chosen_item_name -code $chosen_item_code -UPC $chosen_item_upc -Part_num $chosen_item_part_num -color $chosen_item_color -brand $chosen_item_brand -ean $chosen_item_ean
-                $obj
+                ## create item object using default / values from the itenm object
+                $obj = Create-NewItemObject -Description $chosen_item_name -code $item_obj.model -UPC $item_obj.upc -Part_num $item_obj.model -color $item_obj.color -brand $item_obj.brand -ean $item_obj.ean
+
                 read-host "press enter to continue"
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Adding the object to inventory_csv variable.."
                 $CURRENT_INVENTORY.add($obj) | Out-Null
@@ -265,18 +392,16 @@ function Scan-Inventory {
 
                 Write-Host "API was unable to find matching item for: $user_input."
                 $response = Menu @('Scan again?', 'Create item manually')
-                if ($repsonse -eq 'Scan again?') {
+                if ($response -eq 'Scan again?') {
                     continue
                 }
                 else {
                     $obj = Create-NewItemObject -UPC $user_input
                     $CURRENT_INVENTORY.add($obj) | Out-Null
                 }
-            }
-            $ITEM_HANDLED = $true
+            }    
         }
     }
-    
     #########################################################
     ## INVENTORY SPREADSHEET CREATION (end of scanning loop):
     #########################################################
@@ -315,6 +440,5 @@ function Scan-Inventory {
         Write-Host "Failed to open $outputfile.xlsx, opening .csv in notepad." -Foregroundcolor Yellow
         notepad.exe "$outputfile.csv"
     }
-
     Read-Host "Press enter to continue."
 }
