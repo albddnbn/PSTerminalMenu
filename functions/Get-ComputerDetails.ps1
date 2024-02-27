@@ -37,7 +37,7 @@ function Get-ComputerDetails {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        [string]$Outputfile
+        [string]$Outputfile = ''
     )
 
     ############################################################################################
@@ -48,45 +48,53 @@ function Get-ComputerDetails {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
+                }
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+
+            ## At this point - if targetcomputer is null - its been provided as a parameter
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+
+            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
+                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
+                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
                 }
             }
         }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }
-        Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-        if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-            if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-            }
-        }
-
+        ## Outputfile path needs to be created regardless of how Targetcomputer is submitted to function
         ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if ($outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
@@ -112,9 +120,7 @@ function Get-ComputerDetails {
                 }
             }
         }
-        ## Attempts to use Get-LiveHosts utility function from terminal menu to filter offline hosts
-        $TargetComputer = $TargetComputer | where-object { $_ -ne $null }
-        ## Results list
+        ## Create empty results list
         $results = [system.collections.arraylist]::new()
     }
 
@@ -122,39 +128,49 @@ function Get-ComputerDetails {
     ## PROCESS - Collects computer details from specified computers using CIM commands ##
     #####################################################################################   
     PROCESS {
-        ## Save results to variable
-        $single_result = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-            # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
-            $manufacturer = (get-ciminstance -class win32_computersystem).manufacturer
-            $model = (get-ciminstance -class win32_computersystem).model
-            $biosversion = (get-ciminstance -class win32_bios).smbiosbiosversion
-            $bioreleasedate = (get-ciminstance -class win32_bios).releasedate
-            $winbuild = (get-ciminstance -class win32_operatingsystem).buildnumber
-            $totalram = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-            $totalram = [string]$totalram + " GB"
-            $lastboottime = (Get-Ciminstance -class win32_operatingsystem).LastBootUpTime
-            # get system up time using current time and last bootup time, format it
-            $system_uptime = $(Get-Date) - $lastboottime
-            $system_uptime = $system_uptime.tostring("hh\:mm\:ss")
-            $system_uptime += " Hours"
-            # current_user
-            $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+        if ($Targetcomputer) {
+            # ping test
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
 
-            $obj = [PSCustomObject]@{
-                Manufacturer    = $manufacturer
-                Model           = $model
-                CurrentUser     = $current_user
-                WindowsBuild    = $winbuild
-                BiosVersion     = $biosversion
-                BiosReleaseDate = $bioreleasedate
-                TotalRAM        = $totalram
-                LastBoot        = $lastboottime
-                SystemUptime    = $system_uptime
+                ## Save results to variable
+                $single_result = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+                    # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
+                    $manufacturer = (get-ciminstance -class win32_computersystem).manufacturer
+                    $model = (get-ciminstance -class win32_computersystem).model
+                    $biosversion = (get-ciminstance -class win32_bios).smbiosbiosversion
+                    $bioreleasedate = (get-ciminstance -class win32_bios).releasedate
+                    $winbuild = (get-ciminstance -class win32_operatingsystem).buildnumber
+                    $totalram = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+                    $totalram = [string]$totalram + " GB"
+                    $lastboottime = (Get-Ciminstance -class win32_operatingsystem).LastBootUpTime
+                    # get system up time using current time and last bootup time, format it
+                    $system_uptime = $(Get-Date) - $lastboottime
+                    $system_uptime = $system_uptime.tostring("hh\:mm\:ss")
+                    $system_uptime += " Hours"
+                    # current_user
+                    $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+
+                    $obj = [PSCustomObject]@{
+                        Manufacturer    = $manufacturer
+                        Model           = $model
+                        CurrentUser     = $current_user
+                        WindowsBuild    = $winbuild
+                        BiosVersion     = $biosversion
+                        BiosReleaseDate = $bioreleasedate
+                        TotalRAM        = $totalram
+                        LastBoot        = $lastboottime
+                        SystemUptime    = $system_uptime
+                    }
+                    $obj
+                } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+
+                $results.add($single_result) | out-null
             }
-            $obj
-        } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
-
-        $results.add($single_result) | out-null
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+            }
+        }
     }
 
     ########################################################################################################
@@ -174,15 +190,32 @@ function Get-ComputerDetails {
                 }
             }
             else {
-                if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
-                    Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
+
+                ## Try ImportExcel
+                try {
+                    ## xlsx attempt:
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = 'Details'
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
                 }
-                else {
-                    $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-                    notepad.exe "$outputfile.csv"
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
+                Invoke-item "$($outputfile | split-path -Parent)"
             }
         }
         else {

@@ -28,12 +28,13 @@ function Install-NeededModules {
             $module_check = Get-Module -Name $modulename -ListAvailable -erroraction SilentlyContinue
             if ($module_check) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $modulename"
-                ipmo $modulename | out-null
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $modulename not found, attempting to install now..."
                 Install-Module $modulename -Force
             }
+            ipmo $modulename | out-null
+
         }
     }
     elseif (-not $TestConnection) {

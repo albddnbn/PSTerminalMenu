@@ -35,7 +35,7 @@ function Get-AssetInformation {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Outputfile
     )
     BEGIN {
@@ -84,7 +84,7 @@ function Get-AssetInformation {
 
             return $obj
         }
-
+        Write-host "$targetcomputer" -foregroundcolor green
         #####################
         ##  Start of function
         #####################
@@ -92,7 +92,7 @@ function Get-AssetInformation {
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
         if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
+            $TargetComputer = $TargetComputer
             ## If it's a string - check for commas, try to get-content, then try to ping.
         }
         elseif ($TargetComputer -is [string]) {

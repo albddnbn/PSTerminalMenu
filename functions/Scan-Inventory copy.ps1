@@ -153,8 +153,8 @@ function Scan-Inventory {
             $inventory_list | ForEach-Object {
                 ## Search upc codes
                 # write-host "checking $($_.upc), $($_.description)"
-                # $upctest = $_.upc
-                # $upctest.gettype().name
+                $upctest = $_.upc
+                $upctest.gettype().name
                 if ($scanned_code -eq ([string]$($_.upc))) {
                     Write-Host "Found match for $scanned_code in upc/ean columns of current inventory, increasing stock by 1."
                     $player = New-Object System.Media.SoundPlayer
@@ -190,18 +190,6 @@ function Scan-Inventory {
                 }
                 elseif ($API_LOOKUP_LIMIT_REACHED) {
                     Write-Host "API LOOKUP LIMIT REACHED FOR THE DAY! (~100 for free last checked)" -Foregroundcolor red
-                    $missed_items.add($scanned_code) | Out-Null
-                    continue
-                }
-                ## IF - the user input has a space or dash - it's not gonna work, no point continuing. 
-                elseif (($scanned_code -like "* *") -or ($scanned_code -like "*-*")) {
-                    Write-Host "Skipping $scanned_code, it contains a space or dash." -foregroundcolor yellow
-                    $missed_items.add($scanned_code) | Out-Null
-                    continue
-                }
-                ## IF - the user input has any letters in it - not a upc code
-                elseif ($scanned_code -cmatch "^*[A-Z][a-z]*$") { 
-                    Write-Host "Skipping $scanned_code, it has letters." -foregroundcolor yellow
                     $missed_items.add($scanned_code) | Out-Null
                     continue
                 }
@@ -278,7 +266,7 @@ function Scan-Inventory {
 
         ## Safety export of inventory_list to csv (in case changes messed up how list is passed back out to report creation)
         $inventory_list | export-csv "inventoryscan-$(get-date -format 'yyyy-MM-dd-hh-mm-ss').csv" -NoTypeInformation -Force
-        $missed_items | out-file "misseditems-$(get-date -format 'yyyy-MM-dd-hh-mm-ss').csv"
+
         $return_obj = [pscustomobject]@{
             misseditems   = $missed_items
             inventorylist = $inventory_list
