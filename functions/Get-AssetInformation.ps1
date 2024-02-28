@@ -167,7 +167,7 @@ function Get-AssetInformation {
                         $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate-$iterator_var"
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
                         }
                         else {
                             break
