@@ -1,0 +1,3 @@
+Install-Application:
+    - add a parameter or something along those lines, so script will run the function exactly the same way, except it will use the
+      -DeploymentType 'Uninstall' parameter value as opposed to 'Install'
