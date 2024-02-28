@@ -44,6 +44,7 @@ function Get-CurrentUser {
     )
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
     ## 2. Create output filepath if necessary.
+    ## 3. Create empty results arraylist to hold results from each target machine (collected during the PROCESS block).
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
@@ -78,18 +79,9 @@ function Get-CurrentUser {
                 }
             }
             $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-
-            ## At this point - if targetcomputer is null - its been provided as a parameter
             # Safety catch
             if ($null -eq $TargetComputer) {
                 return
-            }
-            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-
-            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-                }
             }
         }
 
@@ -111,7 +103,7 @@ function Get-CurrentUser {
             }
         }
 
-        ## Create empty results container
+        ## 3. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
 
@@ -124,7 +116,6 @@ function Get-CurrentUser {
             ## 2. Send one test ping
             $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
             if ($ping_result) {
-
                 # Get Computers details and create an object
                 $logged_in_user_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
                     $model = (get-ciminstance -class win32_computersystem).model
@@ -150,7 +141,6 @@ function Get-CurrentUser {
                     }
                     $obj
                 } 
-	
                 $logged_in_user_info = $logged_in_user_info | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
                 # $logged_in_user_info = $logged_in_user_info | Sort -Property PSComputerName
                 $results.add($logged_in_user_info) | out-null
@@ -161,7 +151,9 @@ function Get-CurrentUser {
         }
 
     }
-
+    ## 1. If there are results - sort them by the hostname (pscomputername) property.
+    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 3. Create .csv/.xlsx reports as necessary.
     END {
         if ($results) {
             ## 1. Sort any existing results by computername

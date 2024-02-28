@@ -40,10 +40,10 @@ function Get-ConnectedPrinters {
 
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
     ## 2. Create output filepath if necessary.
-    ## 3. Scriptblock that is executed on each target computer.
+    ## 3. Scriptblock that is executed on each target computer to retrieve connected printer info.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -75,47 +75,45 @@ function Get-ConnectedPrinters {
                 }
             }
             $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-
-            ## At this point - if targetcomputer is null - its been provided as a parameter
             # Safety catch
             if ($null -eq $TargetComputer) {
                 return
             }
-            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-
-            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-                }
-            }
         }       
         
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-            if ($Outputfile.toLower() -eq '') {
-                $REPORT_DIRECTORY = "ConnectedPrinters"
-    
-                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-            }
-            elseif ($outputfile.tolower() -ne 'n') {
-                $REPORT_DIRECTORY = $outputfile
-                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -Nonewline
-                Write-Host "Terminal output only." -Foregroundcolor Green
-            }    
+        $str_title_var = "Printers"
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            if ($outputfile.tolower() -eq '') {
-                $outputfile = "ConnectedPrinters"
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $REPORT_DIRECTORY = "$str_title_var"
+                }
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
+                }
             }
         }
-
-        #################################################
         ## 3. Scriptblock - lists connected/default printers
-        #################################################
         $list_local_printers_block = {
             # Everything will stay null, if there is no user logged in
             $obj = [PScustomObject]@{

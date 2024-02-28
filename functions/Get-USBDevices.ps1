@@ -117,7 +117,9 @@ function Get-USBDevices {
 
         $all_results.add($results) | out-null
     }
-
+    ## 1. If there are results - sort them by the hostname (pscomputername) property.
+    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 3. Create .csv/.xlsx reports as necessary.
     END {
         if ($all_results) {
             $all_results = $all_results | sort -property pscomputername

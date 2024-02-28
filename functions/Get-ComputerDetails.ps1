@@ -40,7 +40,9 @@ function Get-ComputerDetails {
         [string]$Outputfile = ''
     )
 
-
+    ## 1. define date variable (used for filename creation)
+    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+    ## 3. Outputfile path needs to be created regardless of how Targetcomputer is submitted to function
     BEGIN {
         ## 1. define date variable (used for filename creation)
         $thedate = Get-Date -Format 'yyyy-MM-dd'
@@ -81,34 +83,42 @@ function Get-ComputerDetails {
                 return
             }
         }
-        ## Outputfile path needs to be created regardless of how Targetcomputer is submitted to function
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if ($outputfile.tolower() -eq 'n') {
+        ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "PCdetails"
+        if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-
         }
         else {
-        
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "PCDetails"
-        
-                    $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
                 else {
-                    $REPORT_DIRECTORY = $outputfile
-                    $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-                }    
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "PCDetails-$thedate"
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
                 }
             }
         }
-        ## Create empty results list
+        ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
+        Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
+
     }
 
     #####################################################################################

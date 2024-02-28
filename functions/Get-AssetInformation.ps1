@@ -160,7 +160,7 @@ function Get-AssetInformation {
             }
             Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
         }
-        ## 3. Create empty results container
+        ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
 
     }

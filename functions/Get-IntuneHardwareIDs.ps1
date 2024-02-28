@@ -156,10 +156,10 @@ Function Get-IntuneHardwareIDs {
             . "$($getwindowsautopilotinfo.fullname)"
         }
     }
-    
+
     ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
     ## 2. Ping the single target computer one time as test before attempting remote session.
-    ## 3. If machine was responseive, use Get-WindowsAutopilotInfo.ps1 script to collect hardware ID, group tag, etc 
+    ## 3. If machine was responsive, use Get-WindowsAutopilotInfo.ps1 script to collect hardware ID, group tag, etc 
     ##    and append to csv.
     PROCESS {
         ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
