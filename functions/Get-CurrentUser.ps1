@@ -40,13 +40,13 @@ function Get-CurrentUser {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        [string]$Outputfile
+        [string]$Outputfile = ''
     )
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. Create output filepath if necessary.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -93,6 +93,7 @@ function Get-CurrentUser {
             }
         }
 
+        ## 2. Create output filepath if necessary.
         if ($outputfile.tolower() -ne 'n') {
             ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
@@ -110,74 +111,90 @@ function Get-CurrentUser {
             }
         }
 
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting current users on: " -NoNewLine
-        Write-Host "$($targetcomputer -join ', ')" -Foregroundcolor Green
-
-        $all_results = [system.collections.arraylist]::new()
+        ## Create empty results container
+        $results = [system.collections.arraylist]::new()
     }
 
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responseive, run scriptblock to logged in user, info on teams/zoom processes, etc.
     PROCESS {
-        $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-        if (-not ($ping_result)) {
-            Write-Host "$Targetcomputer didn't respond."
-            continue
-        }
-        # Get Computers details and create an object
-        $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-            $model = (get-ciminstance -class win32_computersystem).model
-            # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
-            $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-            # see if teams and/or zoom are running
-            $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
-            $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
-            ForEach ($process_check in @($teams_running, $zoom_running)) {
-                if ($process_check) {
-                    $process_check = $true
-                }
-                else {
-                    $process_check = $false
-                }
-            }
-            $obj = [PSCustomObject]@{
-                Model        = $model
-                CurrentUser  = $current_user
-                TeamsRunning = $teams_running
-                ZoomRunning  = $zoom_running
+        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+        if ($TargetComputer) {
+            ## 2. Send one test ping
+            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
+            if ($ping_result) {
 
-            }
-            $obj
-        } 
+                # Get Computers details and create an object
+                $logged_in_user_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+                    $model = (get-ciminstance -class win32_computersystem).model
+                    # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
+                    $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                    # see if teams and/or zoom are running
+                    $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
+                    $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
+                    ForEach ($process_check in @($teams_running, $zoom_running)) {
+                        if ($process_check) {
+                            $process_check = $true
+                        }
+                        else {
+                            $process_check = $false
+                        }
+                    }
+                    $obj = [PSCustomObject]@{
+                        Model        = $model
+                        CurrentUser  = $current_user
+                        TeamsRunning = $teams_running
+                        ZoomRunning  = $zoom_running
+
+                    }
+                    $obj
+                } 
 	
-        $results = $results | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
-        # $results = $results | Sort -Property PSComputerName
-        $all_results.add($results) | out-null
+                $logged_in_user_info = $logged_in_user_info | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
+                # $logged_in_user_info = $logged_in_user_info | Sort -Property PSComputerName
+                $results.add($logged_in_user_info) | out-null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+            }
+        }
+
     }
 
     END {
-        if ($all_results) {
-            $all_results = $all_results | sort -property pscomputername
-            ## If Outputfile not desired:
+        if ($results) {
+            ## 1. Sort any existing results by computername
+            $results = $results | sort -property pscomputername
+            ## 2. Output to gridview if user didn't choose report output.
             if ($outputfile.tolower() -eq 'n') {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                }
-                else {
-                    $results | out-gridview
-                }
+                $results | out-gridview
             }
-            ## If Output-Reports is available:
-            elseif (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
-                if ($outputfile.tolower() -ne 'n') {
-
-                    Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-                }
-            }
-            elseif ($outputfile -ne 'n') {
+            else {
+                ## 3. Create .csv/.xlsx reports if possible
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-                notepad.exe "$outputfile.csv"
+                ## Try ImportExcel
+                try {
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = 'CurrentUsers'
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
             }
         }
         else {
