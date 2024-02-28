@@ -41,61 +41,70 @@ function Get-USBDevices {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
-        }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
-            }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
-                }
-                else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
-                }
-            }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
+        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
         if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-        ## With this function - it's especially important to log offline computers, whose hardware IDs weren't taken.
-        if ($TargetComputer -ne '127.0.0.1') {
-            $online_hosts = [system.collections.arraylist]::new()
-            $offline_hosts = [system.collections.arraylist]::new()
-            ForEach ($single_computer in $TargetComputer) {
-                $ping_result = Test-Connection $single_computer -Count 1 -Quiet
-                if ($ping_result) {
-                    Write-Host "$single_computer is online." -Foregroundcolor Green
-                    $online_hosts.Add($single_computer) | Out-Null
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
+            }
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    Write-Host "$single_computer is offline." -Foregroundcolor Red
-                    $offline_hosts.add($single_computer) | out-null
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
 
-            Write-Host "Copying offline hosts to clipboard." -foregroundcolor Yellow
-            "$($offline_hosts -join ', ')" | clip
+            ## At this point - if targetcomputer is null - its been provided as a parameter
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
 
-            $TargetComputer = $online_hosts
+            ## With this function - it's especially important to log offline computers, whose hardware IDs weren't taken.
+            if ($TargetComputer -ne '127.0.0.1') {
+                $online_hosts = [system.collections.arraylist]::new()
+                $offline_hosts = [system.collections.arraylist]::new()
+                ForEach ($single_computer in $TargetComputer) {
+                    $ping_result = Test-Connection $single_computer -Count 1 -Quiet
+                    if ($ping_result) {
+                        Write-Host "$single_computer is online." -Foregroundcolor Green
+                        $online_hosts.Add($single_computer) | Out-Null
+                    }
+                    else {
+                        Write-Host "$single_computer is offline." -Foregroundcolor Red
+                        $offline_hosts.add($single_computer) | out-null
+                    }
+                }
+
+                Write-Host "Copying offline hosts to clipboard." -foregroundcolor Yellow
+                "$($offline_hosts -join ', ')" | clip
+
+                $TargetComputer = $online_hosts
+            }
         }
 
+        ## Output file path needs to be created (if specified) regardless of how Targetcomputer is submitted to function.
         if ($outputfile.tolower() -ne 'n') {
             ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
@@ -112,11 +121,12 @@ function Get-USBDevices {
                 }
             }
         }
-
+        ## empty results container
         $all_results = [system.collections.arraylist]::new()
     }
 
     PROCESS {
+        
         ###########################################
         ## Getting USB info from target machine(s):
         ###########################################

@@ -42,45 +42,52 @@ function Get-ConnectedPrinters {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }
-        Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-        
-        if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-            if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+
+            ## At this point - if targetcomputer is null - its been provided as a parameter
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
-        }        
+            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+
+            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
+                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
+                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+                }
+            }
+        }       
         
         ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
@@ -144,46 +151,52 @@ function Get-ConnectedPrinters {
     ## Run 'get connected printers' scriptblock on target machine(s)
     PROCESS {
 
-        # test connection to target computer - if offline, go to next
-        # $ping_test = Test-Connection -ComputerName $TargetComputer -Count 1 -Quiet
-        # if (-not $ping_test) {
-        #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline, skipping." -Foregroundcolor Yellow
-        #     continue
-        # }
+        if ($TargetComputer) {
 
-        $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-            # Everything will stay null, if there is no user logged in
-            $obj = [PScustomObject]@{
-                Username          = ''
-                DefaultPrinter    = $null
-                ConnectedPrinters = $null
-            }
-            $getusername = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+            ## ping test first:
+            $pingreply = Test-connection $TargetComputer -Count 1 -Quiet
 
-            # Only need to check for connected printers if a user is logged in.
+            if ($pingreply) {
 
-            # get connected printers:
-            $printers = get-ciminstance -class win32_printer | select name, Default
-            $obj.DefaultPrinter = $printers | where-object { $_.default } | select -exp name
-            
-            ForEach ($single_printer in $printers) {
-                # if (-not $printer.default) {
-                # make sure its not a 'OneNote' printer, or Microsoft Printer to PDF.
-                if (($single_printer.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($single_printer.name -notlike "*OneNote*")) {
-                    if (($single_printer.name -notlike "Send to*") -and ($single_printer.name -notlike "*Microsoft*")) {
-                        $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($single_printer.name)"
+
+                $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+                    # Everything will stay null, if there is no user logged in
+                    $obj = [PScustomObject]@{
+                        Username          = ''
+                        DefaultPrinter    = $null
+                        ConnectedPrinters = $null
                     }
-                }
-                # }
-            }
-            
-            if ($getusername) {
-                $obj.Username = $getusername
-            }
-            $obj
-        } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    $getusername = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
 
-        $all_results.Add($results) | out-null
+                    # Only need to check for connected printers if a user is logged in.
+
+                    # get connected printers:
+                    $printers = get-ciminstance -class win32_printer | select name, Default
+                    $obj.DefaultPrinter = $printers | where-object { $_.default } | select -exp name
+            
+                    ForEach ($single_printer in $printers) {
+                        # if (-not $printer.default) {
+                        # make sure its not a 'OneNote' printer, or Microsoft Printer to PDF.
+                        if (($single_printer.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($single_printer.name -notlike "*OneNote*")) {
+                            if (($single_printer.name -notlike "Send to*") -and ($single_printer.name -notlike "*Microsoft*")) {
+                                $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($single_printer.name)"
+                            }
+                        }
+                        # }
+                    }
+            
+                    if ($getusername) {
+                        $obj.Username = $getusername
+                    }
+                    $obj
+                } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+
+                $all_results.Add($results) | out-null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer didn't respond to one ping, skipping." -Foregroundcolor Yellow
+            }
+        } 
     }
 
     END {

@@ -35,8 +35,8 @@ function Get-AssetInformation {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        [String[]]$TargetComputer,
-        [string]$Outputfile
+        $TargetComputer,
+        [string]$Outputfile = ''
     )
     BEGIN {
         ##################################################################################
@@ -66,10 +66,17 @@ function Get-AssetInformation {
 
             # get monitor info:
             $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi -ComputerName $ComputerName | Select Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
+            $monitor_string = ""
+            $monitor_count = 0
             $monitors | ForEach-Object {
                 $_.UserFriendlyName = [System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)
                 $_.SerialNumberID = [System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)
                 $_.ManufacturerName = [System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)
+
+                $manufacturername = $($_.ManufacturerName).trim()
+
+                $monitor_string += "Maker: $manufacturername,Mod: $($_.UserFriendlyName),Ser: $($_.SerialNumberID),Yr: $($_.YearOfManufacture)"
+                $monitor_count++
             }
 
             $obj = [PSCustomObject]@{
@@ -78,57 +85,62 @@ function Get-AssetInformation {
                 bioreleasedate      = $bioreleasedate
                 asset_tag           = $asset_tag
                 computer_serial_num = $computer_serial_num
-                monitors            = $monitors
-                NumMonitors         = $monitors.count
+                monitors            = $monitor_string
+                NumMonitors         = $monitor_count
             }
 
             return $obj
         }
-        Write-host "$targetcomputer" -foregroundcolor green
         #####################
         ##  Start of function
         #####################
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## TARGETCOMPUTER HANDLING:
         ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $TargetComputer = $TargetComputer
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            Read-Host "No valid target computeres found. Press enter to continue."
-            # user said to end function:
-            return
-        }
-        Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
 
-        if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-            if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+            ## At this point - if targetcomputer is null - its been provided as a parameter
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
+
+            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
+                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
+                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+                }
             }
         }
 
@@ -150,55 +162,86 @@ function Get-AssetInformation {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "AssetInfo-$thedate"
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate-$iterator_var"
+                        }
+                        else {
+                            break
+                        }
+                    }
                 }
             }
+            Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
+
         }
+        ## Create results container
 
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($single_pc_asset_info_ps1.fullname)."
-
-
-        Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
-
-        $all_results = [system.collections.arraylist]::new()
+        $results = [system.collections.arraylist]::new()
 
     }
 
+    ## Collecting local asset information from each target computer
     PROCESS {
-        $results = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-        if ($results) {
-            $all_results.add($results) | out-null
+        if ($TargetComputer) {
+            ## test with ping first:
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                $target_asset_info = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+                if ($target_asset_info) {
+                    $results.add($target_asset_info) | out-null
+                }
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping." -ForegroundColor Yellow
+            }
         }
     }
 
+    ## output to report files / terminal.
     END {
-        if ($all_results) {
-            ## Sort results
-            $all_results = $all_results | Sort-Object -Property PSComputername
-
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Asset information gathered, exporting to $outputfile.csv/.xlsx..."
-
-            ## Terminal / gridview output
-            if ($outputfile -eq 'n') {
-                if ($all_results.count -le 2) { 
-                    $all_results | Format-Table -AutoSize
+        if ($results) {
+            ## Sort the results
+            if ($outputfile.tolower() -eq 'n') {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($results.count -le 2) {
+                    $results | Format-List
+                    # $results | Out-GridView
                 }
                 else {
-                    $all_results | Out-GridView
+                    $results | out-gridview
                 }
             }
-            ## Report output, use Output-Reports if available
             else {
-                if (Get-Command -Name "Output-Reports" -Erroraction SilentlyContinue) {
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
-                    Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "$REPORT_DIRECTORY $thedate" -CSVFile $true -XLSXFile $true
-                    Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-                }
-                else {
-                    $all_results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
 
-                    notepad.exe "$outputfile.csv"        
+                ## Try ImportExcel
+                try {
+                    ## xlsx attempt:
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = 'Details'
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
                 }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
             }
         }
         else {
