@@ -29,51 +29,48 @@ function Install-SMARTNotebookSoftware {
         )]
         $TargetComputer
     )
+    ## 1. Handling TargetComputer input if not supplied through pipeline.
+    ## 2. Make sure SMARTNotebook folder is in ./deploy/irregular
     BEGIN {
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }
-
-    
-        if ($TargetComputer.count -lt 20) {
-            ## If the Get-LiveHosts utility command is available
-            if (Get-Command -Name Get-LiveHosts -ErrorAction SilentlyContinue) {
-                $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
         }
 
-        # get the smartnotebook folder from irregular applications
+        ## 2. Get the smartnotebook folder from irregular applications
         $SmartNotebookFolder = Get-ChildItem -path "$env:PSMENU_DIR\deploy\irregular" -Filter 'SMARTNotebook' -Directory -Erroraction SilentlyContinue
         if ($SmartNotebookFolder) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($SmartNotebookFolder.FullName), copying to target computers." -foregroundcolor green
@@ -86,44 +83,48 @@ function Install-SMARTNotebookSoftware {
         ## For each target computer - assign installation method - either office or classroom. Classroom installs the smartboard and ink drivers.
         $installation_methods = [system.collections.arraylist]::new()
 
-        ForEach ($single_computer in $Targetcomputer) {
-            $computer_target_path = "\\$single_Computer\C$\TEMP\SMARTNotebook"
-            Copy-Item -Path "$($SmartNotebookFolder.FullName)" -Destination $computer_target_path -Recurse -Force
-            Write-Host "Select SMART Software installation type for $single_computer below."
-            $InstallationTypeReply = Menu @('Office', 'Classroom')
-
-
-            $obj = [pscustomobject]@{
-                computer      = $single_computer
-                installmethod = $InstallationTypeReply
-            }
-
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$single_computer]:: Copied $($SmartNotebookFolder.FullName) to $computer_target_path."
-    
-            $installation_methods.add($obj) | Out-Null
-        }
+        Write-Host "Please choose installation method for target computers:"
+        $InstallationTypeReply = Menu @('Office', 'Classroom')
 
     }
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, find PSADT Folder and install SMARTNotebook software.
     PROCESS {
-        ## Run PSADT installation on target computers.
-        Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-            $installation_method = $using:installation_methods | Where-Object { $_.computer -eq $env:COMPUTERNAME }
-            $installation_method = $installation_method.installmethod
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME]:: Installation method set to: $installation_method"
-            # unblock files
-            Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Recurse | Unblock-File
-            # get Deploy-SMARTNotebook.ps1
-            $DeployScript = Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Filter 'Deploy-SMARTNotebook.ps1' -File -ErrorAction SilentlyContinue
-            if ($DeployScript) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($DeployScript.FullName), executing." -foregroundcolor green
-                Powershell.exe -ExecutionPolicy Bypass "$($DeployScript.FullName)" -DeploymentType "Install" -DeployMode "Silent" -InstallationType "$installation_method"
+        ## 1.
+        if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
+            ## 2. test with ping:
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                ## 3. Run PSADT installation on target computers.
+                Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+                    $installation_method = $using:InstallationTypeReply
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME]:: Installation method set to: $installation_method"
+                    # unblock files
+                    Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Recurse | Unblock-File
+                    # get Deploy-SMARTNotebook.ps1
+                    $DeployScript = Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Filter 'Deploy-SMARTNotebook.ps1' -File -ErrorAction SilentlyContinue
+                    if ($DeployScript) {
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($DeployScript.FullName), executing." -foregroundcolor green
+                        Powershell.exe -ExecutionPolicy Bypass "$($DeployScript.FullName)" -DeploymentType "Install" -DeployMode "Silent" -InstallationType "$installation_method"
+                    }
+                    else {
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Deploy-SMARTNotebook.ps1 not found, exiting." -foregroundcolor red
+                        exit
+                    }
+                }
             }
             else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Deploy-SMARTNotebook.ps1 not found, exiting." -foregroundcolor red
-                exit
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -foregroundcolor red
             }
+    
         }
     }
+
     END {
         Write-Host ""
         Write-Host "Finished SMART Learning Suite installation(s)."
