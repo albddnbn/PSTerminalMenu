@@ -47,57 +47,67 @@ function Install-Application {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        $AppName
-    )
-
-    BEGIN {
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
-        }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
-            }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+        [ValidateScript({
+                if (Test-Path "$env:PSMENU_DIR\deploy\applications\$_" -ErrorAction SilentlyContinue) {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($_) in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Green
+                    return $true
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($_) not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+                    return $false
+                }
+            })]
+        [string]$AppName
+    )
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. If AppName parameter was not supplied, apps chosen through menu will be installed on target machine(s).
+    ##    - menu presented uses the 'PS-Menu' module: https://github.com/chrisseroka/ps-menu
+    ## 3. Define scriptblock - installs specified app using PSADT folder/script on local machine.
+    ## 4. Prompt - should this script skip over computers that have users logged in?
+    ## 5. create empty containers for reports:
+    BEGIN {
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
+        }
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
+            }
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
+                }
+                else {
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        ## Filter offline hosts.
-        $online_computers = [system.collections.arraylist]::new()
-        ForEach ($single_computer in $TargetComputer) {
-            $test_ping = Test-Connection -ComputerName $single_computer -count 1 -Quiet
-            if ($test_ping) {
-                $online_computers.Add($single_computer) | Out-Null
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
         }
-        $TargetComputer = $online_computers
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }    
+        
+        ## 2. If AppName parameter was not supplied, apps chosen through menu will be installed on target machine(s).
         if (-not $appName) {
             # present script/ADMIN with a list of apps to choose from
             $ApplicationList = Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications" -Directory | Where-object { $_.name -notin @('Veyon', 'SMARTNotebook') }
-
             Clear-Host
             $applist = ($ApplicationList).Name
 
@@ -115,7 +125,6 @@ function Install-Application {
                 }
                 $app_name_counter++
             }
-
             # First 29 apps|
             Write-Host "Displaying the first 29 applications available:" -ForegroundColor Yellow
             $chosen_apps_one = Menu $app_list_one -MultiSelect
@@ -140,8 +149,7 @@ function Install-Application {
                 }
             }
         }
-
-        # install local PSADT app scriptblock
+        ## 3. Define scriptblock - installs specified app using PSADT folder/script on local machine.
         $install_local_psadt_block = {
             param(
                 $app_to_install,
@@ -157,7 +165,6 @@ function Install-Application {
                     Continue
                 }
             }
-
             # get the installation script
             $Installationscript = Get-ChildItem -Path "C:\temp" -Filter "Deploy-$app_to_install.ps1" -File -Recurse -ErrorAction SilentlyContinue
             # unblock files:
@@ -171,74 +178,84 @@ function Install-Application {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: ERROR - Couldn't find the app deployment script!" -Foregroundcolor Red
             }
-
         }
-
-
-
-        # $chosen_apps = $chosen_apps_one + $chosen_apps_two
-        # $applist = $applist | select -first 29
         Clear-Host
 
+        ## 4. Prompt - should this script skip over computers that have users logged in?
+        ##    - script runs 'silent' installation of PSADT - this means installations will likely close the app / associated processes
+        ##      before uninstalling / installing. This could disturb users.
         $skip_pcs = Read-Host "Scripts are set to close the application (if running) before installing - skip computers with users logged in? [y/n]"
+    
+        ## 5. create empty containers for reports:
+        ## computers that were unresponsive
+        ## apps that weren't able to be installed (weren't found in deployment folder for some reason.)
+        ## - If they were presented in menu / chosen, apps should definitely be in deployment folder, though.
+        $unresponsive_computers = [system.collections.arraylist]::new()
+        $skipped_applications = [system.collections.arraylist]::new()
+    
+    
+    }
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, cycle through chosen apps and run the local psadt install scriptblock for each one,
+    ##    on each target machine.
+    ##    3.1 --> Check for app/deployment folder in ./deploy/applications, move on to next installation if not found
+    ##    3.2 --> Copy PSADT folder to target machine/session
+    ##    3.3 --> Execute PSADT installation script on target machine/session
+    ##    3.4 --> Cleanup PSADT folder in C:\temp
+    PROCESS {
+        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+        if ($TargetComputer) {
+            ## 2. Ping test
+            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
+            if ($ping_result) {
+                if ($TargetComputer -eq '127.0.0.1') {
+                    $TargetComputer = $env:COMPUTERNAME
+                }
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer responded to one ping, proceeding with installation(s)." -Foregroundcolor Green
 
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Installing " -NoNewLine
-        Write-Host "$($chosen_apps -join ', ')" -ForegroundColor Yellow
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: On $($targetcomputer -join ', ')" -ForegroundColor Yellow
-
-        ## Copy deployment folders over, remove old ones:
-        ForEach ($single_computer in $TargetComputer) {
-            ForEach ($chosen_app in $chosen_apps) {
-
-                if ($single_computer -ne '127.0.0.1') {
-                    $DeploymentFolder = $ApplicationList | Where-Object { $_.Name -eq $chosen_app }
+                ## create sesion
+                $single_target_session = New-PSSession $TargetComputer
+                ## 3. Install chosen apps by creating remote session and cycling through list
+                ForEach ($single_application in $chosen_apps) {
+                    ## 3.1 Check for app/deployment folder in ./deploy/applications
+                    $DeploymentFolder = $ApplicationList | Where-Object { $_.Name -eq $single_application }
                     if (-not $DeploymentFolder) {
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $chosen_app not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_application not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+                        $skipped_applications.Add($single_application) | Out-Null
                         continue
                     }
-
-                    Remove-Item -Path "\\$single_computer\c$\temp\$($deploymentfolder.name)" -Recurse -Force -ErrorAction SilentlyContinue
-
-                    Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "\\$single_computer\c$\temp\$($DeploymentFolder.Name)" -Recurse -Force
-
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($DeploymentFolder.name) copied to $single_computer"
+                    ## 3.2 Copy PSADT folder to target machine/session
+                    Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "C:\temp\$($DeploymentFolder.Name)" -ToSession $single_target_session -Recurse -Force
+                
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($DeploymentFolder.name) copied to $TargetComputer."
+                    ## 3.3 Execute PSADT installation script on target mach8ine/session
+                    Invoke-Command -Session $single_target_session -scriptblock $install_local_psadt_block -ArgumentList $single_application, $skip_pcs
+                    # Start-Sleep -Seconds 1
+                    ## 3.4 Cleanup PSADT folder in temp
+                    $folder_to_delete = "C:\temp\$($DeploymentFolder.Name)"
+                    Invoke-Command -Session $single_target_session -command {
+                        Remove-Item -Path "$($using:folder_to_delete)" -Recurse -Force -ErrorAction SilentlyContinue
+                    }
                 }
             }
-        }
-    }
-    PROCESS {
-        ForEach ($chosen_app in $chosen_apps) {
-            $DeploymentFolder = $ApplicationList | Where-Object { $_.Name -eq $chosen_app }
-            if (-not $DeploymentFolder) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $chosen_app not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
-                continue
-            }
-            if ($TargetComputer -eq '127.0.0.1') {
-                # can run locally using deployment folder in menu:
-                Set-Location "$($DeploymentFolder.FullName)"
-                read-host "$(pwd)"
-                Powershell.exe -Executionpolicy bypass "./Deploy-$($deploymentfolder.name).ps1" -Deploymenttype 'install' -deploymode 'silent'
-            }
-            else { 
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished copying deployment folders to remote computers, executing install scripts now..."
-                ## Actual installation / running the script from ./menu/files
-                Invoke-Command -ComputerName $TargetComputer -scriptblock $install_local_psadt_block -ArgumentList $chosen_app, $skip_pcs   
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Ping fail from $TargetComputer - added to 'unresponsive list'." -Foregroundcolor Red
+                $unresponsive_computers.Add($TargetComputer) | Out-Null
             }
         }
     }
-
+    ## 1. Open the folder that will contain reports if necessary.
     END {
-        ## Cleanup folders
-        ForEach ($single_computer in $Targetcomputer) {
-            if ($single_computer -ne '127.0.0.1') {
-                ForEach ($single_app in $chosen_apps) {
-                    Remove-Item -Path "\\$single_computer\c$\temp\$single_app" -Recurse -Force -ErrorAction SilentlyContinue
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Removed C:\temp\$single_app folder from from $single_computer."
-                }
-            }
+
+        if ($unresponsive_computers) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unresponsive computers:" -Foregroundcolor Yellow
+            $unresponsive_computers | Sort-Object
         }
-
-
+        if ($skipped_applications) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipped applications:" -Foregroundcolor Yellow
+            $skipped_applications | Sort-Object
+        }
         Read-Host "Press enter to continue."
 
     }
