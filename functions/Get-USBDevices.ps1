@@ -37,11 +37,11 @@ function Get-USBDevices {
         $TargetComputer,
         [String]$Outputfile
     )
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. Create output filepath if necessary.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -80,36 +80,14 @@ function Get-USBDevices {
                 return
             }
             Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-
-            ## With this function - it's especially important to log offline computers, whose hardware IDs weren't taken.
-            if ($TargetComputer -ne '127.0.0.1') {
-                $online_hosts = [system.collections.arraylist]::new()
-                $offline_hosts = [system.collections.arraylist]::new()
-                ForEach ($single_computer in $TargetComputer) {
-                    $ping_result = Test-Connection $single_computer -Count 1 -Quiet
-                    if ($ping_result) {
-                        Write-Host "$single_computer is online." -Foregroundcolor Green
-                        $online_hosts.Add($single_computer) | Out-Null
-                    }
-                    else {
-                        Write-Host "$single_computer is offline." -Foregroundcolor Red
-                        $offline_hosts.add($single_computer) | out-null
-                    }
-                }
-
-                Write-Host "Copying offline hosts to clipboard." -foregroundcolor Yellow
-                "$($offline_hosts -join ', ')" | clip
-
-                $TargetComputer = $online_hosts
-            }
         }
 
-        ## Output file path needs to be created (if specified) regardless of how Targetcomputer is submitted to function.
+        ## 2. Create output filepath if necessary.
         if ($outputfile.tolower() -ne 'n') {
             ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $outputfile = "CurrentUsers"
+                    $outputfile = "USBDevices"
                 }
 
                 $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
@@ -117,16 +95,17 @@ function Get-USBDevices {
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "CurrentUsers-$thedate"
+                    $outputfile = "USBDevices $thedate"
                 }
             }
         }
-        ## empty results container
-        $all_results = [system.collections.arraylist]::new()
+
+        ## Create empty results container
+        $results = [system.collections.arraylist]::new()
     }
 
     PROCESS {
-        
+
         ###########################################
         ## Getting USB info from target machine(s):
         ###########################################
