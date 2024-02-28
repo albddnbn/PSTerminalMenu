@@ -179,6 +179,7 @@ function Get-ComputerDetails {
     END {
         if ($results) {
             ## Sort the results
+            $results = $results | sort -property pscomputername
             if ($outputfile.tolower() -eq 'n') {
                 # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
                 if ($results.count -le 2) {
@@ -223,5 +224,4 @@ function Get-ComputerDetails {
         }
         Read-Host "Press enter to continue."
     }
-
 }

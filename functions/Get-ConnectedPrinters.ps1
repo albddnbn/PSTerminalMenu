@@ -35,14 +35,15 @@ function Get-ConnectedPrinters {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        $Outputfile
+        [string]$Outputfile = ''
     )
 
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. Create output filepath if necessary.
+    ## 3. Scriptblock that is executed on each target computer.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -89,7 +90,7 @@ function Get-ConnectedPrinters {
             }
         }       
         
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
             if ($Outputfile.toLower() -eq '') {
                 $REPORT_DIRECTORY = "ConnectedPrinters"
@@ -113,7 +114,7 @@ function Get-ConnectedPrinters {
         }
 
         #################################################
-        ## Scriptblock - lists connected/default printers
+        ## 3. Scriptblock - lists connected/default printers
         #################################################
         $list_local_printers_block = {
             # Everything will stay null, if there is no user logged in
@@ -143,55 +144,22 @@ function Get-ConnectedPrinters {
 
             $obj
         }
-
-        ## COLLECTIONS - holds all computers connected printer details
-        $all_results = [system.collections.arraylist]::new()
+        ## Create empty results container to use during process block
+        $results = [system.collections.arraylist]::new()
     }
 
-    ## Run 'get connected printers' scriptblock on target machine(s)
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responseive, run the 'get connected printers' scriptblock.
     PROCESS {
-
+        ## 1. TargetComputer can't be $null or '', it will display error during test-connection
         if ($TargetComputer) {
-
-            ## ping test first:
+            ## 2. Single ping test to target computer
             $pingreply = Test-connection $TargetComputer -Count 1 -Quiet
-
             if ($pingreply) {
-
-
-                $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    # Everything will stay null, if there is no user logged in
-                    $obj = [PScustomObject]@{
-                        Username          = ''
-                        DefaultPrinter    = $null
-                        ConnectedPrinters = $null
-                    }
-                    $getusername = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-
-                    # Only need to check for connected printers if a user is logged in.
-
-                    # get connected printers:
-                    $printers = get-ciminstance -class win32_printer | select name, Default
-                    $obj.DefaultPrinter = $printers | where-object { $_.default } | select -exp name
-            
-                    ForEach ($single_printer in $printers) {
-                        # if (-not $printer.default) {
-                        # make sure its not a 'OneNote' printer, or Microsoft Printer to PDF.
-                        if (($single_printer.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($single_printer.name -notlike "*OneNote*")) {
-                            if (($single_printer.name -notlike "Send to*") -and ($single_printer.name -notlike "*Microsoft*")) {
-                                $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($single_printer.name)"
-                            }
-                        }
-                        # }
-                    }
-            
-                    if ($getusername) {
-                        $obj.Username = $getusername
-                    }
-                    $obj
-                } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-
-                $all_results.Add($results) | out-null
+                ## 3. If computer responded - collect printer info and add to results list.
+                $connected_printer_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock $list_local_printers_block | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                $results.Add($connected_printer_info) | out-null
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer didn't respond to one ping, skipping." -Foregroundcolor Yellow
@@ -199,32 +167,47 @@ function Get-ConnectedPrinters {
         } 
     }
 
+    ## 1. If there are results - sort them by the hostname (pscomputername) property.
+    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 3. Create .csv/.xlsx reports as necessary.
     END {
-        if ($all_results) {
-            $all_results = $all_results | sort -property pscomputername
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Details on connected printers gathered, exporting to $outputfile.csv/.xlsx..."
-
-
-            if ($outputfile.tolower() -ne 'n') {
-
-                Output-Reports -Filepath "$outputfile" -Content $all_results -ReportTitle "Printers$thedate" -CSVFile $true -XLSXFile $true
-
-                Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+        if ($results) {
+            ## 1. Sort any existing results by computername
+            $results = $results | sort -property pscomputername
+            ## 2. Output to gridview if user didn't choose report output.
+            if ($outputfile.tolower() -eq 'n') {
+                $results | out-gridview
             }
             else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-
-                # if ($all_results.count -lt 2) {
-                $all_results | Format-Table -Wrap
-                # }
-                # else {
-                #     $all_results | Out-GridView
-                # }
+                ## 3. Create .csv/.xlsx reports if possible
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                ## Try ImportExcel
+                try {
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = 'Printers'
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
             }
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue"
+        Read-Host "Press enter to continue."
     }
 }
