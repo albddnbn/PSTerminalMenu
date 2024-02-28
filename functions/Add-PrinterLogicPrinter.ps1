@@ -40,119 +40,165 @@ function Add-PrinterLogicPrinter {
         $TargetComputer,
         [string]$PrinterName
     )
-    # BEGIN {
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
-    ## TARGETCOMPUTER HANDLING:
-    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-    if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-        $null
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-    }
-    elseif ($TargetComputer -is [string]) {
-        if ($TargetComputer -in @('', '127.0.0.1')) {
-            $TargetComputer = @('127.0.0.1')
-        }
-        elseif ($Targetcomputer -like "*,*") {
-            $TargetComputer = $TargetComputer -split ','
-        }
-        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-            $TargetComputer = Get-Content $TargetComputer
+    ## 1. Set date variable
+    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+    BEGIN {
+        ## 1. Set date variable
+        # $thedate = Get-Date -Format 'yyyy-MM-dd'
+        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-            if ($test_ping) {
-                $TargetComputer = @($TargetComputer)
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
+            }
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
+                }
+                else {
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
+                }
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+        }
+    
+        $connect_to_printer_block = {
+            param(
+                $printer_name
+            )
+
+            $obj = [pscustomobject]@{
+                hostname       = $env:COMPUTERNAME
+                printer        = $printer_name
+                connectstatus  = 'NO'
+                clientsoftware = 'NO'
+            }
+            # get installerconsole.exe
+            $exepath = get-childitem -path "C:\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin" -Filter "PrinterInstallerConsole.exe" -File -Erroraction SilentlyContinue
+            if (-not $exepath) {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: PrinterLogic PrinterInstallerConsole.exe was not found in C:\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin." -Foregroundcolor Red
+                return $obj
+            }
+        
+            $obj.clientsoftware = 'YES'
+        
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($exepath.fullname), mapping $printer_name now..."
+            $map_result = (Start-Process "$($exepath.fullname)" -Argumentlist "InstallPrinter=$printer_name" -Wait -Passthru).ExitCode
+        
+            # 0 = good, 1 = bad
+            if ($map_result -eq 0) {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Connected to $printer_name successfully." -Foregroundcolor Green
+                # Write-Host "*Remember that this script does not set default printer, user has to do that themselves."
+                $obj.connectstatus = 'YES'
+                return $obj
             }
             else {
-                $TargetComputerInput = $TargetComputerInput + "x"
-                $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: failed to connect to $printer_name." -Foregroundcolor Red
+                return $obj
             }
         }
-    }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-    # Safety catch to make sure
-    if ($null -eq $TargetComputer) {
-        # user said to end function:
-        return
-    }
-    
-    $connect_to_printer_block = {
-        param(
-            $printer_name
-        )
 
-        $obj = [pscustomobject]@{
-            hostname       = $env:COMPUTERNAME
-            printer        = $printer_name
-            connectstatus  = 'NO'
-            clientsoftware = 'NO'
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Connecting printer: " -NoNewLine
+        Write-Host "$printername" -Foregroundcolor Yellow
+        Write-Host "targetcomputer value : $TargetComputer" -foregroundcolor cyan
+
+        ## create empty containers
+        $missed_computers = [system.collections.arraylist]::new()
+        $failed_connections = [system.collections.arraylist]::new()
+    }
+    PROCESS {
+        if ($Targetcomputer) {
+            # ping test
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                if ($TargetComputer -eq '127.0.0.1') {
+                    $results = Invoke-Command -Scriptblock $connect_to_printer_block -ArgumentList $PrinterName
+                    $results | add-member -MemberType NoteProperty -Name 'PSComputerName' -Value $env:COMPUTERNAME
+                }
+                else {
+                    $results = Invoke-Command -ComputerName $TargetComputer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
+                }
+
+                if ($results.clientsoftware -eq 'NO') {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Client software not installed on $TargetComputer." -Foregroundcolor Yellow
+                    $missed_computers.Add($results.hostname)
+                }
+                if ($results.connectstatus -eq 'NO') {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to connect printer on $TargetComputer." -Foregroundcolor Yellow
+                    $failed_connections.Add($results.hostname)
+                }
+                # $need_software_installed = ($results | where-object { $_.clientsoftware -eq 'NO' }).PSComputerName
+
+                # $failed_connections = ($results | Where-Object { $_.connectstatus -eq 'NO' }).PSComputerName
+                # # no need to repeat the ones that need software installed
+                # $failed_connections = $failed_connections | where-object { $_ -notin $($need_software_installed) }
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+
+            }
+            # if ($need_software_installed) {
+            #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            #     Write-Host "These computers " -NoNewline
+            #     Write-Host "need PrinterLogic software installed" -Foregroundcolor Red -NoNewline
+            #     Write-Host "."
+            #     # Write-Host "$($need_software_installed -join ', ')"
+            #     $need_software_installed
+            #     Write-Host ""
+            # }
+
+            # if ($failed_connections) {
+            #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            #     Write-Host "These computers " -NoNewline
+            #     Write-Host "failed to connect to $printername" -Foregroundcolor Red -NoNewline
+            #     Write-Host ", but have Printer Logic software installed."
+            #     Write-Host ""
+            #     # Write-Host "$($failed_connections -join ', ')" -Foregroundcolor red
+            #     $failed_connections
+            # }
         }
-        # get installerconsole.exe
-        $exepath = get-childitem -path "C:\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin" -Filter "PrinterInstallerConsole.exe" -File -Erroraction SilentlyContinue
-        if (-not $exepath) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: PrinterLogic PrinterInstallerConsole.exe was not found in C:\Program Files (x86)\Printer Properties Pro\Printer Installer Client\bin." -Foregroundcolor Red
-            return $obj
+    }
+    ## 1. output necessary lists
+    END {
+        ## 1.
+        if ($missed_computers) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            Write-Host "These computers " -NoNewline
+            Write-Host "need PrinterLogic software installed" -Foregroundcolor Red -NoNewline
+            Write-Host "."
+            Write-Host ""
+            $missed_computers
         }
-        
-        $obj.clientsoftware = 'YES'
-        
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($exepath.fullname), mapping $printer_name now..."
-        $map_result = (Start-Process "$($exepath.fullname)" -Argumentlist "InstallPrinter=$printer_name" -Wait -Passthru).ExitCode
-        
-        # 0 = good, 1 = bad
-        if ($map_result -eq 0) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Connected to $printer_name successfully." -Foregroundcolor Green
-            # Write-Host "*Remember that this script does not set default printer, user has to do that themselves."
-            $obj.connectstatus = 'YES'
-            return $obj
+        if ($failed_connections) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            Write-Host "These computers " -NoNewline
+            Write-Host "failed to connect to $printername" -Foregroundcolor Red -NoNewline
+            Write-Host ", but have Printer Logic software installed."
+            Write-Host ""
+            $failed_connections
         }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: failed to connect to $printer_name." -Foregroundcolor Red
-            return $obj
-        }
-    }
 
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Connecting printer: " -NoNewLine
-    Write-Host "$printername" -Foregroundcolor Yellow
-    Write-Host "targetcomputer value : $TargetComputer" -foregroundcolor cyan
-    # }
-    # PROCESS {
-    if ($TargetComputer -eq '127.0.0.1') {
-        $results = Invoke-Command -Scriptblock $connect_to_printer_block -ArgumentList $PrinterName
-        $results | add-member -MemberType NoteProperty -Name 'PSComputerName' -Value $env:COMPUTERNAME
+        Read-Host "Press enter to continue."
     }
-    else {
-        $results = Invoke-Command -ComputerName $TargetComputer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
-    }
-    $need_software_installed = ($results | where-object { $_.clientsoftware -eq 'NO' }).PSComputerName
-
-    $failed_connections = ($results | Where-Object { $_.connectstatus -eq 'NO' }).PSComputerName
-    # no need to repeat the ones that need software installed
-    $failed_connections = $failed_connections | where-object { $_ -notin $($need_software_installed) }
-
-    if ($need_software_installed) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-        Write-Host "These computers " -NoNewline
-        Write-Host "need PrinterLogic software installed" -Foregroundcolor Red -NoNewline
-        Write-Host "."
-        # Write-Host "$($need_software_installed -join ', ')"
-        $need_software_installed
-        Write-Host ""
-    }
-
-    if ($failed_connections) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-        Write-Host "These computers " -NoNewline
-        Write-Host "failed to connect to $printername" -Foregroundcolor Red -NoNewline
-        Write-Host ", but have Printer Logic software installed."
-        Write-Host ""
-        # Write-Host "$($failed_connections -join ', ')" -Foregroundcolor red
-        $failed_connections
-    }
-    # }
-    # END {
-
-    Read-Host "Press enter to continue."
-    # }
 }

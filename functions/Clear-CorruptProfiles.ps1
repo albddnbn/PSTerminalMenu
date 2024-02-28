@@ -33,70 +33,188 @@ function Clear-CorruptProfiles {
     #>
     [CmdletBinding()]
     param (
+        [Parameter(
+            Mandatory = $true,
+            ValueFromPipeline = $true
+        )]
         $TargetComputer,
         [string]$Perform_deletions
     )
+    ## 1. Set Report Title and date variables
+    ## 2. Handle Perform_deletions parameter to decide whether to delete folders or just record findings.
+    ## 2.5 Allow user to acknowledge deletions setting before continuing.
+    ## 3. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+    ## 4. Create output/report filepath
+    ## 5. Make sure Clear-CorruptProfiles.ps1 is found in ./localscripts
+    BEGIN {
+        $OUTPUTFILE = ''
 
+        ## 1. Set Report Title and date variables
+        $REPORT_TITLE = 'TempProfiles' # used to create the output filename, .xlsx worksheet title, and folder name inside the report\yyyy-MM-dd folder for today
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
 
-    # VARIABLES ---------------------------------
-    $REPORT_TITLE = 'TempProfiles' # used to create the output filename, .xlsx worksheet title, and folder name inside the report\yyyy-MM-dd folder for today
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
+        ## 2. Handle Perform_deletions parameter to decide whether to delete folders or just record findings.
+        if ($Perform_deletions.ToLower() -like "enable*") {
+            $whatif_setting = $false
+            Write-Host "Deletions ENABLED - script will delete files/folders on target computers." -Foregroundcolor Yellow
 
-    # setting whatif
-    if ($Perform_deletions.ToLower() -like "enable*") {
-        $whatif_setting = $false
+        }
+        else {
+            $whatif_setting = $true
+            Write-Host "Deletions DISABLED - script won't delete files/folders on target computers." -Foregroundcolor Green
+
+        }
+
+        ## 2.5 Allow user to acknowledge deletions setting before continuing.
+        Read-Host "Press enter to continue"
+        ## 3. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
+        }
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
+            }
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
+                }
+                else {
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
+                }
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+        }
+
+        ## 4. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "TempProfiles"
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $REPORT_DIRECTORY = "$str_title_var"
+                }
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        ## 5. Make sure Clear-CorruptProfiles.ps1 is found in ./localscripts
+        $get_corrupt_profiles_ps1 = Get-ChildItem -Path "$env:LOCAL_SCRIPTS" -Filter "Clear-CorruptProfiles.ps1" -File -ErrorAction SilentlyContinue
+        if (-not $get_corrupt_profiles_ps1) {
+            Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            Write-Host "Clear-CorruptProfiles.ps1 script not found in $env:LOCAL_SCRIPTS." -Foregroundcolor Red
+            return
+        }
+
+        ## Create empty results container
+        $results = [system.collections.arraylist]::new()
     }
-    else {
-        $whatif_setting = $true
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, scan for temp profiles, cleanup if specified.
+    PROCESS {
+        ## 1.
+        if ($Targetcomputer) {
+            ## 2.
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                ## 3.
+                $temp_profile_search = Invoke-Command -ComputerName $TargetComputer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
+            
+                if ($temp_profile_search) {
+                    $temp_profile_search = $temp_profile_search | Select * -ExcludeProperty RunspaceID, PSShowComputerName
+                    $results.Add($temp_profile_search) | Out-null
+                }
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+            }
+        }
     }
-
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-    if ($whatif_setting) {
-        Write-Host "Deletions DISABLED - script won't delete files/folders on target computers." -Foregroundcolor Green
+    ## 1. If results - output to report or terminal.
+    END {
+        if ($results) {
+            ## Sort the results
+            if ($outputfile.tolower() -eq 'n') {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($results.count -le 2) {
+                    $results | Format-List
+                    # $results | Out-GridView
+                }
+                else {
+                    $results | out-gridview
+                }
+            }
+            else {
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                ## Try ImportExcel
+                try {
+                    ## xlsx attempt:
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = 'TempProfiles'
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
+            }
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
+        }
+        Read-Host "Press enter to continue."
     }
-    else {
-        Write-Host "Deletions ENABLED - script will delete files/folders on target computers." -Foregroundcolor Yellow
-    }
-
-    Read-Host "Press enter to continue"
-
-    # End variable section -----------------------   
-    $TargetComputer = $TargetComputer | where-object { $_ -ne $null } # remove blank lines from end of text file
-    
-    if ($TargetComputer.count -lt 30) {
-        $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-        $Targetcomputer = $TargetComputer
-    }
-
-    $TargetComputer = $TargetComputer
-
-    # creating output report is mandatory for this function
-    $OutputFile = Get-OutputFileString -TitleString $REPORT_TITLE -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_TITLE -ReportOutput
-
-    # get clear-corruptprofiles.ps1 script
-    $get_corrupt_profiles_ps1 = Get-ChildItem -Path "$env:LOCAL_SCRIPTS" -Filter "Clear-CorruptProfiles.ps1" -File -ErrorAction SilentlyContinue
-    if (-not $get_corrupt_profiles_ps1) {
-        Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-        Write-Host "Clear-CorruptProfiles.ps1 script not found in $env:LOCAL_SCRIPTS." -Foregroundcolor Red
-        return
-    }
-
-    $results = Invoke-Command -ComputerName $TargetComputer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
-
-    if ($results) {
-        $results = $results | Select * -ExcludeProperty RunspaceID, PSShowComputerName
-
-        $results | sort -property pscomputername
-    
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting results to " -NoNewline
-        Write-Host "$outputfile.csv and $outputfile.xlsx" -Foregroundcolor Green
-
-        Output-Reports -filepath "$outputfile" -content $results -ReportTitle $REPORT_TITLE -CSVFile $true -XLSXFile $true
-        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_TITLE\"
-    }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-        Write-Host "No temporary user folders found on $($Targetcomputer -join ', ')." -Foregroundcolor Green
-    }
-    REad-Host "Press enter to continue."
 }

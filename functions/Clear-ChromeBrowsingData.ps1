@@ -37,7 +37,6 @@ function Clear-ChromeBrowsingData {
         [string]$UseCaution,
         [string]$TargetAllProfiles
     )
-
     if (-not $Username) {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No username specified, " -nonewline
         Write-Host "will target active user on $TargetPC." -ForegroundColor Yellow
