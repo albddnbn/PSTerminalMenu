@@ -38,10 +38,12 @@ function Get-AssetInformation {
         $TargetComputer,
         [string]$Outputfile = ''
     )
+    ## 1. Scriptblock that retrieves asset info from local computer.
+    ## 2. Handling TargetComputer input if not supplied through pipeline.
+    ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+    ## 4. Create empty results container.
     BEGIN {
-        ##################################################################################
-        ##  Asset info scriptblock used to get local asset info from each target computer.
-        ##################################################################################
+        ## 1. Asset info scriptblock used to get local asset info from each target computer.
         $asset_info_scriptblock = {
             # computer model (ex: 'precision 3630 tower'), BIOS version, and BIOS release date
             $computer_model = get-ciminstance -class win32_computersystem | select -exp model
@@ -61,10 +63,8 @@ function Get-AssetInformation {
                     $asset_tag = 'No asset tag set in BIOS'
                 }    
             }
-
             $computer_serial_num = get-ciminstance -class win32_bios | select -exp serialnumber
-
-            # get monitor info:
+            # get monitor info and create a string from it (might be unnecessary, or a lengthy approach):
             $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi -ComputerName $ComputerName | Select Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
             $monitor_string = ""
             $monitor_count = 0
@@ -72,9 +72,7 @@ function Get-AssetInformation {
                 $_.UserFriendlyName = [System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)
                 $_.SerialNumberID = [System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)
                 $_.ManufacturerName = [System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)
-
                 $manufacturername = $($_.ManufacturerName).trim()
-
                 $monitor_string += "Maker: $manufacturername,Mod: $($_.UserFriendlyName),Ser: $($_.SerialNumberID),Yr: $($_.YearOfManufacture)"
                 $monitor_count++
             }
@@ -88,16 +86,11 @@ function Get-AssetInformation {
                 monitors            = $monitor_string
                 NumMonitors         = $monitor_count
             }
-
             return $obj
         }
-        #####################
-        ##  Start of function
-        #####################
+
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -129,27 +122,17 @@ function Get-AssetInformation {
                 }
             }
             $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-
-            ## At this point - if targetcomputer is null - its been provided as a parameter
             # Safety catch
             if ($null -eq $TargetComputer) {
                 return
             }
-            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-
-            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-                }
-            }
         }
 
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            ## outputfile will not be 'n' at this point
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "AssetInfo"
@@ -176,17 +159,20 @@ function Get-AssetInformation {
                 }
             }
             Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
-
         }
-        ## Create results container
-
+        ## 3. Create empty results container
         $results = [system.collections.arraylist]::new()
 
     }
-
-    ## Collecting local asset information from each target computer
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, Collect local asset information from computer
     PROCESS {
         if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
             ## test with ping first:
             $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
             if ($pingreply) {
@@ -201,7 +187,7 @@ function Get-AssetInformation {
         }
     }
 
-    ## output to report files / terminal.
+    ## 1. If there were any results - output them to terminal and/or report files as necessary.
     END {
         if ($results) {
             ## Sort the results
@@ -217,8 +203,6 @@ function Get-AssetInformation {
             }
             else {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-
                 ## Try ImportExcel
                 try {
                     ## xlsx attempt:

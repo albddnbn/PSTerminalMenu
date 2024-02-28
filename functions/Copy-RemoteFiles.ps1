@@ -29,96 +29,85 @@ function Copy-RemoteFiles {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    param(
-        [string]$TargetPath,
-        [string]$OutputPath,
+    param(        
         [Parameter(
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        $targetcomputer
+        $targetcomputer,
+        [string]$TargetPath,
+        [string]$OutputPath
     )
 
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. Make sure output folder path exists for remote files to be copied to.
     BEGIN {
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
-            $null
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                    return
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-
-        }
-            
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }
-        # allow user to submit comma-separated list of paths?
-        if ($TargetPath.GetType().name -eq 'String') {
-            if ($TargetPath -like "*,*") {
-                $TargetPath = $TargetPath -split ','
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
-            else {
-                $TargetPath = @($TargetPath)
-            }
-            # if its an array
         }
 
-        ## Chop preceding drive letters from targetpath(s)
-        $temptargetpath = [system.collections.arraylist]::new()
-        ForEach ($single_path in $TargetPath) {
-            if ($single_path -match '[A-Za-z]:\\*') {
-                $single_path = $single_path.substring(3)
-            }
-            $temptargetpath.add($single_path)
+        ## 2. Make sure the outputpath folder exists:
+        if (-not(Test-Path "$Outputpath" -erroraction SilentlyContinue)) {
+            New-Item -ItemType Directory -Path "$Outputpath" -ErrorAction SilentlyContinue | out-null
         }
 
-        $TargetPath = $temptargetpath
     }
 
-    ## Copying files from target computers
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. Copy file from pssession on target machine, to local computer.
+    ##    Report on success/fail
+    ## 4. Remove the pssession.
     PROCESS {
-        Foreach ($single_computer in $Targetcomputer) {
-            $ping_test = Test-Connection -ComputerName $single_computer -Count 1 -Quiet
-
-            if (-not $ping_test) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping." -Foregroundcolor Red
-                continue
-            }
-
-            if (-not (Test-Path $OutputPath\$single_computer)) {
-                New-Item -Path $OutputPath\$single_computer -ItemType Directory -Force | Out-Null
-            }
-
-            ForEach ($single_item in $TargetPath) {
-                if (Test-Path "\\$single_computer\C$\$single_item" -ErrorAction SilentlyContinue) {
-                    Copy-Item "\\$single_computer\C$\$single_item" -Destination "$OutputPath\$single_computer" -Recurse -Force
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Copied \\$single_computer\C$\$single_item to $OutputPath\$single_computer."
+        ## 1. no empty Targetcomputer values past this point
+        if ($targetcomputer) {
+            ## 2. Ping target machine one time
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                $target_session = New-PSSession $TargetComputer
+                try {
+                    Copy-Item -Path "$targetpath" -Destination "$outputpath\" -FromSession $target_session -Recurse
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($Targetcomputer) to $outputpath  complete." -foregroundcolor green
                 }
-                else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: \\$single_computer\C$\$single_item does not exist." -Foregroundcolor Red
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $targetcomputer to $outputpath on local computer." -foregroundcolor red
                 }
+                ## 4. Bye pssession
+                Remove-PSSession $target_session
             }
         }
     }

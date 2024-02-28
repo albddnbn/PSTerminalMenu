@@ -40,15 +40,11 @@ function Get-ComputerDetails {
         [string]$Outputfile = ''
     )
 
-    ############################################################################################
-    ## BEGIN - TargetComputer and Outputfile parameter handling, attempt to filter offline hosts
-    ############################################################################################
+
     BEGIN {
-        ## Date variable (used for filename creation)
+        ## 1. define date variable (used for filename creation)
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        ## TargetComputer is mandatory - if its null, its been provided through pipeline - don't touch it in begin block
+        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -80,18 +76,9 @@ function Get-ComputerDetails {
                 }
             }
             $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-
-            ## At this point - if targetcomputer is null - its been provided as a parameter
             # Safety catch
             if ($null -eq $TargetComputer) {
                 return
-            }
-            Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
-
-            if (($TargetComputer.count -lt 20) -and ($Targetcomputer -ne '127.0.0.1')) {
-                if (Get-Command -Name "Get-LiveHosts" -ErrorAction SilentlyContinue) {
-                    $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-                }
             }
         }
         ## Outputfile path needs to be created regardless of how Targetcomputer is submitted to function
