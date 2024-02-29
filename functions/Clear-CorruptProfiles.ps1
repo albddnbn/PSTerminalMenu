@@ -141,69 +141,65 @@ function Clear-CorruptProfiles {
         ## 6. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
-
+    ## 1. Check Targetcomputer for null/empty values
+    ## 2. Ping test
+    ## 3. If responsive, run Clear-CorruptProfiles.ps1 script on target computer
     PROCESS {
+        ## 1.
         if ($TargetComputer) {
             # may be able to remove the next 3 lines.
             if ($Targetcomputer -eq '127.0.0.1') {
                 $TargetComputer = $env:COMPUTERNAME
             }
-            ## test with ping first:
+            ## 2. test with ping:
             $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
             if ($pingreply) {
+                ## 3. Run script
                 $temp_profile_results = Invoke-Command -ComputerName $TargetComputer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
+                $results.add($temp_profile_results) | Out-Null
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
                 Write-Host "$TargetComputer is offline." -Foregroundcolor Red
             }
-            $results.add($temp_profile_results) | Out-Null
         }
     }
+    ## 1. If there are any results - output them to report .csv/.xlsx files
     END {
         if ($results) {
-
-            ## Sort the results
-            if ($outputfile.tolower() -eq 'n') {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                    # $results | Out-GridView
+            $results = $results | sort -property pscomputername
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            ## Try ImportExcel
+            try {
+                ## xlsx attempt:
+                $params = @{
+                    AutoSize             = $true
+                    TitleBackgroundColor = 'Blue'
+                    TableName            = "$REPORT_DIRECTORY"
+                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    BoldTopRow           = $true
+                    WorksheetName        = "$REPORT_DIRECTORY"
+                    PassThru             = $true
+                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                 }
-                else {
-                    $results | out-gridview
-                }
+                $Content = Import-Csv "$Outputfile.csv"
+                $xlsx = $Content | Export-Excel @params
+                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                Close-ExcelPackage $xlsx
             }
-            else {
-                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-                ## Try ImportExcel
-                try {
-                    ## xlsx attempt:
-                    $params = @{
-                        AutoSize             = $true
-                        TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
-                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
-                        BoldTopRow           = $true
-                        WorksheetName        = "$REPORT_DIRECTORY"
-                        PassThru             = $true
-                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
-                    }
-                    $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
-                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
-                    Close-ExcelPackage $xlsx
-                }
-                catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
-                }
-                Invoke-item "$($outputfile | split-path -Parent)"
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            ## Open the report folder
+            Invoke-item "$($outputfile | split-path -Parent)"
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
+
+        ## This is included for menu purposes, so there's a pause before the function ends and terminal window reverts
+        ## to opening menu options.
         Read-Host "Press enter to return results."
         return $results
     }

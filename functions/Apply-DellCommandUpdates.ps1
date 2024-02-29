@@ -144,25 +144,26 @@ Function Apply-DellCommandUpdates {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping." -ForegroundColor Yellow
             }
         }
-
     }
 
-    ## 1. Output results to terminal and/or file.
+    ## 1. Output results to gridview and terminal
     END {
         if ($results) {
             $results | Out-GridView
-        }
-        $occupied_computers = $($results | where-object { $_.Username } | select-object -expandproperty PSComputerName) -join ', '
-        $need_dell_command_update_installed = $($results | where-object { $_.DCUInstalled -eq 'NO' } | select-object -expandproperty PSComputerName) -join ', '
+            $occupied_computers = $($results | where-object { $_.Username } | select-object -expandproperty PSComputerName) -join ', '
+            $need_dell_command_update_installed = $($results | where-object { $_.DCUInstalled -eq 'NO' } | select-object -expandproperty PSComputerName) -join ', '
     
-        $currently_applying_updates = $($results | where-object { $_.UpdatesStarted -eq "YES" } | select-object -expandproperty PSComputerName) -join ', '
-        Write-Host "These computers are occupied: " -nonewline
-        Write-Host "$occupied_computers" -Foregroundcolor Yellow
-        Write-Host ""
-        Write-Host "These computers need Dell Command | Update installed: " -nonewline
-        Write-Host "$need_dell_command_update_installed" -Foregroundcolor Red
-        Write-Host ""
-        Write-Host "These computers have begun to apply updates and should be rebooting momentarily: " -nonewline
-        Write-Host "$currently_applying_updates" -Foregroundcolor Green
+            $currently_applying_updates = $($results | where-object { $_.UpdatesStarted -eq "YES" } | select-object -expandproperty PSComputerName) -join ', '
+            Write-Host "These computers are occupied: " -nonewline
+            Write-Host "$occupied_computers" -Foregroundcolor Yellow
+            Write-Host "`n"
+            Write-Host "These computers need Dell Command | Update installed: " -nonewline
+            Write-Host "$need_dell_command_update_installed" -Foregroundcolor Red
+            Write-Host "`n"
+            Write-Host "These computers have begun to apply updates and should be rebooting momentarily: " -nonewline
+            Write-Host "$currently_applying_updates" -Foregroundcolor Green
+
+            return $results
+        }
     }
 }

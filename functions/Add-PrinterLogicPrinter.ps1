@@ -183,10 +183,10 @@ function Add-PrinterLogicPrinter {
     }
     ## 1. If there are any results - output to file
     ## 2. Output missed computers to terminal.
+    ## 3. Return results arraylist
     END {
         ## 1.
         if ($results) {
-
             ## Output results list to file:
             ## Sort the results
             if ($outputfile.tolower() -eq 'n') {
@@ -229,11 +229,14 @@ function Add-PrinterLogicPrinter {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
+        ## 2. Output unresponsive computers
         Write-Host "These computers did not respond to ping:"
         Write-Host ""
         $missed_computers
         Write-Host ""
         Read-Host "Press enter to return results."
+
+        ## 3. return results arraylist
         return $results
     }
 }

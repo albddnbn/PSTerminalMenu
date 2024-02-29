@@ -31,7 +31,6 @@ function Build-PrinterConnectionExe {
         # [ValidateSet('printerlogic', 'ps')]
         $PrinterType
     )
-    # doesn't need utility functions.
     $EXECUTABLES_DIRECTORY = 'PrinterMapping'
     $thedate = Get-Date -Format 'yyyy-MM-dd'
 
