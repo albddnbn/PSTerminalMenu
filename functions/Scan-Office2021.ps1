@@ -31,105 +31,183 @@ function Scan-Office2021 {
         )]
         $TargetComputer
     )
-
-    $REPORT_TITLE = 'Office2021Scan'
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
-    ## TARGETCOMPUTER HANDLING:
-    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-    if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-        $null
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-    }
-    elseif ($TargetComputer -is [string]) {
-        if ($TargetComputer -in @('', '127.0.0.1')) {
-            $TargetComputer = @('127.0.0.1')
-        }
-        elseif ($Targetcomputer -like "*,*") {
-            $TargetComputer = $TargetComputer -split ','
-        }
-        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-            $TargetComputer = Get-Content $TargetComputer
+    BEGIN {
+        $REPORT_TITLE = 'Office2021Scan'
+        ## Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-            if ($test_ping) {
-                $TargetComputer = @($TargetComputer)
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            else {
-                $TargetComputerInput = $TargetComputerInput + "x"
-                $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                $TargetComputerInput = $TargetComputerInput | Sort-Object   
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
+                }
+                else {
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
+                }
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
         }
-    }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-    if ($TargetComputer.count -lt 20) {
-        $TargetComputer = Get-LiveHosts -TargetComputerInput $TargetComputer
-    }
-    $outputfile = ''
-    #return new output filepath value
-    if ($Outputfile -eq '') {
-        $OutputFile = Get-OutputFileString -TitleString $REPORT_TITLE -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_TITLE -ReportOutput
-    }
-    elseif ($outputfile.ToLower() -ne 'n') {    
-        $OutputFile = Get-OutputFileString -TitleString $OutputFile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_TITLE -ReportOutput
-    }
-
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Beginning Office2021 scan on target computers now."
-
-    $results = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-        # Loop through each registry path and retrieve the list of subkeys
-        $uninstallKeys = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue
-        $path = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-        foreach ($key in $uninstallKeys) {
-            $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
-            $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-
-            if ($displayName -like "*Office*Professional*") {
-                $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
-
-
-                if ($publisher -like "*Microsoft*") {
-
-
-                    $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
-                    $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
-                    $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
-                    $installdate = (Get-ItemProperty -Path $keyPath -Name "InstallDate" -ErrorAction SilentlyContinue).InstallDate
-
-
-                    $obj = [pscustomobject]@{
-                        DisplayName     = $displayName
-                        Publisher       = $publisher
-                        UninstallString = $uninstallString
-                        Version         = $version
-                        InstallLocation = $installLocation
-                        InstallDate     = $installdate
-                        Office2021Found = $false
-                    }
-                    if ($displayname -like "*2021*") {
-                        $obj.Office2021Found = $true
-                        # found a match, so break
-                        break
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = $REPORT_TITLE
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $REPORT_DIRECTORY = "$str_title_var"
+                }
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
                     }
                 }
             }
         }
-
-        $obj
-    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName | Sort -Property PSComputerName
-
-    $results | sort-object -property PSComputerName | format-table -autosize
-
-    if ($outputfile.ToLower() -ne 'n') {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting results to " -NoNewline
-        Write-Host "$outputfile.csv and $outputfile.xlsx" -Foregroundcolor Green
-
-        Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "Office2021Scan" -CSVFile $true -XLSXFile $true
-
-        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_TITLE\"
+        ## 3. Create empty results container
+        $results = [system.collections.arraylist]::new()
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Beginning Office2021 scan on target computers now."
     }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+
+    PROCESS {
+        if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
+            ## test with ping first:
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                $office2021_check = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
+                    # Loop through each registry path and retrieve the list of subkeys
+                    $uninstallKeys = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue
+                    $path = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+                    foreach ($key in $uninstallKeys) {
+                        $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
+                        $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+
+                        if ($displayName -like "*Office*Professional*") {
+                            $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
+
+
+                            if ($publisher -like "*Microsoft*") {
+
+
+                                $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
+                                $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+                                $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
+                                $installdate = (Get-ItemProperty -Path $keyPath -Name "InstallDate" -ErrorAction SilentlyContinue).InstallDate
+
+
+                                $obj = [pscustomobject]@{
+                                    DisplayName     = $displayName
+                                    Publisher       = $publisher
+                                    UninstallString = $uninstallString
+                                    Version         = $version
+                                    InstallLocation = $installLocation
+                                    InstallDate     = $installdate
+                                    Office2021Found = $false
+                                }
+                                if ($displayname -like "*2021*") {
+                                    $obj.Office2021Found = $true
+                                    # found a match, so break
+                                    break
+                                }
+                            }
+                        }
+                    }
+
+                    $obj
+                }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+            
+                $results.Add($office2021_check) | Out-Null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -Foregroundcolor Yellow
+            }
+        }
+    }
+    END {
+        if ($results) {
+            ## Sort the results
+            if ($outputfile.tolower() -eq 'n') {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+                if ($results.count -le 2) {
+                    $results | Format-List
+                    # $results | Out-GridView
+                }
+                else {
+                    $results | out-gridview
+                }
+            }
+            else {
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                ## Try ImportExcel
+                try {
+                    ## xlsx attempt:
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_DIRECTORY"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = $str_title_var
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
+            }
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
+        }
+        Read-Host "Press enter to continue."
     }
 }

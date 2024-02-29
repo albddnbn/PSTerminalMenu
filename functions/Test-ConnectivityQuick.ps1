@@ -30,39 +30,44 @@ function Test-ConnectivityQuick {
         $TargetComputer
     )
     BEGIN {
-        ## SCRIPT WILL USE THIS AMOUNT OF PINGS TO DETERMINE TARGET NETWORK RESPONSIVENESS.
+        ## SCRIPT WILL USE THIS AMOUNT OF PINGS TO DETERMINE TARGET NETWORK RESPONSIVENESS (quickly).
         $PING_COUNT = 1
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                    return
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
         }
 
         ## COLLECTIONS LISTS - successful/failed pings.
@@ -72,40 +77,50 @@ function Test-ConnectivityQuick {
 
     ## Ping target machines $PingCount times and log result to terminal.
     PROCESS {
-
-        ForEach ($single_computer in $Targetcomputer) {
-            ## Ping target machine(s) 1 time, add result object to corresponding list.
-            # PROCESS {
-            $connection_result = Test-Connection $single_computer -count $PING_COUNT -Quiet
-            if ($connection_result) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online." -foregroundcolor green
-                $list_of_online_computers.add($single_computer) | Out-Null
-            }
-            else {
-
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-                Write-Host "$single_computer is not online." -foregroundcolor red
-                $list_of_offline_computers.add($single_computer) | Out-Null
-            }
+        $connection_result = Test-Connection $TargetComputer -count $PING_COUNT -Quiet
+        $ping_responses = ($connection_result | Measure-Object -Sum).Count
+        if ($connection_result) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
+            $list_of_online_computers.add($single_computer) | Out-Null
+        }
+        else {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+            Write-Host "$single_computer is not online." -foregroundcolor red
+            $list_of_offline_computers.add($single_computer) | Out-Null
         }
     }
-    ## Try to create sensible output file path from one of the hostnames pinged.
+    ## Output offline/online hosts to txt files in output folder
     END {
-        $Hostname_substring = $TargetComputer | Select-Object -First 1
-        $hostname_substring = $hostname_substring -split '-'
-        $hostname_substring = $hostname_substring[1]
+        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
+            $iterator_var = 0
+            while ($true) {
+                $outputfile = "$env:PSMENU_DIR\output\$thedate\hostname_list"
+                if ((Test-Path "$outputfile-online.txt") -or (Test-Path "$outputfile-offline.txt")) {
+                    $outputfile = "$env:PSMENU_DIR\output\$thedate\hostname_list-$([string]$iterator_var)"
+                    $iterator_var++
+                }
+                else {
+                    break
+                }
+            }
+        }
 
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -nonewline
         Write-Host "Outputting list of online/offline hosts to: " -foregroundcolor green
 
-        $list_of_online_computers | Out-File "$env:PSMENU_DIR\output\$hostname_substring-hostname_list-online.txt"
-        $list_of_offline_computers | Out-File "$env:PSMENU_DIR\output\$hostname_substring-hostname_list-offline.txt"
+        $list_of_online_computers | Out-File "$outputfile-online.txt"
+        $list_of_offline_computers | Out-File "$outputfile-offline.txt"
 
-        Write-Host "Online hosts are in $hostname_substring-hostname_list-online.txt" -foregroundcolor green
-        Write-Host "Offline hosts are in $hostname_substring-hostname_list-offline.txt" -foregroundcolor red
+        Write-Host "Online hosts are in $outputfile-online.txt" -foregroundcolor green
+        Write-Host "Offline hosts are in $outputfile-offline.txt" -foregroundcolor red
         Start-Sleep -Seconds 2
 
-        Invoke-Item "$env:PSMENU_DIR\output\"
+        Invoke-Item "$env:PSMENU_DIR\output\$thedate"
         Read-Host "Press Enter when you're done reading the output."
     }
+
 }
