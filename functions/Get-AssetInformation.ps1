@@ -129,13 +129,14 @@ function Get-AssetInformation {
         }
 
         ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "AssetInfo"
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "AssetInfo"
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
                 else {
                     $REPORT_DIRECTORY = $outputfile            
@@ -147,10 +148,10 @@ function Get-AssetInformation {
                 if ($outputfile.tolower() -eq '') {
                     $iterator_var = 0
                     while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
                         }
                         else {
                             break
@@ -158,7 +159,6 @@ function Get-AssetInformation {
                     }
                 }
             }
-            Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
         }
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
