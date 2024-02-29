@@ -29,10 +29,12 @@ function Test-ConnectivityQuick {
         )]
         $TargetComputer
     )
+    ## 1. Set PingCount - # of pings sent to each target machine.
+    ## 2. Handle Targetcomputer if not supplied through the pipeline.
     BEGIN {
-        ## SCRIPT WILL USE THIS AMOUNT OF PINGS TO DETERMINE TARGET NETWORK RESPONSIVENESS (quickly).
+        ## 1. Set PingCount - # of pings sent to each target machine.
         $PING_COUNT = 1
-        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -77,16 +79,18 @@ function Test-ConnectivityQuick {
 
     ## Ping target machines $PingCount times and log result to terminal.
     PROCESS {
-        $connection_result = Test-Connection $TargetComputer -count $PING_COUNT -Quiet
-        $ping_responses = ($connection_result | Measure-Object -Sum).Count
-        if ($connection_result) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
-            $list_of_online_computers.add($single_computer) | Out-Null
-        }
-        else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-            Write-Host "$single_computer is not online." -foregroundcolor red
-            $list_of_offline_computers.add($single_computer) | Out-Null
+        if ($TargetComputer) {
+            $connection_result = Test-Connection $TargetComputer -count $PING_COUNT -Quiet
+            $ping_responses = ($connection_result | Measure-Object -Sum).Count
+            if ($connection_result) {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
+                $list_of_online_computers.add($single_computer) | Out-Null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+                Write-Host "$single_computer is not online." -foregroundcolor red
+                $list_of_offline_computers.add($single_computer) | Out-Null
+            }
         }
     }
     ## Output offline/online hosts to txt files in output folder
