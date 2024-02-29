@@ -39,146 +39,170 @@ function Ping-TestReport {
         )]
         $TargetComputer,
         $PingCount,
-        $Outputfile
+        [string]$Outputfile
     )
-    # BEGIN {
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
+    ## 1. Set date and AM / PM variables
+    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+    ## 3. If provided, use outputfile input to create report output filepath.
+    ## 4. Create arraylist to store results
+    BEGIN {
+        ## 1. Set date and AM / PM variables
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        $am_pm = (Get-Date).ToString('tt')
 
-    ## TARGETCOMPUTER HANDLING:
-    ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-    if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-        $null
-        ## If it's a string - check for commas, try to get-content, then try to ping.
-    }
-    elseif ($TargetComputer -is [string]) {
-        if ($TargetComputer -in @('', '127.0.0.1')) {
-            $TargetComputer = @('127.0.0.1')
-        }
-        elseif ($Targetcomputer -like "*,*") {
-            $TargetComputer = $TargetComputer -split ','
-        }
-        elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-            $TargetComputer = Get-Content $TargetComputer
+        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-            if ($test_ping) {
-                $TargetComputer = @($TargetComputer)
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
+            }
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
+                }
+                else {
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
+                }
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+        }
+
+        ## 2. If provided, use outputfile input to create report output filepath.
+        if ($outputfile -eq '') {
+            $REPORT_TITLE = "Pings-$(Get-Date -Format 'hh-MM')$($am_pm)"
+        }
+        ## If they submitted a value that wasn't 'n' - use that value to create filepath
+        elseif ($outputfile.ToLower() -ne 'n') {
+            $REPORT_TITLE = "Pings-$outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
+        }
+        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = $REPORT_TITLE
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
+            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+                if ($Outputfile.toLower() -eq '') {
+                    $REPORT_DIRECTORY = "$str_title_var"
+                }
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
-                $TargetComputerInput = $TargetComputerInput + "x"
-                $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+                if ($outputfile.tolower() -eq '') {
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
+                }
             }
         }
-    }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-    # Safety catch to make sure
-    if ($null -eq $TargetComputer) {
-        # user said to end function:
-        return
-    }
+        ## 3. Create arraylist to store results
+        $results = [system.collections.arraylist]::new()
 
-    # get the hour/min of day in filestring
-    if ($([int](Get-Date -Format 'HH')) -le 11) {
-        $am_pm = "AM"
+        $PingCount = [int]$PingCount
     }
-    else {
-        $am_pm = "PM"
-    }
-
-    ## If the user didn't submit outputfile value - use default
-    if ($outputfile -eq '') {
-        $REPORT_TITLE = "PingTest-$(Get-Date -Format 'hh-MM')$($am_pm)"
-    }
-    ## If they submitted a value that wasn't 'n' - use that value to create filepath
-    elseif ($outputfile.ToLower() -ne 'n') {
-        $REPORT_TITLE = "PingTest-$outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
-        # if ($Outputfile -eq '') { $outputfile = $REPORT_TITLE } elseif ($outputfile.ToLower() -ne 'n') {
-    }
-
-    ## If Get-OutputFileString is available, use it to create outputfile string
-    if (Get-Command -Name 'Get-OutputFileString' -ErrorAction SilentlyContinue) {
-        $outputfile = Get-OutputFileString -Titlestring $REPORT_TITLE -rootdirectory $env:PSMENU_DIR -foldertitle $REPORT_TITLE -reportoutput
-    }
-    ## Otherwise - just assign filename to be report title
-    else {
-        $outputfile = $REPORT_TITLE
-    }
-
-    $results_container = [system.collections.arraylist]::new()
-
-    $PingCount = [int]$PingCount
-    # }
 
     ## Ping EACH Target computer / record results into ps object, add to arraylist (results_container)
-    # PROCESS {
-    ForEach ($single_computer in $TargetComputer) {
-        # read-host "beginning loop"
-        $obj = [pscustomobject]@{
-            Sourcecomputer       = $env:COMPUTERNAME
-            ComputerHostName     = $single_computer
-            TotalPings           = $pingcount
-            Responses            = 0
-            AvgResponseTime      = 0
-            PacketLossPercentage = 0
+    PROCESS {
+        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+        if ($TargetComputer) {
+            ## 2. Create object to store results of ping test on single machine
+            $obj = [pscustomobject]@{
+                Sourcecomputer       = $env:COMPUTERNAME
+                ComputerHostName     = $TargetComputer
+                TotalPings           = $pingcount
+                Responses            = 0
+                AvgResponseTime      = 0
+                PacketLossPercentage = 0
+            }
+
+            $send_pings = Test-Connection -ComputerName $TargetComputer -count $PingCount -ErrorAction SilentlyContinue
+            $obj.responses = $send_pings.count
+            $sum_of_response_times = $($send_pings | measure-object responsetime -sum)
+            $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
+            if ($obj.Responses -eq 0) {
+                $obj.AvgResponseTime = 0
+            }
+            # calculate packet loss percentage - divide total pings by responses
+            $total_drops = $obj.TotalPings - $obj.Responses
+            $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
+
+            ## 3. Add object to container created in BEGIN block
+            $results.add($obj) | Out-Null
         }
-
-        $results = Test-Connection -ComputerName $single_computer -count $PingCount -ErrorAction SilentlyContinue
-
-        $obj.responses = $results.count
-
-        $sum_of_response_times = $($results | measure-object responsetime -sum)
-
-
-
-        $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
-        if ($obj.Responses -eq 0) {
-
-            $obj.AvgResponseTime = 0
-        }
-
-        # calculate packet loss percentage - divide total pings by responses
-        $total_drops = $obj.TotalPings - $obj.Responses
-        $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
-
-        $results_container.add($obj) | Out-Null
     }
-    # }
 
     ## Report file creation or terminal output
-    # END {
-
-    if ($outputfile.tolower() -eq 'n') {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-        # $results_container | format-table -autosize
-        $results_container | out-gridview
-    }
-    else {
-        if (Get-Command -name 'output-reports' -erroraction SilentlyContinue) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting " -nonewline
-            Write-Host "$outputfile" -foregroundcolor green -NoNewline
-            Write-Host " to .csv/.xlsx."
-    
-            Output-Reports -Filepath "$outputfile" -Content $results_container -ReportTitle "Ping Test $thedate" -CSVFile $true -XLSXFile $true
-    
-            # /-- Open in File explorer
-            Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_TITLE\"
+    END {
+        if ($results) {
+            ## 1. Sort any existing results by computername
+            $results = $results | sort -property pscomputername
+            ## 2. Output to gridview if user didn't choose report output.
+            if ($outputfile.tolower() -eq 'n') {
+                $results | out-gridview
+            }
+            else {
+                ## 3. Create .csv/.xlsx reports if possible
+                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+                ## Try ImportExcel
+                try {
+                    $params = @{
+                        AutoSize             = $true
+                        TitleBackgroundColor = 'Blue'
+                        TableName            = "$REPORT_TITLE"
+                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                        BoldTopRow           = $true
+                        WorksheetName        = $REPORT_TITLE
+                        PassThru             = $true
+                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                    }
+                    $Content = Import-Csv "$Outputfile.csv"
+                    $xlsx = $Content | Export-Excel @params
+                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                    Close-ExcelPackage $xlsx
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+                }
+                Invoke-item "$($outputfile | split-path -Parent)"
+            }
         }
         else {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting " -nonewline
-            Write-Host "$outputfile" -foregroundcolor green -NoNewline
-            Write-Host " to .csv only"
-            $results_container | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-            # /-- Open in File explorer
-            try {
-                Invoke-Item "$outputfile.csv"
-            }
-            catch {
-                Write-Host "Failed to open $outputfile.csv."
-            }
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
+        Read-Host "Press enter to continue."
     }
-    # }
 }
