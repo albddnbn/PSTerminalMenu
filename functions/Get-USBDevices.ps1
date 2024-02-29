@@ -103,33 +103,48 @@ function Get-USBDevices {
         ## Create empty results container
         $results = [system.collections.arraylist]::new()
     }
-
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, Collect connected usb information from computer
     PROCESS {
+        ## 1.
+        if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
+            ## 2. Test with ping:
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                ## 3. Getting USB info from target machine(s):
+                $connected_usb_info = Invoke-Command -Computername $targetcomputer -scriptblock {
+                    $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
 
-        ###########################################
-        ## Getting USB info from target machine(s):
-        ###########################################
-        $results = Invoke-Command -Computername $targetcomputer -scriptblock {
-            $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
+                    $connected_usb_devices
+                }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
 
-            $connected_usb_devices
-        }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-
-        $all_results.add($results) | out-null
+                $results.add($connected_usb_info) | out-null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer did not respond to one ping, skipping." -Foregroundcolor Red
+    
+            }
+        }
     }
     ## 1. If there are results - sort them by the hostname (pscomputername) property.
-    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 2. Separate results out by computer, cycle through and create a list of connected usb devices per machine.
     ## 3. Create .csv/.xlsx reports as necessary.
+    ## 4. Try to open output/report folder.
     END {
-        if ($all_results) {
-            $all_results = $all_results | sort -property pscomputername
-            # outputs a file for each computer in the list
-            $unique_hostnames = $all_results | Select -exp PSComputerName -Unique
-            # script will create a .txt and/or .csv with result object per computer.
-
+        if ($results) {
+            ## 1.
+            $results = $results | sort -property pscomputername
+            ## 2.
+            $unique_hostnames = $results | Select -exp PSComputerName -Unique
             ForEach ($unique_hostname in $unique_hostnames) {
-                $computers_results = $all_results | where-object { $_.pscomputername -eq $unique_hostname }
+                $computers_results = $results | where-object { $_.pscomputername -eq $unique_hostname }
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting $outputfile-$unique_hostname.csv/$outputfile-$unique_hostname.xlsx..."
+                ## 3.
                 if ($outputfile.tolower() -ne 'n') {
                     if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
                         Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
@@ -147,6 +162,7 @@ function Get-USBDevices {
     
                 }
             }
+            ## 4.
             try {
                 Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
             }
@@ -157,6 +173,7 @@ function Get-USBDevices {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "Press enter to return results."
+        return $results    
     }
 }
