@@ -73,8 +73,9 @@ function Test-ConnectivityQuick {
         }
 
         ## COLLECTIONS LISTS - successful/failed pings.
-        $list_of_online_computers = [system.collections.arraylist]::new()
-        $list_of_offline_computers = [system.collections.arraylist]::new()
+        $results = [system.collections.arraylist]::new()
+        # $list_of_online_computers = [system.collections.arraylist]::new()
+        # $list_of_offline_computers = [system.collections.arraylist]::new()
     }
 
     ## Ping target machines $PingCount times and log result to terminal.
@@ -82,49 +83,34 @@ function Test-ConnectivityQuick {
         if ($TargetComputer) {
             $connection_result = Test-Connection $TargetComputer -count $PING_COUNT -Quiet
             $ping_responses = ($connection_result | Measure-Object -Sum).Count
+
+            ## Create object
+            $ping_response_obj = [pscustomobject]@{
+                ComputerName  = $TargetComputer
+                Status        = ""
+                PingResponses = $ping_responses
+                NumberPings   = $PING_COUNT
+            }
+
             if ($connection_result) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
-                $list_of_online_computers.add($single_computer) | Out-Null
+                # $list_of_online_computers.add($single_computer) | Out-Null
+                $ping_response_obj.Status = 'online'
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
                 Write-Host "$single_computer is not online." -foregroundcolor red
-                $list_of_offline_computers.add($single_computer) | Out-Null
+                # $list_of_offline_computers.add($single_computer) | Out-Null
+                $ping_response_obj.Status = 'offline'
             }
+
+            $results.add($ping_response_obj) | Out-Null
         }
     }
-    ## Output offline/online hosts to txt files in output folder
+    ## Open results in gridview since this is just supposed to be quick test for connectivity
     END {
-        ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if ($Outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-        }
-        else {
-            $iterator_var = 0
-            while ($true) {
-                $outputfile = "$env:PSMENU_DIR\output\$thedate\hostname_list"
-                if ((Test-Path "$outputfile-online.txt") -or (Test-Path "$outputfile-offline.txt")) {
-                    $outputfile = "$env:PSMENU_DIR\output\$thedate\hostname_list-$([string]$iterator_var)"
-                    $iterator_var++
-                }
-                else {
-                    break
-                }
-            }
-        }
-
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -nonewline
-        Write-Host "Outputting list of online/offline hosts to: " -foregroundcolor green
-
-        $list_of_online_computers | Out-File "$outputfile-online.txt"
-        $list_of_offline_computers | Out-File "$outputfile-offline.txt"
-
-        Write-Host "Online hosts are in $outputfile-online.txt" -foregroundcolor green
-        Write-Host "Offline hosts are in $outputfile-offline.txt" -foregroundcolor red
-        Start-Sleep -Seconds 2
-
-        Invoke-Item "$env:PSMENU_DIR\output\$thedate"
-        Read-Host "Press Enter when you're done reading the output."
+        $results | out-gridview -Title "Results - $PING_COUNT Pings"
+        Read-Host "`nPress [ENTER] to continue."
     }
 
 }

@@ -114,12 +114,10 @@ function Scan-SoftwareInventory {
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
-    ###########################################################################
     ## Scan the applications listed in three registry locations:
     ## 1. HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall
     ## 2. HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall
     ## 3. HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
-    ###########################################################################
     PROCESS {
         if ($TargetComputer) {
             if ($Targetcomputer -eq '127.0.0.1') {
@@ -167,7 +165,6 @@ function Scan-SoftwareInventory {
                         }
                     } 
                 } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-
                 $results.add($target_software_inventory) | out-null
             }
             else {
@@ -186,14 +183,14 @@ function Scan-SoftwareInventory {
             ForEach ($single_computer_name in $unique_computers) {
                 # get that computers apps
                 $apps = $results | where-object { $_.pscomputername -eq $single_computer_name }
-                # create the full filepaths
-                $output_filepath = "$outputfile-$single_computer_name"
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting files for $single_computername to $output_filepath."
-                ## --
                 if ($outputfile.tolower() -eq 'n') {
                     $apps | out-gridview -Title "$single_computer_name Apps"
                 }
                 else {
+                    # create the full filepaths
+                    $output_filepath = "$outputfile-$single_computer_name"
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting files for $single_computername to $output_filepath."
+
                     $apps | Export-Csv -Path "$outputfile-$single_computer_name.csv" -NoTypeInformation
                     ## Try ImportExcel
                     try {
@@ -220,8 +217,10 @@ function Scan-SoftwareInventory {
                 }
             }
             Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
-            Read-Host "Press Enter to continue."
+
         }
+        Read-Host "`nPress [ENTER] to return results."
+        return $results
     }
 }
 

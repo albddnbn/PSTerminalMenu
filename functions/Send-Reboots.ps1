@@ -131,6 +131,7 @@ function Send-Reboots {
             }
         }
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot(s) sent."
+        Read-Host "`nPress [ENTER] to continue."
     }
 }
 

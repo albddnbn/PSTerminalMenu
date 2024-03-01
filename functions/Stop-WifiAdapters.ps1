@@ -123,6 +123,6 @@ function Stop-WifiAdapters {
 
     ## Pause before continuing back to terminal menu
     END {
-        Read-Host "Press enter to continue."
+        Read-Host "`nPress [ENTER] to continue."
     }
 }

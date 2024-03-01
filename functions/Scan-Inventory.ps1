@@ -452,5 +452,5 @@ function Scan-Inventory {
         Write-Host "Failed to open $outputfile.xlsx, opening .csv in notepad." -Foregroundcolor Yellow
         notepad.exe "$outputfile.csv"
     }
-    Read-Host "Press enter to continue."
+    Read-Host "`nPress [ENTER] to continue."
 }

@@ -39,7 +39,7 @@ function Ping-TestReport {
         )]
         $TargetComputer,
         $PingCount,
-        [string]$Outputfile
+        [string]$Outputfile = ''
     )
     ## 1. Set date and AM / PM variables
     ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
@@ -203,6 +203,7 @@ function Ping-TestReport {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "`nPress [ENTER] to return results."
+        return $results
     }
 }

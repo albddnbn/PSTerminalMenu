@@ -91,24 +91,6 @@ function Install-VeyonRoom {
             return
         }
 
-        Write-Host ""
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Copying files to target computers: $($TargetComputer -join ', ')" -foregroundcolor green
-        Write-Host ""
-
-        ForEach ($single_computer in $TargetComputer) {
-            $TargetPath = "C:\temp\Veyon"
-            if ($single_computer -ne '127.0.0.1') {
-                $TargetPAth = $TargetPath.replace('C:', "\\$single_computer\c$")
-            }
-
-            # delete existing veyon directory
-            REmove-ITem -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
-
-            Copy-Item -Path "$($VeyonDeploymentFolder.FullName)" -Destination $TargetPath -Recurse -Force
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$single_computer] :: Veyon folder copied to $TargetPath"
-        }
-
-    
         $install_veyon_scriptblock = {
             param(
                 $MasterInstall,

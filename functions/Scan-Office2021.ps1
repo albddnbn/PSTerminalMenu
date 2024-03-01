@@ -185,6 +185,7 @@ function Scan-Office2021 {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "`nPress [ENTER] to return results."
+        return $results
     }
 }

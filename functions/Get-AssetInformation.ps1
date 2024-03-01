@@ -205,7 +205,7 @@ function Get-AssetInformation {
                         TableName            = "$REPORT_DIRECTORY"
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'Details'
+                        WorksheetName        = 'AssetInfo'
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

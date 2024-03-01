@@ -116,5 +116,7 @@ function Send-Files {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: File transfer(s) complete." -foregroundcolor green  
         Write-Host "If you'd like to check for file/folder's existence on computers, use: " -NoNewline
         Write-Host "Filesystem operations -> Scan-ForApporFilepath" -Foregroundcolor Yellow
+
+        
     }
 }
