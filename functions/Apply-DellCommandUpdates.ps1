@@ -163,7 +163,7 @@ Function Apply-DellCommandUpdates {
             Write-Host "These computers have begun to apply updates and should be rebooting momentarily: " -nonewline
             Write-Host "$currently_applying_updates" -Foregroundcolor Green
 
-            return $results
         }
+        return $results
     }
 }

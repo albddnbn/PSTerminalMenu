@@ -85,7 +85,6 @@ function Get-CurrentUser {
             }
         }
 
-
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         $str_title_var = "CurrentUsers"
         if ($Outputfile.tolower() -eq 'n') {
@@ -134,31 +133,15 @@ function Get-CurrentUser {
             if ($ping_result) {
                 # Get Computers details and create an object
                 $logged_in_user_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    $model = (get-ciminstance -class win32_computersystem).model
-                    # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
-                    $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-                    # see if teams and/or zoom are running
-                    $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
-                    $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
-                    ForEach ($process_check in @($teams_running, $zoom_running)) {
-                        if ($process_check) {
-                            $process_check = $true
-                        }
-                        else {
-                            $process_check = $false
-                        }
-                    }
                     $obj = [PSCustomObject]@{
-                        Model        = $model
-                        CurrentUser  = $current_user
-                        TeamsRunning = $teams_running
-                        ZoomRunning  = $zoom_running
+                        Model        = (get-ciminstance -class win32_computersystem).model
+                        CurrentUser  = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                        TeamsRunning = $(if (Get-PRocess -Name 'Teams' -ErrorAction SilentlyContinue) { $true } else { $false })
+                        ZoomRunning  = $(if (Get-PRocess -Name 'Zoom' -ErrorAction SilentlyContinue) { $true } else { $false })
 
                     }
                     $obj
-                } 
-                $logged_in_user_info = $logged_in_user_info | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
-                # $logged_in_user_info = $logged_in_user_info | Sort -Property PSComputerName
+                } | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
                 $results.add($logged_in_user_info) | out-null
             }
             else {

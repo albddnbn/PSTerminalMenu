@@ -5,3 +5,4 @@ Install-Application:
 
 All uses of foreach-object - try to use -parallel switch to speed up execution time
   - make foreach block run in parallel instead of one after the other
+  (powershell 7)

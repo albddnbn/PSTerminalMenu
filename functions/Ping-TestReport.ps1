@@ -135,6 +135,11 @@ function Ping-TestReport {
     }
 
     ## Ping EACH Target computer / record results into ps object, add to arraylist (results_container)
+    ## Set object property values:
+    ## 3. Send pings - object property values are derived from resulting object
+    ## 4. Number of responses
+    ## 5. Calculate average response time for successful responses
+    ## 6. Calculate packet loss percentage
     PROCESS {
         ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
         if ($TargetComputer) {
@@ -147,19 +152,23 @@ function Ping-TestReport {
                 AvgResponseTime      = 0
                 PacketLossPercentage = 0
             }
-
+            ## 3. Send $PINGCOUNT number of pings to target device, store results
             $send_pings = Test-Connection -ComputerName $TargetComputer -count $PingCount -ErrorAction SilentlyContinue
+            ## 4. Set number of responses from target machine
             $obj.responses = $send_pings.count
+            ## 5. Calculate average response time for successful responses
             $sum_of_response_times = $($send_pings | measure-object responsetime -sum)
-            $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
             if ($obj.Responses -eq 0) {
                 $obj.AvgResponseTime = 0
             }
-            # calculate packet loss percentage - divide total pings by responses
+            else {
+                $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
+            }
+            ## 6. Calculate packet loss percentage - divide total pings by responses
             $total_drops = $obj.TotalPings - $obj.Responses
             $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
 
-            ## 3. Add object to container created in BEGIN block
+            ## 7. Add object to container created in BEGIN block
             $results.add($obj) | Out-Null
         }
     }

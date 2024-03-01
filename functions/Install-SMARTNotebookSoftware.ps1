@@ -81,8 +81,6 @@ function Install-SMARTNotebookSoftware {
         }
 
         ## For each target computer - assign installation method - either office or classroom. Classroom installs the smartboard and ink drivers.
-        $installation_methods = [system.collections.arraylist]::new()
-
         Write-Host "Please choose installation method for target computers:"
         $InstallationTypeReply = Menu @('Office', 'Classroom')
 

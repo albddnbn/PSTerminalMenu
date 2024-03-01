@@ -117,7 +117,6 @@ function Get-ComputerDetails {
         }
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
-        Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
     }
 
     ## Collects computer details from specified computers using CIM commands  
@@ -130,31 +129,20 @@ function Get-ComputerDetails {
                 ## Save results to variable
                 $single_result = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
                     # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
-                    $manufacturer = (get-ciminstance -class win32_computersystem).manufacturer
-                    $model = (get-ciminstance -class win32_computersystem).model
-                    $biosversion = (get-ciminstance -class win32_bios).smbiosbiosversion
-                    $bioreleasedate = (get-ciminstance -class win32_bios).releasedate
-                    $winbuild = (get-ciminstance -class win32_operatingsystem).buildnumber
-                    $totalram = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-                    $totalram = [string]$totalram + " GB"
-                    $lastboottime = (Get-Ciminstance -class win32_operatingsystem).LastBootUpTime
-                    # get system up time using current time and last bootup time, format it
-                    $system_uptime = $(Get-Date) - $lastboottime
-                    $system_uptime = $system_uptime.tostring("hh\:mm\:ss")
-                    $system_uptime += " Hours"
-                    # current_user
-                    $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
                     # object returned to $results list
+                    $computersystem = Get-CimInstance -Class Win32_Computersystem
+                    $bios = Get-CimInstance -Class Win32_BIOS
+                    $operatingsystem = Get-CimInstance -Class Win32_OperatingSystem
                     $obj = [PSCustomObject]@{
-                        Manufacturer    = $manufacturer
-                        Model           = $model
-                        CurrentUser     = $current_user
-                        WindowsBuild    = $winbuild
-                        BiosVersion     = $biosversion
-                        BiosReleaseDate = $bioreleasedate
-                        TotalRAM        = $totalram
-                        LastBoot        = $lastboottime
-                        SystemUptime    = $system_uptime
+                        Manufacturer    = $($computersystem.manufacturer)
+                        Model           = $($computersystem.model)
+                        CurrentUser     = $((get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username)
+                        WindowsBuild    = $($operatingsystem.buildnumber)
+                        BiosVersion     = $($bios.smbiosbiosversion)
+                        BiosReleaseDate = $($bios.releasedate)
+                        TotalRAM        = $((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb)
+                        LastBoot        = $($operatingsystem.LastBootUpTime)
+                        SystemUptime    = $((Get-Date $lastboottime).ToString("hh\:mm\:ss"))
                     }
                     $obj
                 } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
@@ -193,7 +181,7 @@ function Get-ComputerDetails {
                         TableName            = "$REPORT_DIRECTORY"
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'Details'
+                        WorksheetName        = 'PCdetails'
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

@@ -138,7 +138,16 @@ Function Install-NewTeams {
                         return $obj
                     }
                     # execute script (NewTeams installation folder can be found in ./deploy/irregular)
-                    &"$($installteamsscript.fullname)" -logfile C:\temp\newteams\newteamslog2.txt -forceinstall -setrunonce
+                    $install_params = @{
+                        logfile      = "C:\WINDOWS\Logs\Software\NewTeamsClient-Install-$(Get-Date -Format 'yyyy-MM-dd').log"
+                        forceinstall = $true
+                        setrunonce   = $true
+                    }
+                    ## If the msix file is present - run offline install
+                    if (Test-Path -Path 'C:\temp\newteams\Teams_windows_x64.msi') {
+                        $install_params['offline'] = $true
+                    }
+                    &"$($installteamsscript.fullname)" @install_params
                 }
 
                 ## Check if the computer was skipped
