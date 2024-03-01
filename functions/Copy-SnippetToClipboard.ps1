@@ -21,22 +21,25 @@ function Copy-SnippetToClipboard {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    if (-not (Get-Module -ListAvailable -Name PS-Menu)) {
-        # check for nuget
-        $nuget_check = get-packageprovider | where-object { $_.name -eq 'nuget' }
-        if (-not $nuget_check) {
-            Write-Host "Nuget not found. Installing..." -ForegroundColor Yellow
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-        }
-        Write-Host "PS-Menu not found. Installing..."
-        Install-Module PS-Menu -Scope CurrentUser -Force
-    }
-    Import-Module PS-Menu | out-null
 
-    $snippet_options = Get-ChildItem -Path "$env:PSMENU_DIR\snippets" -Filter *.txt | ForEach-Object { $_.BaseName }
+    ## 1. Checks for PS-Menu module necessary to display interactive terminal menu.
+    ##    - if not found - checks for nuget / tries to install ps-menu
+    if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
+        Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+            Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+            Install-PackageProvider -Name NuGet -MinimumVersion
+        }
+        Install-Module -Name PS-Menu -Force
+    }
+    Import-Module -Name PS-Menu -Force | Out-Null
+
+    ## 2. Creates a list of filenames from the ./snippets directory that end in .txt (resulting filenames in list will
+    ##    not include the .txt extension because of the BaseName property).
+    $snippet_options = Get-ChildItem -Path "$env:PSMENU_DIR\snippets" -Include *.txt | ForEach-Object { $_.BaseName }
     $snippet_choice = menu $snippet_options
 
+    ## 3. Get the content of the chosen file and copy to clipboard
     Get-Content -Path "$env:PSMENU_DIR\snippets\$snippet_choice.txt" | Set-Clipboard
-
     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Content from $env:PSMENU_DIR\snippets\$snippet_choice.txt copied to clipboard."
 }

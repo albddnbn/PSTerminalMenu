@@ -125,21 +125,14 @@ function Get-ConnectedPrinters {
             # Only need to check for connected printers if a user is logged in.
             if ($obj.Username) {
                 # get connected printers:
-                $printers = get-ciminstance -class win32_printer | select name, Default
-                # $obj.DefaultPrinter = $printers | where-object { $_.default } | select -exp name
-
-                ForEach ($single_printer in $printers) {
-                    # if (-not $printer.default) {
-                    # make sure its not a 'OneNote' printer, or Microsoft Printer to PDF.
-                    if (($single_printer.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($single_printer.name -notlike "*OneNote*")) {
-                        if ($single_printer.name -notlike "Send to*") {
-                            $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($single_printer.name)"
+                get-ciminstance -class win32_printer | select name, Default | ForEach-Object {
+                    if (($_.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($_.name -notlike "*OneNote*")) {
+                        if ($_.name -notlike "Send to*") {
+                            $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($_.name)"
                         }
-                    }
-                    # }
+                    }   
                 }
             }
-
             $obj
         }
         ## Create empty results container to use during process block
@@ -206,6 +199,7 @@ function Get-ConnectedPrinters {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "Press enter to return results."
+        return $results
     }
 }

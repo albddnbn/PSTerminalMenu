@@ -1,3 +1,8 @@
 Install-Application:
     - add a parameter or something along those lines, so script will run the function exactly the same way, except it will use the
       -DeploymentType 'Uninstall' parameter value as opposed to 'Install'
+
+
+All uses of foreach-object - try to use -parallel switch to speed up execution time
+  - make foreach block run in parallel instead of one after the other
+  (powershell 7)

@@ -85,20 +85,35 @@ function Get-CurrentUser {
             }
         }
 
-        ## 2. Create output filepath if necessary.
-        if ($outputfile.tolower() -ne 'n') {
-            ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "CurrentUsers"
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $outputfile = "CurrentUsers"
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
-
-                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "CurrentUsers-$thedate"
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
                 }
             }
         }
@@ -118,31 +133,15 @@ function Get-CurrentUser {
             if ($ping_result) {
                 # Get Computers details and create an object
                 $logged_in_user_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    $model = (get-ciminstance -class win32_computersystem).model
-                    # $current_user = Get-Ciminstance -class win32_computersystem | select -exp username # different way
-                    $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-                    # see if teams and/or zoom are running
-                    $teams_running = get-process -name 'teams' -erroraction SilentlyContinue
-                    $zoom_running = get-process -name 'zoom' -erroraction SilentlyContinue
-                    ForEach ($process_check in @($teams_running, $zoom_running)) {
-                        if ($process_check) {
-                            $process_check = $true
-                        }
-                        else {
-                            $process_check = $false
-                        }
-                    }
                     $obj = [PSCustomObject]@{
-                        Model        = $model
-                        CurrentUser  = $current_user
-                        TeamsRunning = $teams_running
-                        ZoomRunning  = $zoom_running
+                        Model        = (get-ciminstance -class win32_computersystem).model
+                        CurrentUser  = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                        TeamsRunning = $(if (Get-PRocess -Name 'Teams' -ErrorAction SilentlyContinue) { $true } else { $false })
+                        ZoomRunning  = $(if (Get-PRocess -Name 'Zoom' -ErrorAction SilentlyContinue) { $true } else { $false })
 
                     }
                     $obj
-                } 
-                $logged_in_user_info = $logged_in_user_info | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
-                # $logged_in_user_info = $logged_in_user_info | Sort -Property PSComputerName
+                } | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
                 $results.add($logged_in_user_info) | out-null
             }
             else {
@@ -192,6 +191,7 @@ function Get-CurrentUser {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "Press enter to return results."
+        return $results
     }
 }

@@ -61,18 +61,8 @@ function Clear-ChromeBrowsingData {
         }
 
         if ($cautious.ToLower() -eq 'y') {
-            # THIS is not going to work (haven't figured out yet)
-            # # source: https://4sysops.com/archives/how-to-display-a-pop-up-message-box-with-powershell/
-            # Add-Type -AssemblyName PresentationCore, PresentationFramework
-            # $ButtonType = [System.Windows.MessageBoxButton]::YesNo
-            # $MessageIcon = [System.Windows.MessageBoxImage]::Warning
-            # $MessageBody = "Allow Chrome application to be closed while your browsing data is deleted?"
-            # $MessageTitle = "Please confirm"
-            # $Result = [System.Windows.MessageBox]::Show($MessageBody, $MessageTitle, $ButtonType, $MessageIcon)
-            # if ($result -eq 'No') {
-            #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: User chose not to delete browsing data." -ForegroundColor Yellow
-            #     return
-            # }
+            ## It should be possible to display a popup to user - asking if it's ok to close Chrome
+            ## Similar to PSADT Interactive installation popups.
             if (Get-Process -name "*chrome*" -erroraction silentlycontinue) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Chrome is running, skipping since cautious was specified." -ForegroundColor Yellow
                 continue

@@ -82,20 +82,36 @@ function Get-USBDevices {
             Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
         }
 
-        ## 2. Create output filepath if necessary.
-        if ($outputfile.tolower() -ne 'n') {
-            ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "USBDevices"
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $outputfile = "USBDevices"
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
-
-                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "USBDevices $thedate"
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
                 }
             }
         }
@@ -103,33 +119,48 @@ function Get-USBDevices {
         ## Create empty results container
         $results = [system.collections.arraylist]::new()
     }
-
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, Collect connected usb information from computer
     PROCESS {
+        ## 1.
+        if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
+            ## 2. Test with ping:
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                ## 3. Getting USB info from target machine(s):
+                $connected_usb_info = Invoke-Command -Computername $targetcomputer -scriptblock {
+                    $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
 
-        ###########################################
-        ## Getting USB info from target machine(s):
-        ###########################################
-        $results = Invoke-Command -Computername $targetcomputer -scriptblock {
-            $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
+                    $connected_usb_devices
+                }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
 
-            $connected_usb_devices
-        }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-
-        $all_results.add($results) | out-null
+                $results.add($connected_usb_info) | out-null
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer did not respond to one ping, skipping." -Foregroundcolor Red
+    
+            }
+        }
     }
     ## 1. If there are results - sort them by the hostname (pscomputername) property.
-    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 2. Separate results out by computer, cycle through and create a list of connected usb devices per machine.
     ## 3. Create .csv/.xlsx reports as necessary.
+    ## 4. Try to open output/report folder.
     END {
-        if ($all_results) {
-            $all_results = $all_results | sort -property pscomputername
-            # outputs a file for each computer in the list
-            $unique_hostnames = $all_results | Select -exp PSComputerName -Unique
-            # script will create a .txt and/or .csv with result object per computer.
-
+        if ($results) {
+            ## 1.
+            $results = $results | sort -property pscomputername
+            ## 2.
+            $unique_hostnames = $results | Select -exp PSComputerName -Unique
             ForEach ($unique_hostname in $unique_hostnames) {
-                $computers_results = $all_results | where-object { $_.pscomputername -eq $unique_hostname }
+                $computers_results = $results | where-object { $_.pscomputername -eq $unique_hostname }
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting $outputfile-$unique_hostname.csv/$outputfile-$unique_hostname.xlsx..."
+                ## 3.
                 if ($outputfile.tolower() -ne 'n') {
                     if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
                         Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
@@ -140,23 +171,27 @@ function Get-USBDevices {
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    
                     $computers_results |  format-table -autosize
-
                     Read-Host "Press enter to show next computer's results"
-    
                 }
             }
-            try {
-                Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
-            }
-            catch {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
+            ## 4.
+            if ($outputfile.tolower() -ne 'n') {
+
+                try {
+                    Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
+                }
+            
+
             }
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "Press enter to return results."
+        return $results    
     }
 }

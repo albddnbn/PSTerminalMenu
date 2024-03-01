@@ -40,69 +40,66 @@ Function Run-SophosScan {
         $Targetpaths,
         [string]$Outputfile
     )
-    # dot source utility functions
-    ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
-        . $utility_function.fullname
-    }
-
-    # set REPORT_DIRECTORY for output, and set thedate variable
-    $REPORT_DIRECTORY = "Sophos-AVScans" # reports outputting to $env:PSMENU_DIR\reports\$thedate\Sample-Function\
-    $thedate = Get-Date -Format 'yyyy-MM-dd'
+    BEGIN {
+        # set REPORT_DIRECTORY for output, and set thedate variable
+        $REPORT_DIRECTORY = "Sophos-AVScans" # reports outputting to $env:PSMENU_DIR\reports\$thedate\Sample-Function\
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
 
 
-    # Filter TargetComputer input to create hostname list:
-    $TargetComputer = Get-TargetComputers -TargetComputerInput $TargetComputer
+        # Filter TargetComputer input to create hostname list:
+        $TargetComputer = Get-TargetComputers -TargetComputerInput $TargetComputer
 
-    # create an output filepath, not including file extension that can be used to create .csv / .xlsx report files at end of function
-    if ($outputfile -eq '') {
-        # create default filename
-        $outputfile = Get-OutputFileString -Titlestring $REPORT_DIRECTORY -rootdirectory $env:PSMENU_DIR -foldertitle $REPORT_DIRECTORY -reportoutput
+        # create an output filepath, not including file extension that can be used to create .csv / .xlsx report files at end of function
+        if ($outputfile -eq '') {
+            # create default filename
+            $outputfile = Get-OutputFileString -Titlestring $REPORT_DIRECTORY -rootdirectory $env:PSMENU_DIR -foldertitle $REPORT_DIRECTORY -reportoutput
 
-    }
-    elseif ($Outputfile.ToLower() -notin @('n', 'no')) {
-        # if outputfile isn't blank and isn't n/no - use it for creation of output filepath
-        $outputfile = Get-OutputFileString -Titlestring $outputfile -rootdirectory $env:PSMENU_DIR -foldertitle $REPORT_DIRECTORY -reportoutput
-    }
-
-    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Beginning function on $($TargetComputer -join ', ')"
-
-    # scans likely tie the system down a bit offer to skip occupied computers:
-    $skip_occupied = Read-Host "Skip computers that have users logged in? [y/n]"
-    $skip_occupied = $skip_occupied.ToLower()
-
-    $results = Invoke-Command -ComputerName $Targetcomputer -scriptblock {
-        $skipthis = $using:skip_occupied
-        # do stuff here
-        $userloggedin = Get-Process -name 'explorer' -includeusername -erroraction SilentlyContinue | Select -exp username
-        # return results of a command or any other type of object, so it will be addded to the $results list
-        if (($userloggedin) -and ($skipthis -eq 'y')) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipping $($env:COMPUTERNAME) - user $($userloggedin) is logged in."
-            break
         }
-        else {
+        elseif ($Outputfile.ToLower() -notin @('n', 'no')) {
+            # if outputfile isn't blank and isn't n/no - use it for creation of output filepath
+            $outputfile = Get-OutputFileString -Titlestring $outputfile -rootdirectory $env:PSMENU_DIR -foldertitle $REPORT_DIRECTORY -reportoutput
+        }
 
-            $obj = [pscustomobject]@{
-                SophosInstalled = "No"
-            }
+        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Beginning function on $($TargetComputer -join ', ')"
 
-
-            $sophos_scanner = get-childitem -path 'C:\Program Files\Sophos\Endpoint Defense' -filter "sophosinterceptxcli.exe" -file -erroraction SilentlyContinue
-            if (-not $sophos_scanner) {
-                Write-Host "Check Sophos on $($env:COMPUTERNAME) - Sophos may not be installed, scanner.exe is not present"
-                $obj
+        # scans likely tie the system down a bit offer to skip occupied computers:
+        $skip_occupied = Read-Host "Skip computers that have users logged in? [y/n]"
+        $skip_occupied = $skip_occupied.ToLower()
+    }
+    PROCESS {
+        $results = Invoke-Command -ComputerName $Targetcomputer -scriptblock {
+            $skipthis = $using:skip_occupied
+            # do stuff here
+            $userloggedin = Get-Process -name 'explorer' -includeusername -erroraction SilentlyContinue | Select -exp username
+            # return results of a command or any other type of object, so it will be addded to the $results list
+            if (($userloggedin) -and ($skipthis -eq 'y')) {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipping $($env:COMPUTERNAME) - user $($userloggedin) is logged in."
+                break
             }
             else {
-                $obj.SophosInstalled = "No"
+
+                $obj = [pscustomobject]@{
+                    SophosInstalled = "No"
+                }
+
+
+                $sophos_scanner = get-childitem -path 'C:\Program Files\Sophos\Endpoint Defense' -filter "sophosinterceptxcli.exe" -file -erroraction SilentlyContinue
+                if (-not $sophos_scanner) {
+                    Write-Host "Check Sophos on $($env:COMPUTERNAME) - Sophos may not be installed, scanner.exe is not present"
+                    $obj
+                }
+                else {
+                    $obj.SophosInstalled = "No"
+                }
+
             }
+        } | Select * -ExcludeProperty RunSpaceId, PSShowComputerName # filters out some properties that don't seem necessary for these functions
+    } END {
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting results to $outputfile .csv / .xlsx."
 
-        }
-    } | Select * -ExcludeProperty RunSpaceId, PSShowComputerName # filters out some properties that don't seem necessary for these functions
+        Output-Reports -Filepath $outputfile -Content $results -ReportTitle $REPORT_DIRECTORY -CSVFile $true -XLSXFile $true
 
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Exporting results to $outputfile .csv / .xlsx."
-
-    Output-Reports -Filepath $outputfile -Content $results -ReportTitle $REPORT_DIRECTORY -CSVFile $true -XLSXFile $true
-
-    # open the folder - output-reports will already auto open the .xlsx if it was created
-    Invoke-Item -Path "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
-
+        # open the folder - output-reports will already auto open the .xlsx if it was created
+        Invoke-Item -Path "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
+    }
 }

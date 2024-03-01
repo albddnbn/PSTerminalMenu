@@ -31,83 +31,57 @@ function Install-VeyonRoom {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        [string]$RoomName
+        [string]$RoomName,
+        # comma-separated list of computers that get Veyon master installation.
+        [string]$Master_Computer
     )
+    ## 1. Handling TargetComputer input if not supplied through pipeline.
     BEGIN {
-        ## TARGETCOMPUTER HANDLING:
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
-        }
-
-        ## Definitely want to filter offline hosts in this one, and not depend on utility function.
-        # create list of online / offline hosts
-        $offline_hosts = @()
-        $online_hosts = @()
-        ForEach ($single_computer in $TargetComputer) {
-            $test_ping = Test-Connection $single_computer -Count 1 -Quiet
-            if ($test_ping) {
-                $online_hosts += $single_computer
-            }
-            else {
-                $offline_hosts += $single_computer
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
             }
         }
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Offline hosts: $($offline_hosts -join ', ') copied to clipboard." -foregroundcolor red
-        "$($offline_hosts -join ', ')" | clip
 
-        $TargetComputer = $online_hosts
-
-        # selecting master computer:
-        Write-Host "Use [SPACE] to select master computers."
-        Write-Host "Computers not selected with have Veyon installed with the /NoMaster switch."
-        $master_computer_selection = Menu $TargetComputer -Multiselect
-
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: MASTER COMPUTER(S) SET TO: " -NoNewline
-        Write-Host "$($master_computer_selection -join ', ')" -foregroundcolor green
-        Write-Host ""
+        ## Creating list of master computers, trim whitespace
+        $master_computer_selection = $($Master_Computers -split ',')
+        $master_computer_selection | % { $_ = $_.Trim() }
 
         if (-not $RoomName) {
             $RoomName = Read-Host "Please enter the name of the room/location: "
         }
-        # getting student computers:
-        $student_computers = $targetcomputer | Where-Object { $_ -notin $master_computer_selection }
-        Write-Host ""
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: STUDENT COMPUTERS SET TO: " -NoNewline
-        Write-Host "$($student_computers -join ', ')" -foregroundcolor green
-        Write-Host ""
-
-        Read-Host "Press enter to proceed with the installation."
-        Clear-Host
 
         # copy the ps app deployment folders over to temp dir
         # get veyon directory from irregular applications:
@@ -117,24 +91,6 @@ function Install-VeyonRoom {
             return
         }
 
-        Write-Host ""
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Copying files to target computers: $($TargetComputer -join ', ')" -foregroundcolor green
-        Write-Host ""
-
-        ForEach ($single_computer in $TargetComputer) {
-            $TargetPath = "C:\temp\Veyon"
-            if ($single_computer -ne '127.0.0.1') {
-                $TargetPAth = $TargetPath.replace('C:', "\\$single_computer\c$")
-            }
-
-            # delete existing veyon directory
-            REmove-ITem -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
-
-            Copy-Item -Path "$($VeyonDeploymentFolder.FullName)" -Destination $TargetPath -Recurse -Force
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$single_computer] :: Veyon folder copied to $TargetPath"
-        }
-
-    
         $install_veyon_scriptblock = {
             param(
                 $MasterInstall,
@@ -167,17 +123,58 @@ function Install-VeyonRoom {
         elseif ($reply -eq '2') {
             Invoke-Command  -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', $VeyonDeploymentFolder.FullName
         }
-    }
-    PROCESS {
-        # run rest of master installs:
-        Invoke-Command -ComputerName $master_computer_selection -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon'
 
-        # Write-Host "`n[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Beginning STUDENT INSTALLATIONS."
-        ## STUDENT INSTALLATIONS:
-        Invoke-Command -ComputerName $student_computers -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\temp\Veyon'
+        ## Missed computers container
+        $missed_computers = [system.collections.arraylist]::new()
+        ## Student computers list:
+        $Student_Computers = [system.collections.arraylist]::new()
     }
+    ## 1. check targetcomputer for null / empty values
+    ## 2. ping test target machine
+    ## 3. If responsive - copy Veyon install folder over to session, and install Veyon student or master
+    ## 4. Add any missed computers to a list, also add student installations to a list for end output.
+    PROCESS {
+        ## 1.
+        if ($TargetComputer) {
+            # may be able to remove the next 3 lines.
+            if ($Targetcomputer -eq '127.0.0.1') {
+                $TargetComputer = $env:COMPUTERNAME
+            }
+            ## 2. Test with ping
+            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
+            if ($pingreply) {
+                ## Create Session
+                $target_session = New-PSSession -ComputerName $TargetComputer
+
+                ## Remove any existing veyon folder
+                Invoke-Command -Session $target_session -Scriptblock {
+                    Remove-Item -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
+                }
+                ## 3. Copy source files
+                Copy-Item -Path "$($VeyonDeploymentFolder.fullname)" -Destination C:\temp\ -ToSession $target_session -Recurse -Force
+
+                ## If its a master computer:
+                if ($Targetcomputer -in $master_computer_selection) {
+                    Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon'
+                }
+                else {
+                    Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\Temp\Veyon'
+                    $Student_Computers.Add($TargetComputer) | Out-Null
+                }
+            }
+            else {
+                ## 4. Missed list is below, student list = $student_computers
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -foregroundcolor red
+                $missed_computers.Add($TargetComputer) | Out-null
+            }
+        }
+    }
+    ## 1. Create script that needs to be run on master computers, to add client computers & make them visible.
+    ## 2. Check if user wants to run master script on local computer.
+    ## 3. Open an RDP window, targeting the first computer in the master computers list - RDP or some type of graphical
+    ##    login is necessary to add clients.
     END {
-        # create the string to add into the script
+        ## 1. Create script that needs to be run on master computers, to add client computers & make them visible.
         $scriptstring = @"
 `$Student_Computers = @('$($Student_Computers -join "', '")')
 `$RoomName = `'$RoomName`'
@@ -218,15 +215,15 @@ ForEach (`$single_computer in `$Student_Computers) {
             }
         }
 
-        Write-Host "Please run $scriptfilename on $($Master_Computers -join ', ') to create the room list of PCs you can view." -ForegroundColor Green
+        Write-Host "Please run $scriptfilename on $($master_computer_selection -join ', ') to create the room list of PCs you can view." -ForegroundColor Green
         Write-Host ""
         Write-host "These student computers were skipped because they're unresponsive:"
-        Write-host "$($skipped_student_computers -join ', ')" -foregroundcolor red
+        Write-host "$($missed_computers -join ', ')" -foregroundcolor red
 
         Invoke-Item "$env:PSMENU_DIR\output\$scriptfilename"
 
         # select first master computer, open rdp window to it
-        $first_master = $Master_Computers[0]
+        $first_master = $master_computer_selection[0]
         Open-RDP -SingleTargetComputer $first_master
     }
 }

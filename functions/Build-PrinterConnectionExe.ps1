@@ -31,7 +31,6 @@ function Build-PrinterConnectionExe {
         # [ValidateSet('printerlogic', 'ps')]
         $PrinterType
     )
-    # doesn't need utility functions.
     $EXECUTABLES_DIRECTORY = 'PrinterMapping'
     $thedate = Get-Date -Format 'yyyy-MM-dd'
 
@@ -82,7 +81,8 @@ Start-Sleep -Seconds 5
 
     $exe_script | Out-File -FilePath "$env:PSMENU_DIR\output\$thedate\$output_filename.ps1" -Force
 
-    Invoke-PS2EXE -inputfile "$env:PSMENU_DIR\output\$thedate\$output_filename.ps1" -outputfile "$env:PSMENU_DIR\executables\$thedate\$EXECUTABLES_DIRECTORY\$output_filename.exe"
+    Invoke-PS2EXE -inputfile "$env:PSMENU_DIR\output\$thedate\$output_filename.ps1" `
+        -outputfile "$env:PSMENU_DIR\executables\$thedate\$EXECUTABLES_DIRECTORY\$output_filename.exe"
 
     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Executable created successfully: $env:PSMENU_DIR\executables\$thedate\$EXECUTABLES_DIRECTORY\$output_filename.exe" -ForegroundColor Green
 

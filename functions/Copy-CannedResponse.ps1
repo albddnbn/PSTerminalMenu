@@ -18,36 +18,40 @@ function Copy-CannedResponse {
         Author: albddnbn (Alex B.)
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
-    # creates list of html files from the canned_responses directory
-    $CannedResponses = Get-ChildItem -Path "$env:PSMENU_DIR\canned_responses" -Filter "*.html" -File
 
-    # Deconstruct html file names into presentable menu options
+    
+    ## 1. Creates a list of all .txt and .html files in the canned_responses directory.
+    $CannedResponses = Get-ChildItem -Path "$env:PSMENU_DIR\canned_responses" -Include *.txt, *.html -File
+
+    ## 2. If created by New-CannedResponse, the files will have names with words separated by dashes (-).
+    ##    - To offer a menu of options - the filenames are split at all occurences of - by replacing them with spaces.
     $CannedResponseOptions = $CannedResponses | ForEach-Object { $_.BaseName -replace '-', ' ' } | Sort-Object
 
-    if (!(Get-Module -Name PS-Menu)) {
+    ## 3. Checks for PS-Menu module necessary to display interactive terminal menu.
+    ##    - if not found - checks for nuget / tries to install ps-menu
+    if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
         Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
-        Install-Module -Name PS-Menu -Force -Scope CurrentUser
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+            Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+            Install-PackageProvider -Name NuGet -MinimumVersion
+        }
+        Install-Module -Name PS-Menu -Force
     }
     Import-Module -Name PS-Menu -Force | Out-Null
 
-    ######################################################
-    #
-    # PRESENT MENU to the user, menu options correspond 
-    # to any .html files in the canned_responses directory
-    #
-    ######################################################
+    # presents menu
     $chosen_response = Menu $CannedResponseOptions
 
-    # Reconstruct the html file name
+    # reconstructs filenames, re-inserting dashes for spaces
     $chosen_response = $chosen_response -replace ' ', '-'
-    Write-Host "You've selected the $chosen_response.html canned response."
 
-    $chosen_response_content = Get-Content "canned_responses\$chosen_response.html"
+    ## 4. Get the content of the correct file - using original list of .html/.txt file objects
+    $chosen_response_file = $CannedResponses | Where-Object { $_.BaseName -eq $chosen_response }
+    $chosen_response_content = Get-Content "$($chosen_response_file.fullname)"
 
-    # get the variables from the content - variables are enclosed in [$variable$]
+    ## 5. Get the variables from the content - variables are enclosed in (($variable$))
+    ##    - for loop cycles through each unique variable, prompting the user for values.
     $variables = $chosen_response_content | Select-String -Pattern '\(\(.*\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
-
-    # prompt user for values for each varaible:
     ForEach ($single_variable in $variables) {
         $formatted_variable_name = $single_variable -split '=' | select -first 1
         $formatted_variable_name = $formatted_variable_name.replace('(($', '')
@@ -61,11 +65,7 @@ function Copy-CannedResponse {
         Write-Host "Replacing $single_variable with $variable_value"
         $chosen_response_content = $chosen_response_content.replace($single_Variable, $variable_value)
     }
-
-    # copy to clipboard
+    ## 6. Copy chosen response to clipboard, with new variable values inserted
     $chosen_response_content | Set-Clipboard
-
     Write-Host "Canned response copied to clipboard." -ForegroundColor Green
-
-
 }

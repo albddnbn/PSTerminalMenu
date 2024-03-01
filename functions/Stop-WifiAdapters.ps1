@@ -18,12 +18,12 @@ function Stop-WifiAdapters {
         'y' or 'Y' will disable target Wi-Fi adapters.
 
     .EXAMPLE
-        Stop-WifiAdapters -TargetComputer s-c136-02 -DisableWifiAdapter y
-        Turns off and disables Wi-Fi adapter on s-c136-02.
+        Stop-WifiAdapters -TargetComputer s-tc136-02 -DisableWifiAdapter y
+        Turns off and disables Wi-Fi adapter on single computer/hostname s-tc136-02.
 
     .EXAMPLE
         Stop-WifiAdapters -TargetComputer t-client- -DisableWifiAdapter n
-        Turns off Wi-Fi adapters on computers in room S-A227, without disabling them.
+        Turns off Wi-Fi adapters on computers w/hostnames starting with t-client-, without disabling them.
 
     .NOTES
         ---
@@ -37,44 +37,51 @@ function Stop-WifiAdapters {
             ValueFromPipeline = $true
         )]
         $TargetComputer,
-        [string]$DisableWifiAdapter
+        [string]$DisableWifiAdapter = 'n'
     )
+    ## 1. Handling of TargetComputer input
+    ## 2. Define Turn off / disable wifi adapter scriptblock that gets run on each target computer
     BEGIN {
-        ## If Targetcomputer is an array or arraylist - it's already been sorted out.
-        if (($TargetComputer -is [System.Collections.IEnumerable]) -and (-not($TargetComputer -is [string]))) {
-            $null
-            ## If it's a string - check for commas, try to get-content, then try to ping.
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
-        elseif ($TargetComputer -is [string]) {
-            if ($TargetComputer -in @('', '127.0.0.1')) {
-                $TargetComputer = @('127.0.0.1')
+        else {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+                $null
+                ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($Targetcomputer -like "*,*") {
-                $TargetComputer = $TargetComputer -split ','
-            }
-            elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
-                $TargetComputer = Get-Content $TargetComputer
-            }
-            else {
-                $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                if ($test_ping) {
-                    $TargetComputer = @($TargetComputer)
+            elseif ($TargetComputer -is [string]) {
+                if ($TargetComputer -in @('', '127.0.0.1')) {
+                    $TargetComputer = @('127.0.0.1')
+                }
+                elseif ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                elseif (Test-Path $Targetcomputer -erroraction SilentlyContinue) {
+                    $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer was not an array, comma-separated list of hostnames, path to hostname text file, or valid single hostname. Exiting." -Foregroundcolor "Red"
-                    return
+                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
+                    if ($test_ping) {
+                        $TargetComputer = @($TargetComputer)
+                    }
+                    else {
+                        $TargetComputerInput = $TargetComputerInput + "x"
+                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                    }
                 }
             }
-        }
-        $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
-        # Safety catch to make sure
-        if ($null -eq $TargetComputer) {
-            # user said to end function:
-            return
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
         }
 
         $DisableWifiAdapter = $DisableWifiAdapter.ToLower()
-
+        ## 2. Turn off / disable wifi adapter scriptblock
         $turnoff_wifi_adapter_scriptblock = {
             param(
                 $DisableWifi
@@ -89,21 +96,33 @@ function Stop-WifiAdapters {
                     Disable-NetAdapter -Name "Wi-Fi" -Force
                 }            
             }
-
             else {
                 Write-Host "[$env:COMPUTERNAME] :: Eth is down, leaving Wi-Fi alone..." -foregroundcolor red
             }
-
         }
     } 
     
     ## Test connection to target machine(s) and then run scriptblock to disable wifi adapter if ethernet adapter is active
     PROCESS {
-        Invoke-Command -ComputerName $TargetComputer -Scriptblock $turnoff_wifi_adapter_scriptblock -ArgumentList $DisableWifiAdapter
+        ## empty Targetcomputer values will cause errors to display during test-connection / rest of code
+        if ($TargetComputer) {
+            ## Ping test
+            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
+            if ($ping_result) {
+                if ($TargetComputer -eq '127.0.0.1') {
+                    $TargetComputer = $env:COMPUTERNAME
+                }
+        
+                Invoke-Command -ComputerName $TargetComputer -Scriptblock $turnoff_wifi_adapter_scriptblock -ArgumentList $DisableWifiAdapter
+            }
+            else {
+                Write-Host "[$env:COMPUTERNAME] :: $TargetComputer is offline, skipping." -Foregroundcolor Yellow
+            }
+        }
     }
 
     ## Pause before continuing back to terminal menu
     END {
-        Read-Host "Press enter to continue."
+        Read-Host "`nPress [ENTER] to continue."
     }
 }

@@ -38,59 +38,13 @@ function Get-AssetInformation {
         $TargetComputer,
         [string]$Outputfile = ''
     )
-    ## 1. Scriptblock that retrieves asset info from local computer.
-    ## 2. Handling TargetComputer input if not supplied through pipeline.
-    ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+    ## 1. Handling TargetComputer input if not supplied through pipeline.
+    ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+    ## 3. Define scriptblock that retrieves asset info from local computer.
     ## 4. Create empty results container.
     BEGIN {
-        ## 1. Asset info scriptblock used to get local asset info from each target computer.
-        $asset_info_scriptblock = {
-            # computer model (ex: 'precision 3630 tower'), BIOS version, and BIOS release date
-            $computer_model = get-ciminstance -class win32_computersystem | select -exp model
-            $biosversion = get-ciminstance -class win32_bios | select -exp smbiosbiosversion
-            $bioreleasedate = get-ciminstance -class win32_bios | select -exp releasedate
-            # Asset tag from BIOS (tested with dell computer)
-            try {
-                $command_configure_exe = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Dell\Command Configure\x86_64" -Filter "cctk.exe" -File -ErrorAction Silentlycontinue
-                # returns a string like: 'Asset=2001234'
-                $asset_tag = &"$($command_configure_exe.fullname)" --asset
-                $asset_tag = $asset_tag -replace 'Asset=', ''
-            }
-            catch {
-                $asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
-                # asus motherboard returned 'default string'
-                if ($asset_tag.ToLower() -eq 'default string') {
-                    $asset_tag = 'No asset tag set in BIOS'
-                }    
-            }
-            $computer_serial_num = get-ciminstance -class win32_bios | select -exp serialnumber
-            # get monitor info and create a string from it (might be unnecessary, or a lengthy approach):
-            $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi -ComputerName $ComputerName | Select Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
-            $monitor_string = ""
-            $monitor_count = 0
-            $monitors | ForEach-Object {
-                $_.UserFriendlyName = [System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)
-                $_.SerialNumberID = [System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)
-                $_.ManufacturerName = [System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)
-                $manufacturername = $($_.ManufacturerName).trim()
-                $monitor_string += "Maker: $manufacturername,Mod: $($_.UserFriendlyName),Ser: $($_.SerialNumberID),Yr: $($_.YearOfManufacture)"
-                $monitor_count++
-            }
-
-            $obj = [PSCustomObject]@{
-                model               = $computer_model
-                biosversion         = $biosversion
-                bioreleasedate      = $bioreleasedate
-                asset_tag           = $asset_tag
-                computer_serial_num = $computer_serial_num
-                monitors            = $monitor_string
-                NumMonitors         = $monitor_count
-            }
-            return $obj
-        }
-
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -128,14 +82,15 @@ function Get-AssetInformation {
             }
         }
 
-        ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "AssetInfo"
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "AssetInfo"
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
                 else {
                     $REPORT_DIRECTORY = $outputfile            
@@ -147,10 +102,10 @@ function Get-AssetInformation {
                 if ($outputfile.tolower() -eq '') {
                     $iterator_var = 0
                     while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
                         }
                         else {
                             break
@@ -158,7 +113,51 @@ function Get-AssetInformation {
                     }
                 }
             }
-            Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
+        }
+        ## 3. Asset info scriptblock used to get local asset info from each target computer.
+        $asset_info_scriptblock = {
+            # computer model (ex: 'precision 3630 tower'), BIOS version, and BIOS release date
+            $computer_model = get-ciminstance -class win32_computersystem | select -exp model
+            $biosversion = get-ciminstance -class win32_bios | select -exp smbiosbiosversion
+            $bioreleasedate = get-ciminstance -class win32_bios | select -exp releasedate
+            # Asset tag from BIOS (tested with dell computer)
+            try {
+                $command_configure_exe = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Dell\Command Configure\x86_64" -Filter "cctk.exe" -File -ErrorAction Silentlycontinue
+                # returns a string like: 'Asset=2001234'
+                $asset_tag = &"$($command_configure_exe.fullname)" --asset
+                $asset_tag = $asset_tag -replace 'Asset=', ''
+            }
+            catch {
+                $asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
+                # asus motherboard returned 'default string'
+                if ($asset_tag.ToLower() -eq 'default string') {
+                    $asset_tag = 'No asset tag set in BIOS'
+                }    
+            }
+            $computer_serial_num = get-ciminstance -class win32_bios | select -exp serialnumber
+            # get monitor info and create a string from it (might be unnecessary, or a lengthy approach):
+            $monitors = Get-CimInstance WmiMonitorId -Namespace root\wmi -ComputerName $ComputerName | Select Active, ManufacturerName, UserFriendlyName, SerialNumberID, YearOfManufacture
+            $monitor_string = ""
+            $monitor_count = 0
+            $monitors | ForEach-Object {
+                $_.UserFriendlyName = [System.Text.Encoding]::ASCII.GetString($_.UserFriendlyName)
+                $_.SerialNumberID = [System.Text.Encoding]::ASCII.GetString($_.SerialNumberID -notmatch 0)
+                $_.ManufacturerName = [System.Text.Encoding]::ASCII.GetString($_.ManufacturerName)
+                $manufacturername = $($_.ManufacturerName).trim()
+                $monitor_string += "Maker: $manufacturername,Mod: $($_.UserFriendlyName),Ser: $($_.SerialNumberID),Yr: $($_.YearOfManufacture)"
+                $monitor_count++
+            }
+        
+            $obj = [PSCustomObject]@{
+                model               = $computer_model
+                biosversion         = $biosversion
+                bioreleasedate      = $bioreleasedate
+                asset_tag           = $asset_tag
+                computer_serial_num = $computer_serial_num
+                monitors            = $monitor_string
+                NumMonitors         = $monitor_count
+            }
+            return $obj
         }
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
@@ -191,15 +190,9 @@ function Get-AssetInformation {
     END {
         if ($results) {
             ## Sort the results
+            $results = $results | sort -property pscomputername
             if ($outputfile.tolower() -eq 'n') {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                    # $results | Out-GridView
-                }
-                else {
-                    $results | out-gridview
-                }
+                $results | out-gridview
             }
             else {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
@@ -212,7 +205,7 @@ function Get-AssetInformation {
                         TableName            = "$REPORT_DIRECTORY"
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'Details'
+                        WorksheetName        = 'AssetInfo'
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }
@@ -231,6 +224,7 @@ function Get-AssetInformation {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to continue."
+        Read-Host "Press enter to return results."
+        return $results
     }
 }
