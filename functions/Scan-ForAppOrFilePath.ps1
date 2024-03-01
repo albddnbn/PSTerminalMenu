@@ -56,22 +56,6 @@ function Scan-ForAppOrFilePath {
     ## and handle TargetComputer input / filter offline hosts.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
-        ## If item is a filepath - have to get rid of drive letter and \ since script scans network paths
-        if ($Item -match '[A-Za-z]:\\*') {
-            $filename_substring = $Item.substring(3)
-
-            $filename_substring = $filename_substring -replace '\\', '-'
-            $filename_substring = $filename_substring -split '-'
-            $filename_substring = $filename_substring[0]        
-        }
-        else {
-            $filename_substring = $Item
-        }
-
-        $REPORT_DIRECTORY = "AppFileScan"
-        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY"
-
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
@@ -110,38 +94,29 @@ function Scan-ForAppOrFilePath {
             }
         }
 
-        ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if ($Outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        ## 3. Outputfile handling - either create default, create filenames using input - report files are mandatory 
+        ##    in this function.
+        $str_title_var = "$SearchType-scan"
+        $REPORT_DIRECTORY = "$str_title_var"
+        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-                if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "$($SearchType)search"
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+            $iterator_var = 0
+            while ($true) {
+                $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                    $iterator_var++
+                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
                 }
                 else {
-                    $REPORT_DIRECTORY = $outputfile            
-                }
-                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-                if ($outputfile.tolower() -eq '') {
-                    $iterator_var = 0
-                    while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
-                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                            $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
-                        }
-                        else {
-                            break
-                        }
-                    }
+                    break
                 }
             }
-            Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Scanning computers now..."
+            
         }
+        
         ## Collecting the results
         $results = [System.Collections.ArrayList]::new()
     }
@@ -263,43 +238,31 @@ function Scan-ForAppOrFilePath {
     ## 1. Output findings (if any) to report files or terminal
     END {
         if ($results) {
-            ## Sort the results
-            if ($outputfile.tolower() -eq 'n') {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                    # $results | Out-GridView
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            ## Try ImportExcel
+            try {
+                ## xlsx attempt:
+                $params = @{
+                    AutoSize             = $true
+                    TitleBackgroundColor = 'Blue'
+                    TableName            = "$REPORT_DIRECTORY"
+                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    BoldTopRow           = $true
+                    WorksheetName        = "$SearchType-Search"
+                    PassThru             = $true
+                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                 }
-                else {
-                    $results | out-gridview
-                }
+                $Content = Import-Csv "$Outputfile.csv"
+                $xlsx = $Content | Export-Excel @params
+                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                Close-ExcelPackage $xlsx
             }
-            else {
-                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-                ## Try ImportExcel
-                try {
-                    ## xlsx attempt:
-                    $params = @{
-                        AutoSize             = $true
-                        TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
-                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
-                        BoldTopRow           = $true
-                        WorksheetName        = "$SearchType-Search"
-                        PassThru             = $true
-                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
-                    }
-                    $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
-                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
-                    Close-ExcelPackage $xlsx
-                }
-                catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
-                }
-                Invoke-item "$($outputfile | split-path -Parent)"
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
+            Invoke-item "$($outputfile | split-path -Parent)"
+            
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."

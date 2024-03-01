@@ -117,19 +117,20 @@ function Send-Reboots {
                 $offline_computers.add($TargetComputer) | Out-Null
             }
         }
-        ## Output offline computers to terminal, and to file if requested
-        END {
-            if ($offline_computers) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Offline computers include:"
-                Write-Host ""
-                $offline_computers
-                Write-Host ""
-                $output_file = Read-Host "Output offline computers to txt file in ./output? [y/n]"
-                if ($output_file.tolower() -eq 'y') {
-                    $offline_computers | Out-File -FilePath "./output/$thedate/Offline-NoReboot-$thedate.txt" -Force
-                }
+    }
+    ## Output offline computers to terminal, and to file if requested
+    END {
+        if ($offline_computers) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Offline computers include:"
+            Write-Host ""
+            $offline_computers
+            Write-Host ""
+            $output_file = Read-Host "Output offline computers to txt file in ./output? [y/n]"
+            if ($output_file.tolower() -eq 'y') {
+                $offline_computers | Out-File -FilePath "./output/$thedate/Offline-NoReboot-$thedate.txt" -Force
             }
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot(s) sent."
         }
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot(s) sent."
     }
 }
+

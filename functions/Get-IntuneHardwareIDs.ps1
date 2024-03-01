@@ -181,7 +181,6 @@ Function Get-IntuneHardwareIDs {
                 }
                 catch {
                     Get-WindowsAutoPilotInfo @params
-
                 }
             }
             else {

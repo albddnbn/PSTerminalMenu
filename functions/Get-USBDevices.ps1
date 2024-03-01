@@ -82,20 +82,36 @@ function Get-USBDevices {
             Write-Host "TargetComputer is: $($TargetComputer -join ', ')"
         }
 
-        ## 2. Create output filepath if necessary.
-        if ($outputfile.tolower() -ne 'n') {
-            ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "USBDevices"
+        if ($Outputfile.tolower() -eq 'n') {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+        }
+        else {
             if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
                 if ($Outputfile.toLower() -eq '') {
-                    $outputfile = "USBDevices"
+                    $REPORT_DIRECTORY = "$str_title_var"
                 }
-
-                $outputfile = Get-OutputFileString -TitleString $outputfile -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
+                else {
+                    $REPORT_DIRECTORY = $outputfile            
+                }
+                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
                 if ($outputfile.tolower() -eq '') {
-                    $outputfile = "USBDevices $thedate"
+                    $iterator_var = 0
+                    while ($true) {
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                            $iterator_var++
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                        }
+                        else {
+                            break
+                        }
+                    }
                 }
             }
         }
@@ -155,19 +171,21 @@ function Get-USBDevices {
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-    
                     $computers_results |  format-table -autosize
-
                     Read-Host "Press enter to show next computer's results"
-    
                 }
             }
             ## 4.
-            try {
-                Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
-            }
-            catch {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
+            if ($outputfile.tolower() -ne 'n') {
+
+                try {
+                    Invoke-Item "$($env:PSMENU_DIR)\reports\$thedate\$REPORT_TITLE"
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open folder for reports."
+                }
+            
+
             }
         }
         else {
