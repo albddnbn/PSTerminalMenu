@@ -118,12 +118,9 @@ function Get-ComputerDetails {
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
         Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
-
     }
 
-    #####################################################################################
-    ## PROCESS - Collects computer details from specified computers using CIM commands ##
-    #####################################################################################   
+    ## Collects computer details from specified computers using CIM commands  
     PROCESS {
         if ($Targetcomputer) {
             # ping test
@@ -147,7 +144,7 @@ function Get-ComputerDetails {
                     $system_uptime += " Hours"
                     # current_user
                     $current_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-
+                    # object returned to $results list
                     $obj = [PSCustomObject]@{
                         Manufacturer    = $manufacturer
                         Model           = $model
@@ -170,9 +167,7 @@ function Get-ComputerDetails {
         }
     }
 
-    ########################################################################################################
-    ## END - Output of results to CSV, XLSX, terminal, or gridview depending on the $OutputFile parameter ##
-    ########################################################################################################
+    ## Output of results to CSV, XLSX, terminal, or gridview depending on the $OutputFile parameter
     END {
         if ($results) {
             ## Sort the results
@@ -189,8 +184,6 @@ function Get-ComputerDetails {
             }
             else {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-
                 ## Try ImportExcel
                 try {
                     ## xlsx attempt:

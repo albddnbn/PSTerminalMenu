@@ -57,7 +57,7 @@ Function Get-IntuneHardwareIDs {
     BEGIN {
         ## 1. Date / Report Directory (for output file creation / etc.)
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-
+        $REPORT_DIRECTORY = "IntuneHardwareIDs"
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
@@ -98,11 +98,11 @@ Function Get-IntuneHardwareIDs {
 
         ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-            if ($Outputfile.toLower() -ne '') {
-                $REPORT_DIRECTORY = "$outputfile"
+            if ($Outputfile.toLower() -eq '') {
+                $REPORT_DIRECTORY = "AssetInfo"
             }
             else {
-                $REPORT_DIRECTORY = "IntuneHardwareIDs"          
+                $REPORT_DIRECTORY = $outputfile            
             }
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
@@ -111,10 +111,10 @@ Function Get-IntuneHardwareIDs {
             if ($outputfile.tolower() -eq '') {
                 $iterator_var = 0
                 while ($true) {
-                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$thedate"
+                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
                     if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                         $iterator_var++
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$([string]$iterator_var)"
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
                     }
                     else {
                         break
@@ -122,67 +122,59 @@ Function Get-IntuneHardwareIDs {
                 }
             }
         }
+        Write-host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Getting asset information from computers now..."
+
         ## 4. Find Get-WindowsAutopilotInfo script and dot source - hopefully from Supportfiles, will check internet if necessary.
-        $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
+        $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutopilotInfo.ps1" -File -ErrorAction SilentlyContinue
         if (-not $getwindowsautopilotinfo) {
-            # Attempt to download script if there's Internet
-            $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
-            if ($check_internet_connection.PingSucceeded) {
-                # check for nuget / install
-                $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
-                if ($null -eq $check_for_nuget) {
-                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
-                    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-                }
-                Install-Script -Name 'Get-WindowsAutopilotInfo' -Force 
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: " -NoNewline
-                Write-Host "No internet connection detected, unable to generate hardware ID .csv." -ForegroundColor Red
-                return
-            }
+
+            ## Right now, installing the script in this way won't help to complete the function.
+            ## ---------------------------------------------------------------------------------------------------------
+            # # Attempt to download script if there's Internet
+            # $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
+            # if ($check_internet_connection.PingSucceeded) {
+            #     # check for nuget / install
+            #     $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+            #     if ($null -eq $check_for_nuget) {
+            #         # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: NuGet not found, installing now."
+            #         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+            #     }
+            #     Install-Script -Name 'Get-WindowsAutopilotInfo.ps1' -Force 
+            # }
+            # else {
+            #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: " -NoNewline
+            #     Write-Host "No internet connection detected, unable to generate hardware ID .csv." -ForegroundColor Red
+            #     return
+            # }
+            ## ---------------------------------------------------------------------------------------------------------
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Get-WindowsAutopilotInfo.ps1 not found in supportfiles directory, unable to generate hardware ID .csv." -ForegroundColor Red
             return
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($getwindowsautopilotinfo.fullname), importing.`r" -NoNewline
             Get-ChildItem "$env:SUPPORTFILES_DIR" -recurse | unblock-file
+            . "$($getwindowsautopilotinfo.fullname)"
         }
     }
 
-    ## 1/2. Filter Targetcomputer for null/empty values and ping test machine.
-    ## 3. If machine was responsive:
-    ##    - Attempt to use cmdlet to get hwid
-    ##    - if Fails (unrecognized because wasn't installed using install-script)
-    ##    - Execute from support files.
-    ##    * I read that using a @splat like this for parameters gives you the advantage of having only one set to modify,
-    ##      as opposed to having to modify two sets of parameters (one for each command in the try/catch)
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responsive, use Get-WindowsAutopilotInfo.ps1 script to collect hardware ID, group tag, etc 
+    ##    and append to csv.
     PROCESS {
         ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
         if ($TargetComputer) {
             ## 2. Send one test ping
             $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            ## 3. Responsive machines...
             if ($ping_result) {
                 if ($TargetComputer -eq '127.0.0.1') {
                     $TargetComputer = $env:COMPUTERNAME
                 }
-                ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
-                $params = @{
-                    ComputerName = $TargetComputer
-                    OutputFile   = "$outputfile"
-                    GroupTag     = $DeviceGroupTag
-                    Append       = $true
-                }
-                ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
-                ## files (it should have to exist at this point).
-                try {
-                    . "$($getwindowsautopilotinfo.fullname)" @params
-                }
-                catch {
-                    Get-WindowsAutoPilotInfo @params
-
-                }
+                ## 3. Use Get-WindowsAutopilotInfo.ps1 script (I wrapped it in a 'Run-GetWindowsAutopilotInfo' function)
+                Run-GetWindowsAutopilotInfo -ComputerName $TargetComputer -OutputFile "$outputfile.csv" -GroupTag $DeviceGroupTag -Append
+                ## TRY THIS instead of having to use the 'wrapped' method -->
+                # Set-ExecutionPolicy Bypass -Scope 'Session' -Force
+                # Get-WindowsAutopilotInfo -ComputerName $TargetComputer -OutputFile "$outputfile.csv" -GroupTag $DeviceGroupTag -Append
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping" -ForegroundColor Yellow

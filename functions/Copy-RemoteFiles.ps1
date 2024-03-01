@@ -80,7 +80,7 @@ function Copy-RemoteFiles {
             }
         }
 
-        ## 2. Make sure the outputpath folder exists:
+        ## 2. Make sure the outputpath folder exists (remote files are copied here):
         if (-not(Test-Path "$Outputpath" -erroraction SilentlyContinue)) {
             New-Item -ItemType Directory -Path "$Outputpath" -ErrorAction SilentlyContinue | out-null
         }
