@@ -32,11 +32,8 @@ function Scan-ForSophosEndpointSelfHelp {
         )]
         $Targetcomputer
     )
-    #####################################################
-    ## Output file path creation, Targetcomputer handling
-    #####################################################
+    ## Targetcomputer handling (if not supplied through pipeline), create output filepath, and create results container.
     BEGIN {
-        $REPORT_TITLE = 'SophosScan'
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
@@ -76,40 +73,30 @@ function Scan-ForSophosEndpointSelfHelp {
             }
         }
         ## Create output filepath
+        $REPORT_DIRECTORY = 'SophosScan'
         if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-            if ($Outputfile.toLower() -eq '') {
-                $REPORT_DIRECTORY = "AssetInfo"
-            }
-            else {
-                $REPORT_DIRECTORY = $outputfile            
-            }
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            if ($outputfile.tolower() -eq '') {
-                $iterator_var = 0
-                while ($true) {
-                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$thedate"
-                    if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                        $iterator_var++
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\AssetInfo-$([string]$iterator_var)"
-                    }
-                    else {
-                        break
-                    }
+            $iterator_var = 0
+            while ($true) {
+                $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$thedate"
+                if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                    $iterator_var++
+                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$([string]$iterator_var)"
+                }
+                else {
+                    break
                 }
             }
         }
-        
         ## Collecting the results
         $results = [system.collections.arraylist]::new()
     }
 
-    #################################################################################
     ## Searches several registry locations for Sophos Endpoint Self Help display name
-    ## Targeted search would be more efficient.
-    #################################################################################
+    ## Targeted search in registry would be more efficient.
     PROCESS {
         if ($TargetComputer) {
             # may be able to remove the next 3 lines.
@@ -180,22 +167,42 @@ function Scan-ForSophosEndpointSelfHelp {
         }
     }
     
-    ##############################################
     ## Either export to xlsx and csv, or just csv.
-    ##############################################
     END {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Information gathered, exporting to $outputfile.csv/.xlsx..."
-        Write-Host ""
-        Write-Host "If a computer doesn't have Sophos Endpoint Self Help - it's likely not showing as protected in Sophos Central." -foregroundcolor yellow
-        Write-Host "If a computer has an older version of Sophos Endpoint Self Help - it may still technically be showing as 'protected' in the console, but will likely be failing the 'Endpoint Self Help Test'" -foregroundcolor yellow
-        if (get-command -name 'output-reports' -erroraction silentlycontinue) {
-            Output-Reports -Filepath "$outputfile" -Content $results -ReportTitle "SophosScan" -CSVFile $true -XLSXFile $true
+        if ($results) {
+            ## Sort the results
+            $results = $results | sort -property pscomputername
+
+            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
+            ## Try ImportExcel
+            try {
+                ## xlsx attempt:
+                $params = @{
+                    AutoSize             = $true
+                    TitleBackgroundColor = 'Blue'
+                    TableName            = "$REPORT_DIRECTORY"
+                    TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
+                    BoldTopRow           = $true
+                    WorksheetName        = "$REPORT_DIRECTORY"
+                    PassThru             = $true
+                    Path                 = "$Outputfile.xlsx" # => Define where to save it here!
+                }
+                $Content = Import-Csv "$Outputfile.csv"
+                $xlsx = $Content | Export-Excel @params
+                $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
+                $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
+                Close-ExcelPackage $xlsx
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
+            }
+            Invoke-item "$($outputfile | split-path -Parent)"
+            
         }
         else {
-            $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-
-            notepad.exe "$outputfile.csv"
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_TITLE\"
+        Read-Host "Press enter to return results."
+        return $results
     }
 }
