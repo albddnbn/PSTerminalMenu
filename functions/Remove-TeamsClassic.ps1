@@ -105,10 +105,7 @@ Function Remove-TeamsClassic {
     ## Use PURGE-TEAMSCLASSIC.PS1 file from LOCALSCRIPTS, on each target computer to remove Teams Classic for all users / system.
     PROCESS {
         if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
+
             ## test with ping first:
             $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
             if ($pingreply) {

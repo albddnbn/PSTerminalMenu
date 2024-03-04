@@ -21,7 +21,11 @@ function Copy-CannedResponse {
 
     
     ## 1. Creates a list of all .txt and .html files in the canned_responses directory.
-    $CannedResponses = Get-ChildItem -Path "$env:PSMENU_DIR\canned_responses" -Include *.txt, *.html -File
+    $CannedResponses = Get-ChildItem -Path "$env:PSMENU_DIR\canned_responses" -Include *.txt, *.html -File -Recurse -ErrorAction SilentlyContinue
+    if (-not $CannedResponses) {
+        Write-Host "No canned responses found in $env:PSMENU_DIR\canned_responses" -ForegroundColor Red
+        return
+    }
 
     ## 2. If created by New-CannedResponse, the files will have names with words separated by dashes (-).
     ##    - To offer a menu of options - the filenames are split at all occurences of - by replacing them with spaces.
@@ -37,9 +41,11 @@ function Copy-CannedResponse {
         }
         Install-Module -Name PS-Menu -Force
     }
-    Import-Module -Name PS-Menu -Force | Out-Null
+    Import-Module -Name PS-Menu -Force
 
     # presents menu
+    write-host "These are canned response options: $Cannedresponseoptions" -ForegroundColor Cyan
+    read-host "enter"
     $chosen_response = Menu $CannedResponseOptions
 
     # reconstructs filenames, re-inserting dashes for spaces

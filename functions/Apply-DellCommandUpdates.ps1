@@ -86,10 +86,7 @@ Function Apply-DellCommandUpdates {
     PROCESS {
         ## 1.
         if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
+
             ## 2. test with ping:
             $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
             if ($pingreply) {

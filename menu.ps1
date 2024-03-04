@@ -224,7 +224,7 @@ while ($exit_program -eq $false) {
                 Write-Host "    4. First section of a hostname to generate a list, ex: " -nonewline
                 Write-Host "s-a227-" -nonewline -foregroundcolor Yellow
                 Write-Host " will create a list of all hostnames that start with s-a227-."
-                $target_computers = read-host "Enter target computer value: "
+                $target_computers = read-host "Enter target computer value"
                 $target_computers = Get-TargetComputers -TargetComputerInput $target_computers
                 $target_computers = [String[]]$target_computers
             }
