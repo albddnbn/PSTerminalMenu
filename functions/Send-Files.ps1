@@ -117,6 +117,6 @@ function Send-Files {
         Write-Host "If you'd like to check for file/folder's existence on computers, use: " -NoNewline
         Write-Host "Filesystem operations -> Scan-ForApporFilepath" -Foregroundcolor Yellow
 
-        
+        Read-Host "`nPress [ENTER] to continue."
     }
 }

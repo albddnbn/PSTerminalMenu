@@ -41,7 +41,7 @@ function Build-PrinterConnectionExe {
         }
     }
 
-    # creates $exe_script variable depending on what kind of printer needs to be mapped
+    ## creates $exe_script variable depending on what kind of printer needs to be mapped
     if ($PrinterType -like "*ps*") {
         $exe_script = @"
 `$printername = '\\$PrinterType\$PrinterName'
