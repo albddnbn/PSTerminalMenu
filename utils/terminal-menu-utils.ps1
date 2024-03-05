@@ -36,98 +36,88 @@ function Get-TargetComputers {
             else {
 
                 ## Try pinging and getting ad computer
-                $ping_result = Test-Connection -ComputerName $TargetComputerInput -Count 1 -Quiet
+                # $ping_result = Test-Connection -ComputerName $TargetComputerInput -Count 1 -Quiet
 
-                # try {
-                #     $ad_check = get-adcomputer -computername $TargetComputerInput
+                # # try {
+                # #     $ad_check = get-adcomputer -computername $TargetComputerInput
+                # # }
+                # # catch {
+
+                # #     $null
+                # # }
+
+                # ## If Targetcomputer input can be pinged, or is an AD Computer object
+                # if ($ping_result) {
+                #     $TargetComputerInput = @($TargetComputerInput)
                 # }
-                # catch {
-
-                #     $null
-                # }
-
-                ## If Targetcomputer input can be pinged, or is an AD Computer object
-                if (($ping_result) -or ($ad_check)) {
-                    $TargetComputerInput = @($TargetComputerInput)
+                # else {
+                #     try {
+                ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
+                if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
+                    Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"
+                    Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
                 }
                 else {
-                    # try {
-                    #     $TargetComputerInput = $TargetComputerInput + "x"
 
-                    #     $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                    # }
-                    # catch {
-                    Read-Host "starting targetcomputer processing"
-                    # $TargetComputerInput = Get-ComputersLDAP -ComputerName $TargetComputerInput
-                    write-host "Testing $TargetComputerInput"
-                    try {
-
-                        if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
-                            Write-Error "Security group filtering won't work because `$env:USERDNSDOMAIN is not available!"
-                            Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
-                        }
-                        else {
-
-                            # if no domain specified fallback to PowerShell environment variable
-                            if ([string]::IsNullOrEmpty($searchRoot)) {
-                                $searchRoot = $env:USERDNSDOMAIN
-                            }
-
-                            $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                            $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputerInput*))"
-                            $searcher.SearchRoot = "LDAP://$searchRoot"
-                            # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
-                            # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
-
-                            [void]$searcher.PropertiesToLoad.Add("name")
-
-                            $list = [System.Collections.Generic.List[String]]@()
-
-                            $results = $searcher.FindAll()
-                            foreach ($result in $results) {
-                                $resultItem = $result.Properties
-                                [void]$List.add($resultItem.name)
-                            }
-
-                            $TargetComputerInput = $list
-
-                        }
+                    # if no domain specified fallback to PowerShell environment variable
+                    if ([string]::IsNullOrEmpty($searchRoot)) {
+                        $searchRoot = $env:USERDNSDOMAIN
                     }
-                    catch {
-                        #Nothing we can do
-                        Write-Warning $_.Exception.Message
-                        return $null
+
+                    $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
+                    $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputerInput*))"
+                    $searcher.SearchRoot = "LDAP://$searchRoot"
+                    # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
+                    # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
+
+                    [void]$searcher.PropertiesToLoad.Add("name")
+
+                    $list = [System.Collections.Generic.List[String]]@()
+
+                    $results = $searcher.FindAll()
+                    foreach ($result in $results) {
+                        $resultItem = $result.Properties
+                        [void]$List.add($resultItem.name)
                     }
-                    # }
-                    Read-Host "hi"
-                    $TargetComputerInput = $TargetComputerInput | Sort-Object
-    
-                    Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: TargetComputer value determined to be the first section of a hostname, used Get-ADComputer to create hostname list."
-    
+
+                    $TargetComputerInput = $list
+
                 }
+                # }
+                # catch {
+                #     #Nothing we can do
+                #     Write-Warning $_.Exception.Message
+                #     return $null
+                # }
+                # }
+                $TargetComputerInput = $TargetComputerInput | Sort-Object
+    
+                Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: TargetComputer value determined to be the first section of a hostname, used Get-ADComputer to create hostname list."
+    
             }
-
         }
 
-        $TargetComputerInput = $TargetComputerInput | Where-object { ($_ -ne '') -and ($_ -ne $null) }
+    }
 
-        # `a will sound the Windows 'gong' just to get user's attentino so they know they have to enter y/n
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Hosts determined:" -Nonewline
-        Write-Host "$($TargetComputerInput -join ', ')" -foregroundcolor green
+    $TargetComputerInput = $TargetComputerInput | Where-object { ($_ -ne '') -and ($_ -ne $null) }
 
-        # tell user to press enter to accept the list or any other key to deny
-        Write-Host "Press 'y' to accept the list, or 'n' to deny it and end the function." -foregroundcolor yellow
-        $key = $Host.UI.RawUI.ReadKey()
-        [String]$character = $key.Character
-        if ($($character.ToLower()) -ne 'y') {
-            return $null
-        }
-        # elseif - they pressed enter 
-        elseif ($($character.ToLower()) -eq 'y') {
-            return $TargetComputerInput
-        }
+    # `a will sound the Windows 'gong' just to get user's attentino so they know they have to enter y/n
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Hosts determined:" -Nonewline
+    Write-Host "$($TargetComputerInput -join ', ')" -foregroundcolor green
+
+    # tell user to press enter to accept the list or any other key to deny
+    Write-Host "Press 'y' to accept the list, or 'n' to deny it and end the function." -foregroundcolor yellow
+    $key = $Host.UI.RawUI.ReadKey()
+    [String]$character = $key.Character
+    if ($($character.ToLower()) -ne 'y') {
+        return $null
+    }
+    # elseif - they pressed enter 
+    elseif ($($character.ToLower()) -eq 'y') {
+        return $TargetComputerInput
     }
 }
+
 function Get-OutputFileString {
     <#
             .SYNOPSIS
