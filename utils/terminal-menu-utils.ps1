@@ -15,6 +15,8 @@ function Get-TargetComputers {
     param(
         $TargetComputerInput
     )
+    $gettargetcomputers = get-childitem -path "$env:PSMENU_DIR" -Filter "Get-ComputersLDAP.ps1" -File -Recurse
+    . "$($gettargetcomputers.fullname)"
     Write-Verbose "`$Targetcomputerinput : $TargetComputerInput"
     if ($TargetComputerInput -eq '') {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No TargetComputer value provided, assigning '127.0.0.1'."
@@ -36,20 +38,68 @@ function Get-TargetComputers {
                 ## Try pinging and getting ad computer
                 $ping_result = Test-Connection -ComputerName $TargetComputerInput -Count 1 -Quiet
 
-                try {
-                    $ad_check = get-adcomputer -computername $TargetComputerInput
-                }
-                catch {
-                    $null
-                }
+                # try {
+                #     $ad_check = get-adcomputer -computername $TargetComputerInput
+                # }
+                # catch {
+
+                #     $null
+                # }
 
                 ## If Targetcomputer input can be pinged, or is an AD Computer object
                 if (($ping_result) -or ($ad_check)) {
                     $TargetComputerInput = @($TargetComputerInput)
                 }
                 else {
-                    $TargetComputerInput = $TargetComputerInput + "x"
-                    $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                    # try {
+                    #     $TargetComputerInput = $TargetComputerInput + "x"
+
+                    #     $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
+                    # }
+                    # catch {
+                    Read-Host "starting targetcomputer processing"
+                    # $TargetComputerInput = Get-ComputersLDAP -ComputerName $TargetComputerInput
+                    write-host "Testing $ComputerNAme"
+                    try {
+
+                        if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
+                            Write-Error "Security group filtering won't work because `$env:USERDNSDOMAIN is not available!"
+                            Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
+                        }
+                        else {
+
+                            # if no domain specified fallback to PowerShell environment variable
+                            if ([string]::IsNullOrEmpty($searchRoot)) {
+                                $searchRoot = $env:USERDNSDOMAIN
+                            }
+
+                            $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
+                            $searcher.Filter = "(&(objectclass=computer)(cn=$ComputerName*))"
+                            $searcher.SearchRoot = "LDAP://$searchRoot"
+                            # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
+                            # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
+
+                            [void]$searcher.PropertiesToLoad.Add("name")
+
+                            $list = [System.Collections.Generic.List[String]]@()
+
+                            $results = $searcher.FindAll()
+                            foreach ($result in $results) {
+                                $resultItem = $result.Properties
+                                [void]$List.add($resultItem.name)
+                            }
+
+                            return $list
+
+                        }
+                    }
+                    catch {
+                        #Nothing we can do
+                        Write-Warning $_.Exception.Message
+                        return $null
+                    }
+                    # }
+                    Read-Host "hi"
                     $TargetComputerInput = $TargetComputerInput | Sort-Object
     
                     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: TargetComputer value determined to be the first section of a hostname, used Get-ADComputer to create hostname list."

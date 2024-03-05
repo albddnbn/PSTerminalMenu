@@ -6,3 +6,7 @@ Install-Application:
 All uses of foreach-object - try to use -parallel switch to speed up execution time
   - make foreach block run in parallel instead of one after the other
   (powershell 7)
+
+- in get-targetcomputers and being blocks for report-generating functions
+  - instead of the $ad_check variable using get-adcomputer, AND the test-connection (think this is how they are now)
+    - Try just using test-connection - if it works, should be a single computer name.
