@@ -70,9 +70,9 @@ function Get-InstalledDotNetversions {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                        $TargetComputer = $TargetComputer + "x"
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object   
                     }
                 }
             }
@@ -132,10 +132,10 @@ function Get-InstalledDotNetversions {
                 # Get Computers details and create an object
                 $target_installed_dotnet = Invoke-Command -ComputerName $Targetcomputer -Scriptblock {
                     Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
-                        Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match ‘^(?!S)\p{L}’ } |`
+                        Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
                         Select PSChildName, version
                 }
-                $results.add($logged_in_user_info) | out-null
+                $results.add($target_installed_dotnet) | out-null
             }
             else {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow

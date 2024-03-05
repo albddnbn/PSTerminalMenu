@@ -72,9 +72,9 @@ function Get-CurrentUser {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+                        $TargetComputer = $TargetComputer + "x"
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object   
                     }
                 }
             }
