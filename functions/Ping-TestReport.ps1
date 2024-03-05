@@ -76,7 +76,7 @@ function Ping-TestReport {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -92,20 +92,19 @@ function Ping-TestReport {
         }
 
         ## 2. If provided, use outputfile input to create report output filepath.
-        if ($outputfile -eq '') {
-            $REPORT_TITLE = "Pings-$(Get-Date -Format 'hh-MM')$($am_pm)"
-        }
-        ## If they submitted a value that wasn't 'n' - use that value to create filepath
-        elseif ($outputfile.ToLower() -ne 'n') {
-            $REPORT_TITLE = "Pings-$outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
-        }
         ## Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        $str_title_var = $REPORT_TITLE
+        if ($outputfile) {
+            $str_title_var = "$outputfile-$(Get-Date -Format 'hh-MM')$($am_pm)"
+        }
+        else {
+            $str_title_var = "Pings-$(Get-Date -Format 'hh-MM')$($am_pm)"
+        }
+
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -129,6 +128,17 @@ function Ping-TestReport {
                         }
                     }
                 }
+
+                ## Try to get output directory path and make sure it exists.
+                try {
+                    $outputdir = $outputfile | split-path -parent
+                    if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                    }
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+                }
             }
         }
         ## 3. Create arraylist to store results
@@ -144,35 +154,37 @@ function Ping-TestReport {
     ## 5. Calculate average response time for successful responses
     ## 6. Calculate packet loss percentage
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Create object to store results of ping test on single machine
-            $obj = [pscustomobject]@{
-                Sourcecomputer       = $env:COMPUTERNAME
-                ComputerHostName     = $TargetComputer
-                TotalPings           = $pingcount
-                Responses            = 0
-                AvgResponseTime      = 0
-                PacketLossPercentage = 0
-            }
-            ## 3. Send $PINGCOUNT number of pings to target device, store results
-            $send_pings = Test-Connection -ComputerName $TargetComputer -count $PingCount -ErrorAction SilentlyContinue
-            ## 4. Set number of responses from target machine
-            $obj.responses = $send_pings.count
-            ## 5. Calculate average response time for successful responses
-            $sum_of_response_times = $($send_pings | measure-object responsetime -sum)
-            if ($obj.Responses -eq 0) {
-                $obj.AvgResponseTime = 0
-            }
-            else {
-                $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
-            }
-            ## 6. Calculate packet loss percentage - divide total pings by responses
-            $total_drops = $obj.TotalPings - $obj.Responses
-            $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
+        ForEach ($single_computer in $TargetComputer) {
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Create object to store results of ping test on single machine
+                $obj = [pscustomobject]@{
+                    Sourcecomputer       = $env:COMPUTERNAME
+                    ComputerHostName     = $single_computer
+                    TotalPings           = $pingcount
+                    Responses            = 0
+                    AvgResponseTime      = 0
+                    PacketLossPercentage = 0
+                }
+                ## 3. Send $PINGCOUNT number of pings to target device, store results
+                $send_pings = Test-Connection -ComputerName $single_computer -count $PingCount -ErrorAction SilentlyContinue
+                ## 4. Set number of responses from target machine
+                $obj.responses = $send_pings.count
+                ## 5. Calculate average response time for successful responses
+                $sum_of_response_times = $($send_pings | measure-object responsetime -sum)
+                if ($obj.Responses -eq 0) {
+                    $obj.AvgResponseTime = 0
+                }
+                else {
+                    $obj.avgresponsetime = $sum_of_response_times.sum / $obj.responses
+                }
+                ## 6. Calculate packet loss percentage - divide total pings by responses
+                $total_drops = $obj.TotalPings - $obj.Responses
+                $obj.PacketLossPercentage = ($total_drops / $($obj.TotalPings)) * 100
 
-            ## 7. Add object to container created in BEGIN block
-            $results.add($obj) | Out-Null
+                ## 7. Add object to container created in BEGIN block
+                $results.add($obj) | Out-Null
+            }
         }
     }
 
@@ -209,7 +221,14 @@ function Ping-TestReport {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
-                Invoke-item "$($outputfile | split-path -Parent)"
+                ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+                try {
+                    Invoke-item "$($outputfile | split-path -Parent)"
+                }
+                catch {
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    Invoke-item "$outputfile.csv"
+                }
             }
         }
         else {

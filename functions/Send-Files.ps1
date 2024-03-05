@@ -75,7 +75,7 @@ function Send-Files {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -96,21 +96,24 @@ function Send-Files {
     ##    Report on success/fail
     ## 4. Remove the pssession.
     PROCESS {
-        ## 1. no empty Targetcomputer values past this point
-        if ($targetcomputer) {
-            ## 2. Ping target machine one time
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                $target_session = New-PSSession $TargetComputer
-                try {
-                    Copy-Item -Path "$sourcepath" -Destination "$destinationpath" -ToSession $target_session -Recurse
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($Targetcomputer) complete." -foregroundcolor green
+        ForEach ($single_computer in $TargetComputer) {
+
+            ## 1. no empty Targetcomputer values past this point
+            if ($single_computer) {
+                ## 2. Ping target machine one time
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    $target_session = New-PSSession $single_computer
+                    try {
+                        Copy-Item -Path "$sourcepath" -Destination "$destinationpath" -ToSession $target_session -Recurse
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete." -foregroundcolor green
+                    }
+                    catch {
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer." -foregroundcolor red
+                    }
+                    ## 4. Bye pssession
+                    Remove-PSSession $target_session
                 }
-                catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $targetcomputer." -foregroundcolor red
-                }
-                ## 4. Bye pssession
-                Remove-PSSession $target_session
             }
         }
     }

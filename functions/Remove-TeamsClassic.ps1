@@ -60,7 +60,7 @@ Function Remove-TeamsClassic {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -107,12 +107,15 @@ Function Remove-TeamsClassic {
 
     ## Use PURGE-TEAMSCLASSIC.PS1 file from LOCALSCRIPTS, on each target computer to remove Teams Classic for all users / system.
     PROCESS {
-        if ($TargetComputer) {
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                Invoke-Command -ComputerName $Targetcomputer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+            if ($single_computer) {
+
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    Invoke-Command -ComputerName $single_computer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+                }
             }
         }
     }

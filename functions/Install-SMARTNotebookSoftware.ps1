@@ -58,7 +58,7 @@ function Install-SMARTNotebookSoftware {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -92,34 +92,37 @@ function Install-SMARTNotebookSoftware {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, find PSADT Folder and install SMARTNotebook software.
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## 2. test with ping:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## 3. Run PSADT installation on target computers.
-                Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    $installation_method = $using:InstallationTypeReply
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME]:: Installation method set to: $installation_method"
-                    # unblock files
-                    Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Recurse | Unblock-File
-                    # get Deploy-SMARTNotebook.ps1
-                    $DeployScript = Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Filter 'Deploy-SMARTNotebook.ps1' -File -ErrorAction SilentlyContinue
-                    if ($DeployScript) {
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($DeployScript.FullName), executing." -foregroundcolor green
-                        Powershell.exe -ExecutionPolicy Bypass "$($DeployScript.FullName)" -DeploymentType "Install" -DeployMode "Silent" -InstallationType "$installation_method"
-                    }
-                    else {
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Deploy-SMARTNotebook.ps1 not found, exiting." -foregroundcolor red
-                        exit
+            ## 1.
+            if ($single_computer) {
+
+                ## 2. test with ping:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## 3. Run PSADT installation on target computers.
+                    Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        $installation_method = $using:InstallationTypeReply
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME]:: Installation method set to: $installation_method"
+                        # unblock files
+                        Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Recurse | Unblock-File
+                        # get Deploy-SMARTNotebook.ps1
+                        $DeployScript = Get-ChildItem -Path "C:\TEMP\SMARTNotebook" -Filter 'Deploy-SMARTNotebook.ps1' -File -ErrorAction SilentlyContinue
+                        if ($DeployScript) {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($DeployScript.FullName), executing." -foregroundcolor green
+                            Powershell.exe -ExecutionPolicy Bypass "$($DeployScript.FullName)" -DeploymentType "Install" -DeployMode "Silent" -InstallationType "$installation_method"
+                        }
+                        else {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Deploy-SMARTNotebook.ps1 not found, exiting." -foregroundcolor red
+                            exit
+                        }
                     }
                 }
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -foregroundcolor red
-            }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping, skipping." -foregroundcolor red
+                }
     
+            }
         }
     }
 

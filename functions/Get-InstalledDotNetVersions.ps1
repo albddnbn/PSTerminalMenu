@@ -71,7 +71,7 @@ function Get-InstalledDotNetversions {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -92,7 +92,7 @@ function Get-InstalledDotNetversions {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -116,6 +116,17 @@ function Get-InstalledDotNetversions {
                         }
                     }
                 }
+
+                ## Try to get output directory path and make sure it exists.
+                try {
+                    $outputdir = $outputfile | split-path -parent
+                    if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                    }
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+                }
             }
         }
 
@@ -127,24 +138,26 @@ function Get-InstalledDotNetversions {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responseive, run scriptblock to logged in user, info on teams/zoom processes, etc.
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Send one test ping
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                # Get Computers details and create an object
-                $target_installed_dotnet = Invoke-Command -ComputerName $Targetcomputer -Scriptblock {
-                    Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
-                        Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
-                        Select PSChildName, version
+        ForEach ($single_computer in $TargetComputer) {
+
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    # Get Computers details and create an object
+                    $target_installed_dotnet = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
+                            Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
+                            Select PSChildName, version
+                    } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    $results.add($target_installed_dotnet) | out-null
                 }
-                $results.add($target_installed_dotnet) | out-null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                }
             }
         }
-
     }
     ## 1. If there are results - sort them by the hostname (pscomputername) property.
     ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
@@ -181,7 +194,14 @@ function Get-InstalledDotNetversions {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
-                Invoke-item "$($outputfile | split-path -Parent)"
+                ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+                try {
+                    Invoke-item "$($outputfile | split-path -Parent)"
+                }
+                catch {
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    Invoke-item "$outputfile.csv"
+                }
             }
         }
         else {

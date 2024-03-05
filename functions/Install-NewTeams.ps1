@@ -62,7 +62,7 @@ Function Install-NewTeams {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -96,73 +96,76 @@ Function Install-NewTeams {
     ## 4. Copy the New Teams folder to target, using the session
     ## 5. Execute script - removes Teams classic / installs & provisions new Teams client
     PROCESS {
-        ## 1. Check $Targetcomputer for $null / '' values
-        if ($Targetcomputer) {
-            ## 2. Send one test ping
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                if ($TargetComputer -eq '127.0.0.1') {
-                    $TargetComputer = $env:COMPUTERNAME
-                }
-                ## 3. Create PSSession on on target machine
-                $single_target_session = New-PSSession $TargetComputer
-                ## 4. Copy the New Teams folder to target, using the session
-                try {
-                    Copy-Item -Path "$($NewTeamsFolder.fullname)" -Destination 'C:\temp' -ToSession $single_target_session -Recurse -Force
-                }
-                catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Error copying NewTeams folder to $TargetComputer" -foregroundcolor red
-                    continue
-                }
+        ForEach ($single_computer in $TargetComputer) {
 
-                ## 5. Execute script - removes Teams classic / installs & provisions new Teams client
-                ##    - Skips computer if skip_occupied_computers is 'y' and user is logged in
-                $new_teams_install_result = Invoke-Command -ComputerName $Targetcomputer -scriptblock {
-
-                    $obj = [pscustomobject]@{
-                        UserLoggedIn = ''
-                        Skipped      = 'no'
+            ## 1. Check $single_computer for $null / '' values
+            if ($single_computer) {
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    if ($single_computer -eq '127.0.0.1') {
+                        $single_computer = $env:COMPUTERNAME
                     }
-                    $check_for_user = $using:skip_occupied_computers
-                    if ($check_for_user.ToLower() -eq 'y') {
-                        $user_logged_in = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-                        if ($user_logged_in) {
-                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " -NoNewline
-                            Write-Host "[$env:COMPUTERNAME] :: Found $user_logged_in logged in, skipping installation of Teams." -foregroundcolor yellow
-                            $obj.UserLoggedIn = $user_logged_in
-                            $obj.Skipped = 'yes'
-                            return $obj                            
+                    ## 3. Create PSSession on on target machine
+                    $single_target_session = New-PSSession $single_computer
+                    ## 4. Copy the New Teams folder to target, using the session
+                    try {
+                        Copy-Item -Path "$($NewTeamsFolder.fullname)" -Destination 'C:\temp' -ToSession $single_target_session -Recurse -Force
+                    }
+                    catch {
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Error copying NewTeams folder to $single_computer" -foregroundcolor red
+                        continue
+                    }
+
+                    ## 5. Execute script - removes Teams classic / installs & provisions new Teams client
+                    ##    - Skips computer if skip_occupied_computers is 'y' and user is logged in
+                    $new_teams_install_result = Invoke-Command -ComputerName $single_computer -scriptblock {
+
+                        $obj = [pscustomobject]@{
+                            UserLoggedIn = ''
+                            Skipped      = 'no'
                         }
+                        $check_for_user = $using:skip_occupied_computers
+                        if ($check_for_user.ToLower() -eq 'y') {
+                            $user_logged_in = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                            if ($user_logged_in) {
+                                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " -NoNewline
+                                Write-Host "[$env:COMPUTERNAME] :: Found $user_logged_in logged in, skipping installation of Teams." -foregroundcolor yellow
+                                $obj.UserLoggedIn = $user_logged_in
+                                $obj.Skipped = 'yes'
+                                return $obj                            
+                            }
+                        }
+                        $installteamsscript = get-childitem -path 'C:\temp\newteams' -filter "install-msteams.ps1" -file -erroraction SilentlyContinue
+                        if (-not $installteamsscript) {
+                            Write-Host "No install-msteams.ps1 on $env:computername" -foregroundcolor red
+                            $obj.Skipped = 'yes'
+                            return $obj
+                        }
+                        # execute script (NewTeams installation folder can be found in ./deploy/irregular)
+                        $install_params = @{
+                            logfile      = "C:\WINDOWS\Logs\Software\NewTeamsClient-Install-$(Get-Date -Format 'yyyy-MM-dd').log"
+                            forceinstall = $true
+                            setrunonce   = $true
+                        }
+                        ## If the msix file is present - run offline install
+                        if (Test-Path -Path 'C:\temp\newteams\Teams_windows_x64.msi') {
+                            $install_params['offline'] = $true
+                        }
+                        &"$($installteamsscript.fullname)" @install_params
                     }
-                    $installteamsscript = get-childitem -path 'C:\temp\newteams' -filter "install-msteams.ps1" -file -erroraction SilentlyContinue
-                    if (-not $installteamsscript) {
-                        Write-Host "No install-msteams.ps1 on $env:computername" -foregroundcolor red
-                        $obj.Skipped = 'yes'
-                        return $obj
-                    }
-                    # execute script (NewTeams installation folder can be found in ./deploy/irregular)
-                    $install_params = @{
-                        logfile      = "C:\WINDOWS\Logs\Software\NewTeamsClient-Install-$(Get-Date -Format 'yyyy-MM-dd').log"
-                        forceinstall = $true
-                        setrunonce   = $true
-                    }
-                    ## If the msix file is present - run offline install
-                    if (Test-Path -Path 'C:\temp\newteams\Teams_windows_x64.msi') {
-                        $install_params['offline'] = $true
-                    }
-                    &"$($installteamsscript.fullname)" @install_params
-                }
 
-                ## Check if the computer was skipped
-                if ($new_teams_install_result.Skipped -eq 'yes') {
-                    $missed_computers.add($TargetComputer) | out-null
+                    ## Check if the computer was skipped
+                    if ($new_teams_install_result.Skipped -eq 'yes') {
+                        $missed_computers.add($single_computer) | out-null
+                        continue
+                    }
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not reachable, skipping." -foregroundcolor red
+                    $missed_computers.add($single_computer) | out-null
                     continue
                 }
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not reachable, skipping." -foregroundcolor red
-                $missed_computers.add($TargetComputer) | out-null
-                continue
             }
         }
     }

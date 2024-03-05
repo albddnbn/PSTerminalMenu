@@ -35,7 +35,7 @@ Function Set-ChromeClearDataOnExit {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -83,15 +83,18 @@ Function Set-ChromeClearDataOnExit {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, Collect local asset information from computer
     PROCESS {
-        if ($TargetComputer) {
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $chrome_setting_scriptblock
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping." -ForegroundColor Yellow
+            if ($single_computer) {
+
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer\ -Count 1 -Quiet
+                if ($pingreply) {
+                    Invoke-Command -ComputerName $single_computer\ -ScriptBlock $chrome_setting_scriptblock
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer\ didn't respond to one ping, skipping." -ForegroundColor Yellow
+                }
             }
         }
     }

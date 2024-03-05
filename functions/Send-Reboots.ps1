@@ -68,7 +68,7 @@ function Send-Reboots {
                             $TargetComputer = @($TargetComputer)
                         }
                         else {
-                            write-host "getting AD computer"
+    
                             $TargetComputer = $TargetComputer
                             $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                             $TargetComputer = $TargetComputer | Sort-Object 
@@ -95,29 +95,29 @@ function Send-Reboots {
     ## 3. Send reboot either with or without message
     ## 4. If machine was offline - add it to list to output at end.
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Ping test
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                if ($TargetComputer -eq '127.0.0.1') {
-                    $TargetComputer = $env:COMPUTERNAME
-                }
-                if ($RebootMessage) {
-                    Invoke-Command -ComputerName $TargetComputer -ScriptBlock {
-                        shutdown  /r /t $using:reboottime /c "$using:RebootMessage"
+        ForEach ($single_computer in $TargetComputer) {
+
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Ping test
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    if ($RebootMessage) {
+                        Invoke-Command -ComputerName $single_computer -ScriptBlock {
+                            shutdown  /r /t $using:reboottime /c "$using:RebootMessage"
+                        }
+                        $reboot_method = "Reboot w/popup msg"
                     }
-                    $reboot_method = "Reboot w/popup msg"
+                    else {
+                        Restart-Computer $single_computer
+                        $reboot_method = "Reboot using Restart-Computer (no Force)" # 2-28-2024
+                    }
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot sent to $single_computer using $reboot_method." -ForegroundColor Green
                 }
                 else {
-                    Restart-Computer $TargetComputer
-                    $reboot_method = "Reboot using Restart-Computer (no Force)" # 2-28-2024
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                    $offline_computers.add($single_computer) | Out-Null
                 }
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot sent to $TargetComputer using $reboot_method." -ForegroundColor Green
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
-                $offline_computers.add($TargetComputer) | Out-Null
             }
         }
     }

@@ -84,7 +84,7 @@ Function Get-IntuneHardwareIDs {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -100,7 +100,7 @@ Function Get-IntuneHardwareIDs {
         }
 
         ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+        if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
             if ($Outputfile.toLower() -ne '') {
                 $REPORT_DIRECTORY = "$outputfile"
             }
@@ -115,15 +115,30 @@ Function Get-IntuneHardwareIDs {
                 $iterator_var = 0
                 while ($true) {
                     $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$thedate"
-                    if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                    if ((Test-Path "$outputfile.csv" -ErrorAction Silentcontinue)) {
                         $iterator_var++
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$([string]$iterator_var)"
+                        $outputfile += "$([string]$iterator_var)"                    
                     }
                     else {
                         break
                     }
                 }
             }
+            ## Try to get output directory path and make sure it exists.
+            try {
+                $outputdir = $outputfile | split-path -parent
+                if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                    New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                }
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+            }
+        }
+
+        ## make sure there's a .csv on the end of output file?
+        if ($outputfile -notlike "*.csv") {
+            $outputfile += ".csv"
         }
         ## 4. Find Get-WindowsAutopilotInfo script and dot source - hopefully from Supportfiles, will check internet if necessary.
         $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
@@ -161,42 +176,48 @@ Function Get-IntuneHardwareIDs {
     ##    * I read that using a @splat like this for parameters gives you the advantage of having only one set to modify,
     ##      as opposed to having to modify two sets of parameters (one for each command in the try/catch)
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Send one test ping
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            ## 3. Responsive machines...
-            if ($ping_result) {
-                if ($TargetComputer -eq '127.0.0.1') {
-                    $TargetComputer = $env:COMPUTERNAME
+        ForEach ($single_computer in $TargetComputer) {
+
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                ## 3. Responsive machines...
+                if ($ping_result) {
+                    ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
+                    $params = @{
+                        ComputerName = $single_computer
+                        OutputFile   = "$outputfile"
+                        GroupTag     = $DeviceGroupTag
+                        Append       = $true
+                    }
+                    ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
+                    ## files (it should have to exist at this point).
+                    try {
+                        . "$($getwindowsautopilotinfo.fullname)" @params
+                    }
+                    catch {
+                        Get-WindowsAutoPilotInfo @params
+                    }
                 }
-                ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
-                $params = @{
-                    ComputerName = $TargetComputer
-                    OutputFile   = "$outputfile"
-                    GroupTag     = $DeviceGroupTag
-                    Append       = $true
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping, skipping" -ForegroundColor Yellow
                 }
-                ## Attempt to use cmdlet from installing script from internet, if fails - revert to script in support 
-                ## files (it should have to exist at this point).
-                try {
-                    . "$($getwindowsautopilotinfo.fullname)" @params
-                }
-                catch {
-                    Get-WindowsAutoPilotInfo @params
-                }
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping" -ForegroundColor Yellow
             }
         }
     }
     ## 1. Open the folder that will contain reports if necessary.
     END {
         ## 1. Open reports folder
-        if ($outputfile.tolower() -ne 'n') {
-            Invoke-Item "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\"
+        ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+        try {
+            Invoke-item "$($outputfile | split-path -Parent)"
         }
+        catch {
+            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+            Invoke-item "$outputfile"
+        }
+
         Read-Host "Press enter to return to menu."
     }
 }

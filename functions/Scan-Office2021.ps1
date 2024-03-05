@@ -58,7 +58,7 @@ function Scan-Office2021 {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -74,7 +74,7 @@ function Scan-Office2021 {
         }
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         $REPORT_DIRECTORY = 'Office2021Scan'
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+        if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
@@ -84,11 +84,21 @@ function Scan-Office2021 {
                 $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$thedate"
                 if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                     $iterator_var++
-                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$([string]$iterator_var)"
+                    $outputfile += "-$([string]$iterator_var)"
                 }
                 else {
                     break
                 }
+            }
+            ## Try to get output directory path and make sure it exists.
+            try {
+                $outputdir = $outputfile | split-path -parent
+                if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                    New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                }
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
             }
         }
         
@@ -98,57 +108,60 @@ function Scan-Office2021 {
     }
 
     PROCESS {
-        if ($TargetComputer) {
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                $office2021_check = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    # Loop through each registry path and retrieve the list of subkeys
-                    $uninstallKeys = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue
-                    $path = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-                    foreach ($key in $uninstallKeys) {
-                        $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
-                        $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+            if ($single_computer) {
 
-                        if ($displayName -like "*Office*Professional*") {
-                            $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    $office2021_check = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        # Loop through each registry path and retrieve the list of subkeys
+                        $uninstallKeys = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue
+                        $path = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+                        foreach ($key in $uninstallKeys) {
+                            $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
+                            $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
 
-
-                            if ($publisher -like "*Microsoft*") {
-
-
-                                $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
-                                $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
-                                $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
-                                $installdate = (Get-ItemProperty -Path $keyPath -Name "InstallDate" -ErrorAction SilentlyContinue).InstallDate
+                            if ($displayName -like "*Office*Professional*") {
+                                $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
 
 
-                                $obj = [pscustomobject]@{
-                                    DisplayName     = $displayName
-                                    Publisher       = $publisher
-                                    UninstallString = $uninstallString
-                                    Version         = $version
-                                    InstallLocation = $installLocation
-                                    InstallDate     = $installdate
-                                    Office2021Found = $false
-                                }
-                                if ($displayname -like "*2021*") {
-                                    $obj.Office2021Found = $true
-                                    # found a match, so break
-                                    break
+                                if ($publisher -like "*Microsoft*") {
+
+
+                                    $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
+                                    $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+                                    $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
+                                    $installdate = (Get-ItemProperty -Path $keyPath -Name "InstallDate" -ErrorAction SilentlyContinue).InstallDate
+
+
+                                    $obj = [pscustomobject]@{
+                                        DisplayName     = $displayName
+                                        Publisher       = $publisher
+                                        UninstallString = $uninstallString
+                                        Version         = $version
+                                        InstallLocation = $installLocation
+                                        InstallDate     = $installdate
+                                        Office2021Found = $false
+                                    }
+                                    if ($displayname -like "*2021*") {
+                                        $obj.Office2021Found = $true
+                                        # found a match, so break
+                                        break
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    $obj
-                }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                        $obj
+                    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
             
-                $results.Add($office2021_check) | Out-Null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -Foregroundcolor Yellow
+                    $results.Add($office2021_check) | Out-Null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping, skipping." -Foregroundcolor Yellow
+                }
             }
         }
     }

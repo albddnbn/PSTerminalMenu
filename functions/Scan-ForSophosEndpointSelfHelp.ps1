@@ -61,7 +61,7 @@ function Scan-ForSophosEndpointSelfHelp {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -77,21 +77,31 @@ function Scan-ForSophosEndpointSelfHelp {
         }
         ## Create output filepath
         $REPORT_DIRECTORY = 'SophosScan'
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+        if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
             $iterator_var = 0
             while ($true) {
-                $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$thedate"
+                $outputfile = "$REPORT_DIRECTORY-$thedate"
                 if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                     $iterator_var++
-                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$REPORT_DIRECTORY-$([string]$iterator_var)"
+                    $outputfile += "-$([string]$iterator_var)"
                 }
                 else {
                     break
                 }
+            }
+            ## Try to get output directory path and make sure it exists.
+            try {
+                $outputdir = $outputfile | split-path -parent
+                if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                    New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                }
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
             }
         }
         ## Collecting the results
@@ -101,68 +111,71 @@ function Scan-ForSophosEndpointSelfHelp {
     ## Searches several registry locations for Sophos Endpoint Self Help display name
     ## Targeted search in registry would be more efficient.
     PROCESS {
-        if ($TargetComputer) {
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                # check target remote computers and get the sophos app object list from them
-                $sophos_endpoint_check = Invoke-Command -computername $TargetComputer -scriptblock {
+            if ($single_computer) {
 
-                    # Define the registry paths for uninstall information
-                    $registryPaths = @(
-                        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
-                        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-                        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-                    )
-                    # Loop through each registry path and retrieve the list of subkeys
-                    foreach ($path in $registryPaths) {
-                        $uninstallKeys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-                        # Skip if the registry path doesn't exist
-                        if (-not $uninstallKeys) {
-                            continue
-                        }
-                        # Loop through each uninstall key and display the properties
-                        foreach ($key in $uninstallKeys) {
-                            $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
-                            $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-                            if ($displayName -eq 'Sophos Endpoint Self Help') {
-                                $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
-                                $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
-                                $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
-                                $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
-                                $productcode = (Get-ItemProperty -Path $keyPath -Name "productcode" -ErrorAction SilentlyContinue).productcode
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    # check target remote computers and get the sophos app object list from them
+                    $sophos_endpoint_check = Invoke-Command -computername $single_computer -scriptblock {
+
+                        # Define the registry paths for uninstall information
+                        $registryPaths = @(
+                            "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                            "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+                        )
+                        # Loop through each registry path and retrieve the list of subkeys
+                        foreach ($path in $registryPaths) {
+                            $uninstallKeys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+                            # Skip if the registry path doesn't exist
+                            if (-not $uninstallKeys) {
+                                continue
+                            }
+                            # Loop through each uninstall key and display the properties
+                            foreach ($key in $uninstallKeys) {
+                                $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
+                                $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+                                if ($displayName -eq 'Sophos Endpoint Self Help') {
+                                    $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
+                                    $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+                                    $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
+                                    $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
+                                    $productcode = (Get-ItemProperty -Path $keyPath -Name "productcode" -ErrorAction SilentlyContinue).productcode
 		
 		
-                                $obj = [pscustomobject]@{
-                                    DisplayName     = $DisplayName
-                                    Uninstallstring = $uninstallString
-                                    DisplayVersion  = $version
-                                    Publisher       = $publisher
-                                    ProductCode     = $productcode
-                                    InstallLocation = $installlocation
+                                    $obj = [pscustomobject]@{
+                                        DisplayName     = $DisplayName
+                                        Uninstallstring = $uninstallString
+                                        DisplayVersion  = $version
+                                        Publisher       = $publisher
+                                        ProductCode     = $productcode
+                                        InstallLocation = $installlocation
+                                    }
+                                    $obj
                                 }
-                                $obj
                             }
                         }
-                    }
-                    if (-not $obj) {
-                        $obj = [pscustomobject]@{
-                            DisplayName     = "No Sophos Endpoint Self Help found"
-                            Uninstallstring = $uninstallString
-                            DisplayVersion  = $version
-                            Publisher       = $publisher
-                            ProductCode     = $productcode
-                            InstallLocation = $installlocation
+                        if (-not $obj) {
+                            $obj = [pscustomobject]@{
+                                DisplayName     = "No Sophos Endpoint Self Help found"
+                                Uninstallstring = $uninstallString
+                                DisplayVersion  = $version
+                                Publisher       = $publisher
+                                ProductCode     = $productcode
+                                InstallLocation = $installlocation
+                            }
+                            $obj
                         }
-                        $obj
-                    }
-                }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
 
-                $results.Add($sophos_endpoint_check)
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -Foregroundcolor Yellow
+                    $results.Add($sophos_endpoint_check)
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping, skipping." -Foregroundcolor Yellow
+                }
             }
         }
     }
@@ -196,8 +209,14 @@ function Scan-ForSophosEndpointSelfHelp {
             catch {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            Invoke-item "$($outputfile | split-path -Parent)"
-            
+            ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+            try {
+                Invoke-item "$($outputfile | split-path -Parent)"
+            }
+            catch {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                Invoke-item "$outputfile.csv"
+            }            
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."

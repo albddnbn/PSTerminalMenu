@@ -68,7 +68,7 @@ function Stop-WifiAdapters {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        write-host "getting AD computer"
+
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
@@ -107,19 +107,22 @@ function Stop-WifiAdapters {
     
     ## Test connection to target machine(s) and then run scriptblock to disable wifi adapter if ethernet adapter is active
     PROCESS {
-        ## empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## Ping test
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                if ($TargetComputer -eq '127.0.0.1') {
-                    $TargetComputer = $env:COMPUTERNAME
-                }
+        ForEach ($single_computer in $TargetComputer) {
+
+            ## empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## Ping test
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    if ($single_computer -eq '127.0.0.1') {
+                        $single_computer = $env:COMPUTERNAME
+                    }
         
-                Invoke-Command -ComputerName $TargetComputer -Scriptblock $turnoff_wifi_adapter_scriptblock -ArgumentList $DisableWifiAdapter
-            }
-            else {
-                Write-Host "[$env:COMPUTERNAME] :: $TargetComputer is offline, skipping." -Foregroundcolor Yellow
+                    Invoke-Command -ComputerName $single_computer -Scriptblock $turnoff_wifi_adapter_scriptblock -ArgumentList $DisableWifiAdapter
+                }
+                else {
+                    Write-Host "[$env:COMPUTERNAME] :: $single_computer is offline, skipping." -Foregroundcolor Yellow
+                }
             }
         }
     }
