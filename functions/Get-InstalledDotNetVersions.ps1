@@ -1,29 +1,30 @@
-function Get-ComputerDetails {
+function Get-InstalledDotNetversions {
     <#
     .SYNOPSIS
-        Collects: Manufacturer, Model, Current User, Windows Build, BIOS Version, BIOS Release Date, and Total RAM from target machine(s).
-        Outputs: A .csv and .xlsx report file if anything other than 'n' is supplied for the $OutputFile parameter.
+        Gets a list of installed dotnet versions on target computers. Returns results.
 
     .DESCRIPTION
+        Creates report if anything except 'n' is supplied for Outputfile.
 
     .PARAMETER TargetComputer
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER OutputFile
-        'n' or 'N' = terminal output only
+        'n' = terminal output only
         Entering anything else will create an output file in the 'reports' directory, in a folder with name based on function name, and OutputFile input.
-        Ex: Outputfile = 'A220-Info', output file(s) will be in the $env:PSMENU_DIR\reports\2023-11-1\A220-Info\ directory.
+        Ex: Outputfile = 'A220', output file(s) will be in $env:PSMENU_DIR\reports\AssetInfo - A220\
 
     .EXAMPLE
-        Output details for a single hostname to "sa227-28-details.csv" and "sa227-28-details.xlsx" in the 'reports' directory.
-        Get-ComputerDetails -TargetComputer "t-client-28" -Outputfile "tclient-28-details"
+        1. Get dotnet versions on single computer, output results to terminal/gridview
+        Get-InstalledDotNetVersions -TargetComputer "t-client-01" -outputfile 'n'
 
     .EXAMPLE
-        Output details for all hostnames starting with g-pc-0 to terminal.
-        Get-ComputerDetails -TargetComputer 'g-pc-0' -outputfile 'n'
+        2. Get user on group of computers with hostnames starting with t-client-, output default filename reports
+        Get-InstalledDotNetVersions -TargetComputer "t-client-" -outputfile ''
 
     .NOTES
         ---
@@ -38,16 +39,14 @@ function Get-ComputerDetails {
             Position = 0
         )]
         [String[]]$TargetComputer,
-        [string]$Outputfile
+        [string]$Outputfile = ''
     )
-
-    ## 1. define date variable (used for filename creation)
-    ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
-    ## 3. Outputfile path needs to be created regardless of how Targetcomputer is submitted to function
+    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
+    ## 2. Create output filepath if necessary.
+    ## 3. Create empty results arraylist to hold results from each target machine (collected during the PROCESS block).
     BEGIN {
-        ## 1. define date variable (used for filename creation)
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
@@ -76,6 +75,7 @@ function Get-ComputerDetails {
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -85,8 +85,9 @@ function Get-ComputerDetails {
                 return
             }
         }
-        ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        $str_title_var = "PCdetails"
+
+        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
+        $str_title_var = "InstalledDotNet"
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
@@ -105,18 +106,18 @@ function Get-ComputerDetails {
                 if ($outputfile.tolower() -eq '') {
                     $iterator_var = 0
                     while ($true) {
-                        $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile += "$([string]$iterator_var)"
+                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
                         }
                         else {
                             break
                         }
                     }
-
-
                 }
+
+                ## Try to get output directory path and make sure it exists.
                 try {
                     $outputdir = $outputfile | split-path -parent
                     if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
@@ -126,47 +127,31 @@ function Get-ComputerDetails {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
                 }
-
-
             }
         }
-        ## 4. Create empty results container
+
+        ## 3. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
 
-    ## Collects computer details from specified computers using CIM commands  
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session.
+    ## 3. If machine was responseive, run scriptblock to logged in user, info on teams/zoom processes, etc.
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
+
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
-                # ping test
-                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
-                if ($pingreply) {
-
-                    ## Save results to variable
-                    $single_result = Invoke-Command -ComputerName $single_computer -Scriptblock {
-                        # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
-                        # object returned to $results list
-                        $computersystem = Get-CimInstance -Class Win32_Computersystem
-                        $bios = Get-CimInstance -Class Win32_BIOS
-                        $operatingsystem = Get-CimInstance -Class Win32_OperatingSystem
-
-                        $lastboot = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
-                        $uptime = ((Get-Date) - $lastboot).ToString("dd\.hh\:mm\:ss")
-                        $obj = [PSCustomObject]@{
-                            Manufacturer    = $($computersystem.manufacturer)
-                            Model           = $($computersystem.model)
-                            CurrentUser     = $((get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username)
-                            WindowsBuild    = $($operatingsystem.buildnumber)
-                            BiosVersion     = $($bios.smbiosbiosversion)
-                            BiosReleaseDate = $($bios.releasedate)
-                            TotalRAM        = $((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb)
-                            LastBoot        = $lastboot
-                            SystemUptime    = $uptime
-                        }
-                        $obj
-                    } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
-
-                    $results.add($single_result) | out-null
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    # Get Computers details and create an object
+                    $target_installed_dotnet = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
+                            Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
+                            Select PSChildName, version
+                    } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    $results.add($target_installed_dotnet) | out-null
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
@@ -174,34 +159,29 @@ function Get-ComputerDetails {
             }
         }
     }
-
-    ## Output of results to CSV, XLSX, terminal, or gridview depending on the $OutputFile parameter
+    ## 1. If there are results - sort them by the hostname (pscomputername) property.
+    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
+    ## 3. Create .csv/.xlsx reports as necessary.
     END {
         if ($results) {
-            ## Sort the results
+            ## 1. Sort any existing results by computername
             $results = $results | sort -property pscomputername
+            ## 2. Output to gridview if user didn't choose report output.
             if ($outputfile.tolower() -eq 'n') {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                    # $results | Out-GridView
-                }
-                else {
-                    $results | out-gridview
-                }
+                $results | out-gridview
             }
             else {
+                ## 3. Create .csv/.xlsx reports if possible
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
                 ## Try ImportExcel
                 try {
-                    ## xlsx attempt:
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
                         TableName            = "$REPORT_DIRECTORY"
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'PCdetails'
+                        WorksheetName        = 'CurrentUsers'
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }
@@ -214,11 +194,12 @@ function Get-ComputerDetails {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
+                ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
                 try {
                     Invoke-item "$($outputfile | split-path -Parent)"
                 }
                 catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
                     Invoke-item "$outputfile.csv"
                 }
             }

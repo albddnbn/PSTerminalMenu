@@ -35,15 +35,15 @@ function Add-PrinterLogicPrinter {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$PrinterName
     )
     ## 1. TargetComputer handling if not supplied through pipeline
-    ## 2. Outputfile path creation
-    ## 3. Scriptblock to connect to printerlogic printer
-    ## 4. Results containers for overall results and skipped computers.
+    ## 2. Scriptblock to connect to printerlogic printer
+    ## 3. Results containers for overall results and skipped computers.
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
@@ -51,11 +51,11 @@ function Add-PrinterLogicPrinter {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -71,9 +71,11 @@ function Add-PrinterLogicPrinter {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -83,40 +85,8 @@ function Add-PrinterLogicPrinter {
                 return
             }
         }
-
-        ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        $str_title_var = "PrtLogicConnect"
-        if ($Outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-        }
-        else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-                if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "$str_title_var"
-                }
-                else {
-                    $REPORT_DIRECTORY = $outputfile            
-                }
-                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-                if ($outputfile.tolower() -eq '') {
-                    $iterator_var = 0
-                    while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
-                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                            $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
-                        }
-                        else {
-                            break
-                        }
-                    }
-                }
-            }
-        }
-        ## 3. Define the scriptblock that connects machine to target printer in printerlogic cloud instance
+        
+        ## 2. Define the scriptblock that connects machine to target printer in printerlogic cloud instance
         $connect_to_printer_block = {
             param(
                 $printer_name
@@ -161,23 +131,21 @@ function Add-PrinterLogicPrinter {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, run scriptblock to attempt connection to printerlogic printer, save results to object
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## 2. test with ping:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## 3.
-                $printer_connection_results = Invoke-Command -ComputerName $TargetComputer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
+        ForEach ($single_computer in $TargetComputer) {
+            ## 1.
+            if ($single_computer) {
+                ## 2. test with ping:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## 3.
+                    $printer_connection_results = Invoke-Command -ComputerName $single_computer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
             
-                $results.add($printer_connection_results)
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping." -Foregroundcolor Red
-                $missed_computers.Add($TargetComputer)
+                    $results.add($printer_connection_results)
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping." -Foregroundcolor Red
+                    $missed_computers.Add($single_computer)
+                }
             }
         }
     }
@@ -187,44 +155,9 @@ function Add-PrinterLogicPrinter {
     END {
         ## 1.
         if ($results) {
-            ## Output results list to file:
-            ## Sort the results
-            if ($outputfile.tolower() -eq 'n') {
-                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
-                if ($results.count -le 2) {
-                    $results | Format-List
-                    # $results | Out-GridView
-                }
-                else {
-                    $results | out-gridview
-                }
-            }
-            else {
-                $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
-                ## Try ImportExcel
-                try {
-                    ## xlsx attempt:
-                    $params = @{
-                        AutoSize             = $true
-                        TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
-                        TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
-                        BoldTopRow           = $true
-                        WorksheetName        = "$REPORT_DIRECTORY"
-                        PassThru             = $true
-                        Path                 = "$Outputfile.xlsx" # => Define where to save it here!
-                    }
-                    $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
-                    $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
-                    $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
-                    Close-ExcelPackage $xlsx
-                }
-                catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
-                }
-                Invoke-item "$($outputfile | split-path -Parent)"
-            }
+
+            $results | out-gridview
+
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."

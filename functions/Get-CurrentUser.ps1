@@ -37,9 +37,10 @@ function Get-CurrentUser {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Outputfile = ''
     )
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
@@ -52,11 +53,11 @@ function Get-CurrentUser {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -72,9 +73,11 @@ function Get-CurrentUser {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -91,7 +94,7 @@ function Get-CurrentUser {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -108,12 +111,22 @@ function Get-CurrentUser {
                         $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                            $outputfile += "$([string]$iterator_var)"
                         }
                         else {
                             break
                         }
                     }
+                }
+                ## Try to get output directory path and make sure it exists.
+                try {
+                    $outputdir = $outputfile | split-path -parent
+                    if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                    }
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
                 }
             }
         }
@@ -126,29 +139,31 @@ function Get-CurrentUser {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responseive, run scriptblock to logged in user, info on teams/zoom processes, etc.
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Send one test ping
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                # Get Computers details and create an object
-                $logged_in_user_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    $obj = [PSCustomObject]@{
-                        Model        = (get-ciminstance -class win32_computersystem).model
-                        CurrentUser  = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-                        TeamsRunning = $(if (Get-PRocess -Name 'Teams' -ErrorAction SilentlyContinue) { $true } else { $false })
-                        ZoomRunning  = $(if (Get-PRocess -Name 'Zoom' -ErrorAction SilentlyContinue) { $true } else { $false })
+        ForEach ($single_computer in $TargetComputer) {
 
-                    }
-                    $obj
-                } | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
-                $results.add($logged_in_user_info) | out-null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    # Get Computers details and create an object
+                    $logged_in_user_info = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        $obj = [PSCustomObject]@{
+                            Model        = (get-ciminstance -class win32_computersystem).model
+                            CurrentUser  = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                            TeamsRunning = $(if (Get-PRocess -Name 'Teams' -ErrorAction SilentlyContinue) { $true } else { $false })
+                            ZoomRunning  = $(if (Get-PRocess -Name 'Zoom' -ErrorAction SilentlyContinue) { $true } else { $false })
+
+                        }
+                        $obj
+                    } | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
+                    $results.add($logged_in_user_info) | out-null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                }
             }
         }
-
     }
     ## 1. If there are results - sort them by the hostname (pscomputername) property.
     ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
@@ -185,7 +200,14 @@ function Get-CurrentUser {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
-                Invoke-item "$($outputfile | split-path -Parent)"
+                ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+                try {
+                    Invoke-item "$($outputfile | split-path -Parent)"
+                }
+                catch {
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    Invoke-item "$outputfile.csv"
+                }
             }
         }
         else {

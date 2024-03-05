@@ -26,9 +26,10 @@ Function Remove-TeamsClassic {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer
+        [String[]]$TargetComputer
     )
     ## 1. Handling of TargetComputer input
     ## 2. ask to skip occupied computers
@@ -39,11 +40,11 @@ Function Remove-TeamsClassic {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -59,9 +60,11 @@ Function Remove-TeamsClassic {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -104,15 +107,15 @@ Function Remove-TeamsClassic {
 
     ## Use PURGE-TEAMSCLASSIC.PS1 file from LOCALSCRIPTS, on each target computer to remove Teams Classic for all users / system.
     PROCESS {
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                Invoke-Command -ComputerName $Targetcomputer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+        ForEach ($single_computer in $TargetComputer) {
+
+            if ($single_computer) {
+
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    Invoke-Command -ComputerName $single_computer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+                }
             }
         }
     }

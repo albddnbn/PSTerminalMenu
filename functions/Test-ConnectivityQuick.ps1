@@ -25,9 +25,10 @@ function Test-ConnectivityQuick {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer
+        [String[]]$TargetComputer
     )
     ## 1. Set PingCount - # of pings sent to each target machine.
     ## 2. Handle Targetcomputer if not supplied through the pipeline.
@@ -39,11 +40,11 @@ function Test-ConnectivityQuick {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -59,9 +60,11 @@ function Test-ConnectivityQuick {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -80,31 +83,34 @@ function Test-ConnectivityQuick {
 
     ## Ping target machines $PingCount times and log result to terminal.
     PROCESS {
-        if ($TargetComputer) {
-            $connection_result = Test-Connection $TargetComputer -count $PING_COUNT -Quiet
-            $ping_responses = ($connection_result | Measure-Object -Sum).Count
+        ForEach ($single_computer in $TargetComputer) {
 
-            ## Create object
-            $ping_response_obj = [pscustomobject]@{
-                ComputerName  = $TargetComputer
-                Status        = ""
-                PingResponses = $ping_responses
-                NumberPings   = $PING_COUNT
-            }
+            if ($single_computer) {
+                $connection_result = Test-Connection $single_computer -count $PING_COUNT
+                $ping_responses = $([string[]]($connection_result | where-object { $_.statuscode -eq 0 })).count
 
-            if ($connection_result) {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
-                # $list_of_online_computers.add($single_computer) | Out-Null
-                $ping_response_obj.Status = 'online'
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-                Write-Host "$single_computer is not online." -foregroundcolor red
-                # $list_of_offline_computers.add($single_computer) | Out-Null
-                $ping_response_obj.Status = 'offline'
-            }
+                ## Create object
+                $ping_response_obj = [pscustomobject]@{
+                    ComputerName  = $single_computer
+                    Status        = ""
+                    PingResponses = $ping_responses
+                    NumberPings   = $PING_COUNT
+                }
 
-            $results.add($ping_response_obj) | Out-Null
+                if ($connection_result) {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
+                    # $list_of_online_computers.add($single_computer) | Out-Null
+                    $ping_response_obj.Status = 'online'
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+                    Write-Host "$single_computer is not online." -foregroundcolor red
+                    # $list_of_offline_computers.add($single_computer) | Out-Null
+                    $ping_response_obj.Status = 'offline'
+                }
+
+                $results.add($ping_response_obj) | Out-Null
+            }
         }
     }
     ## Open results in gridview since this is just supposed to be quick test for connectivity

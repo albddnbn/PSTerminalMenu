@@ -32,9 +32,10 @@ function Get-ConnectedPrinters {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Outputfile = ''
     )
 
@@ -48,11 +49,11 @@ function Get-ConnectedPrinters {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -68,9 +69,11 @@ function Get-ConnectedPrinters {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -79,7 +82,7 @@ function Get-ConnectedPrinters {
             if ($null -eq $TargetComputer) {
                 return
             }
-        }       
+        }      
         
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         $str_title_var = "Printers"
@@ -87,7 +90,7 @@ function Get-ConnectedPrinters {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -104,12 +107,22 @@ function Get-ConnectedPrinters {
                         $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                            $outputfile += "$([string]$iterator_var)"
                         }
                         else {
                             break
                         }
                     }
+                }
+                ## Try to get output directory path and make sure it exists.
+                try {
+                    $outputdir = $outputfile | split-path -parent
+                    if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                    }
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
                 }
             }
         }
@@ -143,19 +156,21 @@ function Get-ConnectedPrinters {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responseive, run the 'get connected printers' scriptblock.
     PROCESS {
-        ## 1. TargetComputer can't be $null or '', it will display error during test-connection
-        if ($TargetComputer) {
-            ## 2. Single ping test to target computer
-            $pingreply = Test-connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## 3. If computer responded - collect printer info and add to results list.
-                $connected_printer_info = Invoke-Command -ComputerName $TargetComputer -Scriptblock $list_local_printers_block | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-                $results.Add($connected_printer_info) | out-null
+        ForEach ($single_computer in $TargetComputer) {
+            ## 1. TargetComputer can't be $null or '', it will display error during test-connection
+            if ($single_computer) {
+                ## 2. Single ping test to target computer
+                $pingreply = Test-connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## 3. If computer responded - collect printer info and add to results list.
+                    $connected_printer_info = Invoke-Command -ComputerName $single_computer -Scriptblock $list_local_printers_block | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    $results.Add($connected_printer_info) | out-null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping, skipping." -Foregroundcolor Yellow
+                }
             }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer didn't respond to one ping, skipping." -Foregroundcolor Yellow
-            }
-        } 
+        }
     }
 
     ## 1. If there are results - sort them by the hostname (pscomputername) property.
@@ -193,7 +208,14 @@ function Get-ConnectedPrinters {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
-                Invoke-item "$($outputfile | split-path -Parent)"
+                ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+                try {
+                    Invoke-item "$($outputfile | split-path -Parent)"
+                }
+                catch {
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    Invoke-item "$outputfile.csv"
+                }
             }
         }
         else {

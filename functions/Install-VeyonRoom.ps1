@@ -28,9 +28,10 @@ function Install-VeyonRoom {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$RoomName,
         # comma-separated list of computers that get Veyon master installation.
         [string]$Master_Computer
@@ -42,11 +43,11 @@ function Install-VeyonRoom {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -62,9 +63,11 @@ function Install-VeyonRoom {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -134,38 +137,46 @@ function Install-VeyonRoom {
     ## 3. If responsive - copy Veyon install folder over to session, and install Veyon student or master
     ## 4. Add any missed computers to a list, also add student installations to a list for end output.
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## 2. Test with ping
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## Create Session
-                $target_session = New-PSSession -ComputerName $TargetComputer
+        ForEach ($single_computer in $TargetComputer) {
 
-                ## Remove any existing veyon folder
-                Invoke-Command -Session $target_session -Scriptblock {
-                    Remove-Item -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
+            # If there aren't any master computers yet - ask if this one should be master
+            if (-not $master_computer_selection) {
+                $reply = Read-Host "Would you like to make $single_computer a master computer? [y/n]"
+                if ($reply.tolower() -eq 'y') {
+                    $master_computer_selection = @($single_computer)
                 }
-                ## 3. Copy source files
-                Copy-Item -Path "$($VeyonDeploymentFolder.fullname)" -Destination C:\temp\ -ToSession $target_session -Recurse -Force
+            }
 
-                ## If its a master computer:
-                if ($Targetcomputer -in $master_computer_selection) {
-                    Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon'
+            ## 1.
+            if ($single_computer) {
+
+                ## 2. Test with ping
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## Create Session
+                    $target_session = New-PSSession -ComputerName $single_computer
+
+                    ## Remove any existing veyon folder
+                    Invoke-Command -Session $target_session -Scriptblock {
+                        Remove-Item -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
+                    }
+                    ## 3. Copy source files
+                    Copy-Item -Path "$($VeyonDeploymentFolder.fullname)" -Destination C:\temp\ -ToSession $target_session -Recurse -Force
+
+                    ## If its a master computer:
+                    if ($single_computer -in $master_computer_selection) {
+                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon'
+                    }
+                    else {
+                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\Temp\Veyon'
+                        $Student_Computers.Add($single_computer) | Out-Null
+                    }
                 }
                 else {
-                    Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\Temp\Veyon'
-                    $Student_Computers.Add($TargetComputer) | Out-Null
+                    ## 4. Missed list is below, student list = $student_computers
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping, skipping." -foregroundcolor red
+                    $missed_computers.Add($single_computer) | Out-null
                 }
-            }
-            else {
-                ## 4. Missed list is below, student list = $student_computers
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping, skipping." -foregroundcolor red
-                $missed_computers.Add($TargetComputer) | Out-null
             }
         }
     }

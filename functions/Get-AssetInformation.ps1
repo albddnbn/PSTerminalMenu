@@ -33,9 +33,10 @@ function Get-AssetInformation {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Outputfile = ''
     )
     ## 1. Handling TargetComputer input if not supplied through pipeline.
@@ -49,11 +50,11 @@ function Get-AssetInformation {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -69,9 +70,11 @@ function Get-AssetInformation {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -88,7 +91,7 @@ function Get-AssetInformation {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -102,14 +105,20 @@ function Get-AssetInformation {
                 if ($outputfile.tolower() -eq '') {
                     $iterator_var = 0
                     while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                            $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+
+
                         }
                         else {
                             break
                         }
+                    }
+
+                    if (-not (Test-Path $($outputfile | split-path -parent) -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
                     }
                 }
             }
@@ -161,27 +170,28 @@ function Get-AssetInformation {
         }
         ## 4. Create empty results container
         $results = [system.collections.arraylist]::new()
+        write-host "$($Targetcomputer -join ', ')" -ForegroundColor cyan
 
     }
     ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, Collect local asset information from computer
     PROCESS {
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                $target_asset_info = Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
-                if ($target_asset_info) {
-                    $results.add($target_asset_info) | out-null
+        ForEach ($single_computer in $TargetComputer) {
+            if ($single_computer) {
+
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    Write-Host "Pinged $single_computer successfully, attempting to get asset info."
+                    $target_asset_info = Invoke-Command -ComputerName $single_computer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+                    if ($target_asset_info) {
+                        $results.add($target_asset_info) | out-null
+                    }
                 }
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping." -ForegroundColor Yellow
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping, skipping." -ForegroundColor Yellow
+                }
             }
         }
     }
@@ -210,7 +220,7 @@ function Get-AssetInformation {
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }
                     $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
+                    $xlsx = $Content | Export-Excel @params # -ErrorAction SilentlyContinue
                     $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
                     $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
                     Close-ExcelPackage $xlsx

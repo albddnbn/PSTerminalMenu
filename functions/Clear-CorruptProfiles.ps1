@@ -35,9 +35,10 @@ function Clear-CorruptProfiles {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Perform_deletions
     )
     ## 1. Set date and report title variables to be used in output filename creation
@@ -76,11 +77,11 @@ function Clear-CorruptProfiles {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -96,9 +97,11 @@ function Clear-CorruptProfiles {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -149,22 +152,21 @@ function Clear-CorruptProfiles {
     ## 2. Ping test
     ## 3. If responsive, run Clear-CorruptProfiles.ps1 script on target computer
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## 2. test with ping:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## 3. Run script
-                $temp_profile_results = Invoke-Command -ComputerName $TargetComputer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
-                $results.add($temp_profile_results) | Out-Null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-                Write-Host "$TargetComputer is offline." -Foregroundcolor Red
+        ForEach ($single_computer in $TargetComputer) {
+            ## 1.
+            if ($single_computer) {
+
+                ## 2. test with ping:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## 3. Run script
+                    $temp_profile_results = Invoke-Command -ComputerName $single_computer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
+                    $results.add($temp_profile_results) | Out-Null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
+                    Write-Host "$single_computer is offline." -Foregroundcolor Red
+                }
             }
         }
     }

@@ -44,9 +44,10 @@ function Install-Application {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [ValidateScript({
                 if (Test-Path "$env:PSMENU_DIR\deploy\applications\$_" -ErrorAction SilentlyContinue) {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($_) in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Green
@@ -71,11 +72,11 @@ function Install-Application {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -91,9 +92,11 @@ function Install-Application {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -204,44 +207,53 @@ function Install-Application {
     ##    3.3 --> Execute PSADT installation script on target machine/session
     ##    3.4 --> Cleanup PSADT folder in C:\temp
     PROCESS {
-        ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
-        if ($TargetComputer) {
-            ## 2. Ping test
-            $ping_result = Test-Connection $TargetComputer -count 1 -Quiet
-            if ($ping_result) {
-                if ($TargetComputer -eq '127.0.0.1') {
-                    $TargetComputer = $env:COMPUTERNAME
-                }
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer responded to one ping, proceeding with installation(s)." -Foregroundcolor Green
+        ForEach ($single_computer in $TargetComputer) {
 
-                ## create sesion
-                $single_target_session = New-PSSession $TargetComputer
-                ## 3. Install chosen apps by creating remote session and cycling through list
-                ForEach ($single_application in $chosen_apps) {
-                    ## 3.1 Check for app/deployment folder in ./deploy/applications
-                    $DeploymentFolder = $ApplicationList | Where-Object { $_.Name -eq $single_application }
-                    if (-not $DeploymentFolder) {
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_application not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
-                        $skipped_applications.Add($single_application) | Out-Null
-                        continue
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            if ($single_computer) {
+                ## 2. Ping test
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    if ($single_computer -eq '127.0.0.1') {
+                        $single_computer = $env:COMPUTERNAME
                     }
-                    ## 3.2 Copy PSADT folder to target machine/session
-                    Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "C:\temp\$($DeploymentFolder.Name)" -ToSession $single_target_session -Recurse -Force
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer responded to one ping, proceeding with installation(s)." -Foregroundcolor Green
+
+                    ## create sesion
+                    $single_target_session = New-PSSession $single_computer
+                    ## 3. Install chosen apps by creating remote session and cycling through list
+                    ForEach ($single_application in $chosen_apps) {
+                        ## 3.1 Check for app/deployment folder in ./deploy/applications
+                        $DeploymentFolder = $ApplicationList | Where-Object { $_.Name -eq $single_application }
+                        if (-not $DeploymentFolder) {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_application not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+                            $skipped_applications.Add($single_application) | Out-Null
+                            continue
+                        }
+
+                        ## Make sure there isn't an existing deployment folder on target machine:
+                        Invoke-Command -Session $single_target_session -scriptblock {
+                            Remove-Item -Path "C:\temp\$($using:DeploymentFolder.Name)" -Recurse -Force -ErrorAction SilentlyContinue
+                        }
+
+                        ## 3.2 Copy PSADT folder to target machine/session
+                        Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "C:\temp\$($DeploymentFolder.Name)" -ToSession $single_target_session -Recurse -Force
                 
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($DeploymentFolder.name) copied to $TargetComputer."
-                    ## 3.3 Execute PSADT installation script on target mach8ine/session
-                    Invoke-Command -Session $single_target_session -scriptblock $install_local_psadt_block -ArgumentList $single_application, $skip_pcs
-                    # Start-Sleep -Seconds 1
-                    ## 3.4 Cleanup PSADT folder in temp
-                    $folder_to_delete = "C:\temp\$($DeploymentFolder.Name)"
-                    Invoke-Command -Session $single_target_session -command {
-                        Remove-Item -Path "$($using:folder_to_delete)" -Recurse -Force -ErrorAction SilentlyContinue
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($DeploymentFolder.name) copied to $single_computer."
+                        ## 3.3 Execute PSADT installation script on target mach8ine/session
+                        Invoke-Command -Session $single_target_session -scriptblock $install_local_psadt_block -ArgumentList $single_application, $skip_pcs
+                        # Start-Sleep -Seconds 1
+                        ## 3.4 Cleanup PSADT folder in temp
+                        $folder_to_delete = "C:\temp\$($DeploymentFolder.Name)"
+                        Invoke-Command -Session $single_target_session -command {
+                            Remove-Item -Path "$($using:folder_to_delete)" -Recurse -Force -ErrorAction SilentlyContinue
+                        }
                     }
                 }
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Ping fail from $TargetComputer - added to 'unresponsive list'." -Foregroundcolor Red
-                $unresponsive_computers.Add($TargetComputer) | Out-Null
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Ping fail from $single_computer - added to 'unresponsive list'." -Foregroundcolor Red
+                    $unresponsive_computers.Add($single_computer) | Out-Null
+                }
             }
         }
     }

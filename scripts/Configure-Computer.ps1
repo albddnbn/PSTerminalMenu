@@ -13,25 +13,10 @@ Function Configure-Computer {
     )
     BEGIN {
         ## Dracula themes: https://github.com/dracula
-        $APPS_TO_INSTALL = [system.collections.arraylist]::new(
-            {
-                Name = "Chrome"
-                Installer = "https://dl.google.com/chrome/install/GoogleChromeStandaloneEnterprise64.msi"
-                ThemeFile = ""
-                Arguments = "/quiet /norestart"
-            },
-            {
-                Name = "Notepad++"
-                Installer = ""
-                ThemeFile = "dracula.xml"
-                Arguments = ""
-            },
-            {
-                Name = "VSCode"
-                Installer = "https://go.microsoft.com/fwlink/?LinkID=852157"
-                ThemeFile = "dracula.json"
-                Arguments = "/silent"
-            }
+        $APPS_TO_INSTALL = [system.collections.array]::new(
+            'VSCode',
+            'Notepad++',
+            'Chrome'
         )
 
         $REG_FILES_TO_IMPORT = Get-ChildItem -PAth "$env:SUPPORTFILES_DIR\registry" `

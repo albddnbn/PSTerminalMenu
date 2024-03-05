@@ -23,11 +23,8 @@ function Scan-ForAppOrFilePath {
         If the -SearchType 'app' argument is used, this should be the application's DisplayName. 
         If the -SearchType 'path' argument is used, this should be the path to search for, Ex: C:\users\public\test.txt.
 
-    .PARAMETER ShowMisses
-        *Work in progress, should work for apps at least rn - 12-6-23*
-        Whether to show missed searches. 
-        If the -SearchType 'app' argument is used, this will show any applications that were not found. 
-        If the -SearchType 'path' argument is used, this will show any files/folders that were not found.
+    .PARAMETER SearchTitle
+        Used to create the output filename/path if supplied.
 
     .EXAMPLE
         Scan-ForAppOrFilePath -ComputerList 't-client-01' -SearchType 'app' -Item 'Microsoft Teams' -outputfile 'teams'
@@ -41,14 +38,16 @@ function Scan-ForAppOrFilePath {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $targetcomputer,
+        [String[]]$TargetComputer,
         [Parameter(Mandatory = $true)]
         [ValidateSet('Path', 'App', 'File', 'Folder')]
         [String]$SearchType,
         [Parameter(Mandatory = $true)]
-        [String]$Item
+        [String]$Item,
+        [String]$Outputfile
     )
     ## 1. Set date
     ## 2. Handle targetcomputer if not submitted through pipeline
@@ -61,11 +60,11 @@ function Scan-ForAppOrFilePath {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -81,9 +80,11 @@ function Scan-ForAppOrFilePath {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -97,24 +98,40 @@ function Scan-ForAppOrFilePath {
         ## 3. Outputfile handling - either create default, create filenames using input - report files are mandatory 
         ##    in this function.
         $str_title_var = "$SearchType-scan"
-        $REPORT_DIRECTORY = "$str_title_var"
-        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+        if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
+            if ($Outputfile.toLower() -eq '') {
+                $REPORT_DIRECTORY = "$str_title_var"
+            }
+            else {
+                $REPORT_DIRECTORY = $outputfile            
+            }
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            $iterator_var = 0
-            while ($true) {
-                $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
-                if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                    $iterator_var++
-                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
-                }
-                else {
-                    break
+            if ($outputfile.tolower() -eq '') {
+
+                $iterator_var = 0
+                while ($true) {
+                    $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                    if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                        $iterator_var++
+                        $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                    }
+                    else {
+                        break
+                    }
                 }
             }
-            
+            try {
+                $outputdir = $outputfile | split-path -parent
+                if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                    New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                }
+            }
+            catch {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+            }
         }
         
         ## Collecting the results
@@ -125,113 +142,113 @@ function Scan-ForAppOrFilePath {
     ##    --> If searching for filepaths - creates object with some details / file attributes
     ##    --> If searching for apps - creates object with some details / app attributes
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## 2. Test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## File/Folder search
-                if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+        ForEach ($single_computer in $TargetComputer) {
 
-                    $search_result = Invoke-Command -ComputerName $targetcomputer -ScriptBlock {
-                        $obj = [PSCustomObject]@{
-                            Name           = $env:COMPUTERNAME
-                            Path           = $using:item
-                            PathPresent    = $false
-                            PathType       = $null
-                            LastWriteTime  = $null
-                            CreationTime   = $null
-                            LastAccessTime = $null
-                            Attributes     = $null
-                        }
-                        $GetSpecifiedItem = Get-Item -Path "$using:item" -ErrorAction SilentlyContinue
-                        if ($GetSpecifiedItem.Exists) {
-                            $details = $GetSpecifiedItem | Select FullName, *Time, Attributes, Length
-                            $obj.PathPresent = $true
-                            if ($GetSpecifiedItem.PSIsContainer) {
-                                $obj.PathType = 'Folder'
+            ## 1.
+            if ($single_computer) {
+
+                ## 2. Test with ping first:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## File/Folder search
+                    if (@('path', 'file', 'folder') -contains $SearchType.ToLower()) {
+
+                        $search_result = Invoke-Command -ComputerName $single_computer -ScriptBlock {
+                            $obj = [PSCustomObject]@{
+                                Name           = $env:COMPUTERNAME
+                                Path           = $using:item
+                                PathPresent    = $false
+                                PathType       = $null
+                                LastWriteTime  = $null
+                                CreationTime   = $null
+                                LastAccessTime = $null
+                                Attributes     = $null
+                            }
+                            $GetSpecifiedItem = Get-Item -Path "$using:item" -ErrorAction SilentlyContinue
+                            if ($GetSpecifiedItem.Exists) {
+                                $details = $GetSpecifiedItem | Select FullName, *Time, Attributes, Length
+                                $obj.PathPresent = $true
+                                if ($GetSpecifiedItem.PSIsContainer) {
+                                    $obj.PathType = 'Folder'
+                                }
+                                else {
+                                    $obj.PathType = 'File'
+                                }
+                                $obj.LastWriteTime = $details.LastWriteTime
+                                $obj.CreationTime = $details.CreationTime
+                                $obj.LastAccessTime = $details.LastAccessTime
+                                $obj.Attributes = $details.Attributes
                             }
                             else {
-                                $obj.PathType = 'File'
-                            }
-                            $obj.LastWriteTime = $details.LastWriteTime
-                            $obj.CreationTime = $details.CreationTime
-                            $obj.LastAccessTime = $details.LastAccessTime
-                            $obj.Attributes = $details.Attributes
-                        }
-                        else {
-                            $obj.PathPresent = "Filepath not found"
-                        }
-                        $obj
-                    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-                }
-                ## Application search
-                elseif ($SearchType -eq 'App') {
-
-                    $search_result = Invoke-Command -ComputerName $targetcomputer -Scriptblock {
-                        # $app_matches = [System.Collections.ArrayList]::new()
-                        # Define the registry paths for uninstall information
-                        $registryPaths = @(
-                            "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
-                            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-                            "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-                        )
-                        $obj = $null
-                        # Loop through each registry path and retrieve the list of subkeys
-                        foreach ($path in $registryPaths) {
-                            $uninstallKeys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-                            # Skip if the registry path doesn't exist
-                            if (-not $uninstallKeys) {
-                                continue
-                            }
-                            # Loop through each uninstall key and display the properties
-                            foreach ($key in $uninstallKeys) {
-                                $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
-                                $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-                                if ($displayName -like "*$using:Item*") {
-                                    $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
-                                    $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
-                                    $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
-                                    $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
-                                    # $productcode = (Get-ItemProperty -Path $keyPath -Name "productcode" -ErrorAction SilentlyContinue).productcode
-                                    $installdate = (Get-ItemProperty -Path $keyPath -Name "installdate" -ErrorAction SilentlyContinue).installdate
-
-                                    $obj = [PSCustomObject]@{
-                                        ComputerName    = $env:COMPUTERNAME
-                                        AppName         = $displayName
-                                        AppVersion      = $version
-                                        InstallDate     = $installdate
-                                        InstallLocation = $installLocation
-                                        Publisher       = $publisher
-                                        UninstallString = $uninstallString
-                                    }
-                                    $obj
-                                }
-                            }
-                        }
-                        if ($null -eq $obj) {
-                            $obj = [PSCustomObject]@{
-                                ComputerName    = $TargetComputer
-                                AppName         = "No matching apps found for $using:Item"
-                                AppVersion      = $null
-                                InstallDate     = $null
-                                InstallLocation = $null
-                                Publisher       = $null
-                                UninstallString = "No matching apps found"
+                                $obj.PathPresent = "Filepath not found"
                             }
                             $obj
-                        }
-                    } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-                }
+                        }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    }
+                    ## Application search
+                    elseif ($SearchType -eq 'App') {
 
-                $results.add($search_result) | out-null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline, skipping." -ForegroundColor Yellow
+                        $search_result = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                            # $app_matches = [System.Collections.ArrayList]::new()
+                            # Define the registry paths for uninstall information
+                            $registryPaths = @(
+                                "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                                "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                                "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+                            )
+                            $obj = $null
+                            # Loop through each registry path and retrieve the list of subkeys
+                            foreach ($path in $registryPaths) {
+                                $uninstallKeys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+                                # Skip if the registry path doesn't exist
+                                if (-not $uninstallKeys) {
+                                    continue
+                                }
+                                # Loop through each uninstall key and display the properties
+                                foreach ($key in $uninstallKeys) {
+                                    $keyPath = Join-Path -Path $path -ChildPath $key.PSChildName
+                                    $displayName = (Get-ItemProperty -Path $keyPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+                                    if ($displayName -like "*$using:Item*") {
+                                        $uninstallString = (Get-ItemProperty -Path $keyPath -Name "UninstallString" -ErrorAction SilentlyContinue).UninstallString
+                                        $version = (Get-ItemProperty -Path $keyPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+                                        $publisher = (Get-ItemProperty -Path $keyPath -Name "Publisher" -ErrorAction SilentlyContinue).Publisher
+                                        $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
+                                        # $productcode = (Get-ItemProperty -Path $keyPath -Name "productcode" -ErrorAction SilentlyContinue).productcode
+                                        $installdate = (Get-ItemProperty -Path $keyPath -Name "installdate" -ErrorAction SilentlyContinue).installdate
+
+                                        $obj = [PSCustomObject]@{
+                                            ComputerName    = $env:COMPUTERNAME
+                                            AppName         = $displayName
+                                            AppVersion      = $version
+                                            InstallDate     = $installdate
+                                            InstallLocation = $installLocation
+                                            Publisher       = $publisher
+                                            UninstallString = $uninstallString
+                                        }
+                                        $obj
+                                    }
+                                }
+                            }
+                            if ($null -eq $obj) {
+                                $obj = [PSCustomObject]@{
+                                    ComputerName    = $single_computer
+                                    AppName         = "No matching apps found for $using:Item"
+                                    AppVersion      = $null
+                                    InstallDate     = $null
+                                    InstallLocation = $null
+                                    Publisher       = $null
+                                    UninstallString = "No matching apps found"
+                                }
+                                $obj
+                            }
+                        } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    }
+
+                    $results.add($search_result) | out-null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline, skipping." -ForegroundColor Yellow
+                }
             }
         }
     }
@@ -261,7 +278,14 @@ function Scan-ForAppOrFilePath {
             catch {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
             }
-            Invoke-item "$($outputfile | split-path -Parent)"
+            ## Try opening directory (that might contain xlsx and csv reports), default to opening csv which should always exist
+            try {
+                Invoke-item "$($outputfile | split-path -Parent)"
+            }
+            catch {
+                # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                Invoke-item "$outputfile.csv"
+            }
             
         }
         else {

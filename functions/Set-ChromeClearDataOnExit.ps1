@@ -2,9 +2,10 @@ Function Set-ChromeClearDataOnExit {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer
+        [String[]]$TargetComputer
     )
     ## 1. Handling TargetComputer input if not supplied through pipeline.
     ## 2. Define scriptblock that sets Chrome data deletion registry settings.
@@ -14,11 +15,11 @@ Function Set-ChromeClearDataOnExit {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -34,9 +35,11 @@ Function Set-ChromeClearDataOnExit {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputerInput = $TargetComputerInput + "x"
-                        $TargetComputerInput = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputerInput*" } | Select -Exp DNShostname
-                        $TargetComputerInput = $TargetComputerInput | Sort-Object   
+
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+  
                     }
                 }
             }
@@ -80,18 +83,18 @@ Function Set-ChromeClearDataOnExit {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, Collect local asset information from computer
     PROCESS {
-        if ($TargetComputer) {
-            # may be able to remove the next 3 lines.
-            if ($Targetcomputer -eq '127.0.0.1') {
-                $TargetComputer = $env:COMPUTERNAME
-            }
-            ## test with ping first:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                Invoke-Command -ComputerName $Targetcomputer -ScriptBlock $chrome_setting_scriptblock
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Targetcomputer didn't respond to one ping, skipping." -ForegroundColor Yellow
+        ForEach ($single_computer in $TargetComputer) {
+
+            if ($single_computer) {
+
+                ## test with ping first:
+                $pingreply = Test-Connection $single_computer\ -Count 1 -Quiet
+                if ($pingreply) {
+                    Invoke-Command -ComputerName $single_computer\ -ScriptBlock $chrome_setting_scriptblock
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer\ didn't respond to one ping, skipping." -ForegroundColor Yellow
+                }
             }
         }
     }
