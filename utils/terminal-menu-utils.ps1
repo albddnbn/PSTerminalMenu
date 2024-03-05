@@ -59,7 +59,7 @@ function Get-TargetComputers {
                     # catch {
                     Read-Host "starting targetcomputer processing"
                     # $TargetComputerInput = Get-ComputersLDAP -ComputerName $TargetComputerInput
-                    write-host "Testing $ComputerNAme"
+                    write-host "Testing $TargetComputerInput"
                     try {
 
                         if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
@@ -74,7 +74,7 @@ function Get-TargetComputers {
                             }
 
                             $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                            $searcher.Filter = "(&(objectclass=computer)(cn=$ComputerName*))"
+                            $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputerInput*))"
                             $searcher.SearchRoot = "LDAP://$searchRoot"
                             # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
                             # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
