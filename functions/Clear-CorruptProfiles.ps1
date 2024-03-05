@@ -101,7 +101,7 @@ function Clear-CorruptProfiles {
                         $TargetComputer = $TargetComputer
                         $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
                         $TargetComputer = $TargetComputer | Sort-Object 
-                        read-host "target $($Targetcomputer -join ', ')" -ForegroundColor cyan  
+  
                     }
                 }
             }
