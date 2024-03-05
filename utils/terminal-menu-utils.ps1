@@ -89,7 +89,7 @@ function Get-TargetComputers {
                                 [void]$List.add($resultItem.name)
                             }
 
-                            return $list
+                            $TargetComputerInput = $list
 
                         }
                     }
