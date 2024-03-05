@@ -37,9 +37,10 @@ function Get-CurrentUser {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$Outputfile = ''
     )
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
@@ -52,11 +53,11 @@ function Get-CurrentUser {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -72,9 +73,11 @@ function Get-CurrentUser {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputer = $TargetComputer + "x"
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object   
+                        write-host "getting AD computer"
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+                        read-host "target $($Targetcomputer -join ', ')" -ForegroundColor cyan  
                     }
                 }
             }

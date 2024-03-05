@@ -35,9 +35,10 @@ function Add-PrinterLogicPrinter {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         [string]$PrinterName
     )
     ## 1. TargetComputer handling if not supplied through pipeline
@@ -50,11 +51,11 @@ function Add-PrinterLogicPrinter {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -70,9 +71,11 @@ function Add-PrinterLogicPrinter {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputer = $TargetComputer + "x"
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object   
+                        write-host "getting AD computer"
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+                        read-host "target $($Targetcomputer -join ', ')" -ForegroundColor cyan  
                     }
                 }
             }
@@ -128,19 +131,21 @@ function Add-PrinterLogicPrinter {
     ## 2. Ping the single target computer one time as test before attempting remote session.
     ## 3. If machine was responsive, run scriptblock to attempt connection to printerlogic printer, save results to object
     PROCESS {
-        ## 1.
-        if ($TargetComputer) {
-            ## 2. test with ping:
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
-                ## 3.
-                $printer_connection_results = Invoke-Command -ComputerName $TargetComputer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
+        ForEach ($single_computer in $TargetComputer) {
+            ## 1.
+            if ($single_computer) {
+                ## 2. test with ping:
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
+                    ## 3.
+                    $printer_connection_results = Invoke-Command -ComputerName $single_computer -scriptblock $connect_to_printer_block -ArgumentList $PrinterName
             
-                $results.add($printer_connection_results)
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is not responding to ping." -Foregroundcolor Red
-                $missed_computers.Add($TargetComputer)
+                    $results.add($printer_connection_results)
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping." -Foregroundcolor Red
+                    $missed_computers.Add($single_computer)
+                }
             }
         }
     }

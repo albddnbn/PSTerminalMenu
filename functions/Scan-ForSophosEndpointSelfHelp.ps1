@@ -28,9 +28,10 @@ function Scan-ForSophosEndpointSelfHelp {
     param(
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $Targetcomputer
+        [String[]]$TargetComputer
     )
     ## Targetcomputer handling (if not supplied through pipeline), create output filepath, and create results container.
     BEGIN {
@@ -40,11 +41,11 @@ function Scan-ForSophosEndpointSelfHelp {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -60,9 +61,11 @@ function Scan-ForSophosEndpointSelfHelp {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputer = $TargetComputer + "x"
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object   
+                        write-host "getting AD computer"
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
+                        read-host "target $($Targetcomputer -join ', ')" -ForegroundColor cyan  
                     }
                 }
             }

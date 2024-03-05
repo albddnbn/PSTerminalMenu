@@ -34,10 +34,11 @@ function Get-ComputerDetails {
     param (
         [Parameter(
             Mandatory = $true,
-            ValueFromPipeline = $true
+            ValueFromPipeline = $true,
+            Position = 0
         )]
-        $TargetComputer,
-        [string]$Outputfile = ''
+        [String[]]$TargetComputer,
+        [string]$Outputfile
     )
 
     ## 1. define date variable (used for filename creation)
@@ -51,11 +52,11 @@ function Get-ComputerDetails {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
-            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string])) {
+            if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
                 $null
                 ## If it's a string - check for commas, try to get-content, then try to ping.
             }
-            elseif ($TargetComputer -is [string]) {
+            elseif ($TargetComputer -is [string[]]) {
                 if ($TargetComputer -in @('', '127.0.0.1')) {
                     $TargetComputer = @('127.0.0.1')
                 }
@@ -71,9 +72,10 @@ function Get-ComputerDetails {
                         $TargetComputer = @($TargetComputer)
                     }
                     else {
-                        $TargetComputer = $TargetComputer + "x"
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object   
+                        write-host "getting AD computer"
+                        $TargetComputer = $TargetComputer
+                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
+                        $TargetComputer = $TargetComputer | Sort-Object 
                     }
                 }
             }
@@ -89,7 +91,7 @@ function Get-ComputerDetails {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
                 if ($Outputfile.toLower() -eq '') {
                     $REPORT_DIRECTORY = "$str_title_var"
                 }
@@ -103,16 +105,29 @@ function Get-ComputerDetails {
                 if ($outputfile.tolower() -eq '') {
                     $iterator_var = 0
                     while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                        $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
                         if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
                             $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
+                            $outputfile += "$([string]$iterator_var)"
                         }
                         else {
                             break
                         }
                     }
+
+
                 }
+                try {
+                    $outputdir = $outputfile | split-path -parent
+                    if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                    }
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+                }
+
+
             }
         }
         ## 4. Create empty results container
@@ -121,36 +136,41 @@ function Get-ComputerDetails {
 
     ## Collects computer details from specified computers using CIM commands  
     PROCESS {
-        if ($Targetcomputer) {
-            # ping test
-            $pingreply = Test-Connection $TargetComputer -Count 1 -Quiet
-            if ($pingreply) {
+        ForEach ($single_computer in $TargetComputer) {
+            if ($single_computer) {
+                # ping test
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+                if ($pingreply) {
 
-                ## Save results to variable
-                $single_result = Invoke-Command -ComputerName $TargetComputer -Scriptblock {
-                    # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
-                    # object returned to $results list
-                    $computersystem = Get-CimInstance -Class Win32_Computersystem
-                    $bios = Get-CimInstance -Class Win32_BIOS
-                    $operatingsystem = Get-CimInstance -Class Win32_OperatingSystem
-                    $obj = [PSCustomObject]@{
-                        Manufacturer    = $($computersystem.manufacturer)
-                        Model           = $($computersystem.model)
-                        CurrentUser     = $((get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username)
-                        WindowsBuild    = $($operatingsystem.buildnumber)
-                        BiosVersion     = $($bios.smbiosbiosversion)
-                        BiosReleaseDate = $($bios.releasedate)
-                        TotalRAM        = $((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb)
-                        LastBoot        = $($operatingsystem.LastBootUpTime)
-                        SystemUptime    = $((Get-Date $lastboottime).ToString("hh\:mm\:ss"))
-                    }
-                    $obj
-                } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+                    ## Save results to variable
+                    $single_result = Invoke-Command -ComputerName $single_computer -Scriptblock {
+                        # Gets active user, computer manufacturer, model, BIOS version & release date, Win Build number, total RAM, last boot time, and total system up time.
+                        # object returned to $results list
+                        $computersystem = Get-CimInstance -Class Win32_Computersystem
+                        $bios = Get-CimInstance -Class Win32_BIOS
+                        $operatingsystem = Get-CimInstance -Class Win32_OperatingSystem
 
-                $results.add($single_result) | out-null
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $TargetComputer is offline." -Foregroundcolor Yellow
+                        $lastboot = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime
+                        $uptime = ((Get-Date) - $lastboot).ToString("dd\.hh\:mm\:ss")
+                        $obj = [PSCustomObject]@{
+                            Manufacturer    = $($computersystem.manufacturer)
+                            Model           = $($computersystem.model)
+                            CurrentUser     = $((get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username)
+                            WindowsBuild    = $($operatingsystem.buildnumber)
+                            BiosVersion     = $($bios.smbiosbiosversion)
+                            BiosReleaseDate = $($bios.releasedate)
+                            TotalRAM        = $((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb)
+                            LastBoot        = $lastboot
+                            SystemUptime    = $uptime
+                        }
+                        $obj
+                    } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+
+                    $results.add($single_result) | out-null
+                }
+                else {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                }
             }
         }
     }
@@ -194,7 +214,13 @@ function Get-ComputerDetails {
                 catch {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ImportExcel module not found, skipping xlsx creation." -Foregroundcolor Yellow
                 }
-                Invoke-item "$($outputfile | split-path -Parent)"
+                try {
+                    Invoke-item "$($outputfile | split-path -Parent)"
+                }
+                catch {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Could not open output folder." -Foregroundcolor Yellow
+                    Invoke-item "$outputfile.csv"
+                }
             }
         }
         else {
