@@ -63,16 +63,35 @@ function Copy-RemoteFiles {
                     $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                    if ($test_ping) {
-                        $TargetComputer = @($TargetComputer)
+                    ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
+                    if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
+                        Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"
+                        Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
                     }
                     else {
-
-                        $TargetComputer = $TargetComputer
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object 
-  
+    
+                        # if no domain specified fallback to PowerShell environment variable
+                        if ([string]::IsNullOrEmpty($searchRoot)) {
+                            $searchRoot = $env:USERDNSDOMAIN
+                        }
+    
+                        $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
+                        $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputer*))"
+                        $searcher.SearchRoot = "LDAP://$searchRoot"
+                        # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
+                        # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
+    
+                        [void]$searcher.PropertiesToLoad.Add("name")
+    
+                        $list = [System.Collections.Generic.List[String]]@()
+    
+                        $results = $searcher.FindAll()
+                        foreach ($result in $results) {
+                            $resultItem = $result.Properties
+                            [void]$List.add($resultItem.name)
+                        }
+                        $TargetComputer = $list
+    
                     }
                 }
             }
