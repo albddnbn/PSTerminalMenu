@@ -110,13 +110,15 @@ function Get-AssetInformation {
                             $iterator_var++
                             $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
 
-                            if (-not (Test-Path $($outputfile | split-path -parent) -ErrorAction SilentlyContinue)) {
-                                New-Item -ItemType Directory -Path $($outputfile | split-path -parent) -ErrorAction SilentlyContinue | Out-Null
-                            }
+
                         }
                         else {
                             break
                         }
+                    }
+
+                    if (-not (Test-Path $($outputfile | split-path -parent) -ErrorAction SilentlyContinue)) {
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
                     }
                 }
             }
@@ -218,7 +220,7 @@ function Get-AssetInformation {
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }
                     $Content = Import-Csv "$Outputfile.csv"
-                    $xlsx = $Content | Export-Excel @params
+                    $xlsx = $Content | Export-Excel @params # -ErrorAction SilentlyContinue
                     $ws = $xlsx.Workbook.Worksheets[$params.Worksheetname]
                     $ws.View.ShowGridLines = $false # => This will hide the GridLines on your file
                     Close-ExcelPackage $xlsx
