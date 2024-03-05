@@ -88,12 +88,12 @@ Function Set-ChromeClearDataOnExit {
             if ($single_computer) {
 
                 ## test with ping first:
-                $pingreply = Test-Connection $single_computer\ -Count 1 -Quiet
+                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
-                    Invoke-Command -ComputerName $single_computer\ -ScriptBlock $chrome_setting_scriptblock
+                    Invoke-Command -ComputerName $single_computer -ScriptBlock $chrome_setting_scriptblock
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer\ didn't respond to one ping, skipping." -ForegroundColor Yellow
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping, skipping." -ForegroundColor Yellow
                 }
             }
         }

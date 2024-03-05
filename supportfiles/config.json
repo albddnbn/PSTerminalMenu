@@ -44,6 +44,7 @@
         ],
         "maintenance": [
             "Clear-ChromeBrowsingData",
+            "Set-ChromeClearDataOnExit",
             "Clear-CorruptProfiles",
             "Clear-FirefoxProfile",
             "Format-SecondaryDrive",
