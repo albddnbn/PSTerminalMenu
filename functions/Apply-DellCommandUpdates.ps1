@@ -12,10 +12,10 @@ Function Apply-DellCommandUpdates {
             3. Computers that have begun to apply updates and should be rebooting momentarily.
 
     .PARAMETER TargetComputer
-        Target computer or computers of the function. Single hostname, ex: 's-c136-02' or 's-c136-02.dtcc.edu'
+        Target computer or computers of the function.
+        Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
-        g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
+        First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
 
     .PARAMETER WeeklyUpdates
         'y'     will use this command: &"$($dellcommandexe.fullname)" /configure -scheduleWeekly=Sun,02:00
@@ -61,16 +61,35 @@ Function Apply-DellCommandUpdates {
                     $TargetComputer = Get-Content $TargetComputer
                 }
                 else {
-                    $test_ping = Test-Connection -ComputerName $TargetComputer -count 1 -Quiet
-                    if ($test_ping) {
-                        $TargetComputer = @($TargetComputer)
+                    ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
+                    if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
+                        Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"
+                        Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
                     }
                     else {
-
-                        $TargetComputer = $TargetComputer
-                        $TargetComputer = Get-ADComputer -Filter * | Where-Object { $_.DNSHostname -match "^$TargetComputer.*" } | Select -Exp DNShostname
-                        $TargetComputer = $TargetComputer | Sort-Object 
-  
+    
+                        # if no domain specified fallback to PowerShell environment variable
+                        if ([string]::IsNullOrEmpty($searchRoot)) {
+                            $searchRoot = $env:USERDNSDOMAIN
+                        }
+    
+                        $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
+                        $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputer*))"
+                        $searcher.SearchRoot = "LDAP://$searchRoot"
+                        # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
+                        # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
+    
+                        [void]$searcher.PropertiesToLoad.Add("name")
+    
+                        $list = [System.Collections.Generic.List[String]]@()
+    
+                        $results = $searcher.FindAll()
+                        foreach ($result in $results) {
+                            $resultItem = $result.Properties
+                            [void]$List.add($resultItem.name)
+                        }
+                        $TargetComputer = $list
+    
                     }
                 }
             }
