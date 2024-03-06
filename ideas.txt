@@ -10,3 +10,10 @@ All uses of foreach-object - try to use -parallel switch to speed up execution t
 - in get-targetcomputers and being blocks for report-generating functions
   - instead of the $ad_check variable using get-adcomputer, AND the test-connection (think this is how they are now)
     - Try just using test-connection - if it works, should be a single computer name.
+**^This actually does work, but it turns out that I can scrap this whole section, and combine it with the section that
+takes the input string and uses it to grab a group of computers.
+  - if input string was input with intent to grab one computer - it's only going to be able to grab the one computer
+  - if its part of a hostname and not linked to a real hostname itself - it will be used to generate a list.
+
+  **Instead of using the Get-AD .. cmdlets / ACtiveDirectory module - I'm using a different method to query the LDAP server.
+    I adapted a script from here: https://

@@ -52,6 +52,8 @@ function Get-TargetComputers {
                 # }
                 # else {
                 #     try {
+
+                ## Gets all AD Computer names that start with the input string (TargetComputerInput)                    
                 ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
                 if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
                     Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"

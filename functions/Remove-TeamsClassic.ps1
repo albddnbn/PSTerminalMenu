@@ -134,6 +134,7 @@ Function Remove-TeamsClassic {
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
                     Invoke-Command -ComputerName $single_computer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Teams Classic removal attempt on $single_computer completed."
                 }
             }
         }
@@ -141,7 +142,7 @@ Function Remove-TeamsClassic {
 
     ## Function completion msg
     END {
-        Write-Host "Finished removing Microsoft Teams 'Classic' from $($Targetcomputer -join ', ')."
+        Write-Host "Finished removing Microsoft Teams 'Classic' from $($Targetcomputer -join ', ').`n"
         Read-Host "Press enter to continue."
     }
 }
