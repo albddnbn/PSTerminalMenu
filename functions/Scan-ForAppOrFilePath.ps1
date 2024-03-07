@@ -260,10 +260,14 @@ function Scan-ForAppOrFilePath {
                                 }
                                 $obj
                             }
-                        } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
-                    }
+                        } | Select PSComputerName, * -ExcludeProperty RunspaceId, PSShowComputerName -ErrorAction SilentlyContinue
 
-                    $results.add($search_result) | out-null
+                        # $search_result
+                        # read-host "enter"
+                    }
+                    ForEach ($single_result_obj in $Search_result) {
+                        $results.add($single_result_obj) | out-null
+                    }
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline, skipping." -ForegroundColor Yellow
@@ -314,4 +318,3 @@ function Scan-ForAppOrFilePath {
         return $results
     }
 }
-
