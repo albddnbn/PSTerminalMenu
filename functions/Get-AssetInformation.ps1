@@ -221,7 +221,7 @@ function Get-AssetInformation {
             ## Sort the results
             $results = $results | sort -property pscomputername
             if ($outputfile.tolower() -eq 'n') {
-                $results | out-gridview
+                $results | out-gridview -Title "Asset Information"
             }
             else {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation

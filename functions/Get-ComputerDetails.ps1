@@ -207,7 +207,7 @@ function Get-ComputerDetails {
                     # $results | Out-GridView
                 }
                 else {
-                    $results | out-gridview
+                    $results | out-gridview -Title "Computer Info"
                 }
             }
             else {

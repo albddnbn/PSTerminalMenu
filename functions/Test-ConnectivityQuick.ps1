@@ -134,7 +134,7 @@ function Test-ConnectivityQuick {
     }
     ## Open results in gridview since this is just supposed to be quick test for connectivity
     END {
-        $results | out-gridview -Title "Results - $PING_COUNT Pings"
+        $results | out-gridview -Title "Results: $PING_COUNT Pings"
         Read-Host "`nPress [ENTER] to continue."
     }
 

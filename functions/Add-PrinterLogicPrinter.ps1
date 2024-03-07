@@ -177,7 +177,7 @@ function Add-PrinterLogicPrinter {
         ## 1.
         if ($results) {
 
-            $results | out-gridview
+            $results | out-gridview -Title "PrinterLogic Connect Results"
 
         }
         else {
