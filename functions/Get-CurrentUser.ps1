@@ -175,7 +175,7 @@ function Get-CurrentUser {
 
                         }
                         $obj
-                    } | Select PSComputerName, CurrentUser, Model, TeamsRunning, ZoomRunning
+                    } | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
                     $results.add($logged_in_user_info) | out-null
                 }
                 else {

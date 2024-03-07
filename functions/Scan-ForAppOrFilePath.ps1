@@ -23,7 +23,7 @@ function Scan-ForAppOrFilePath {
         If the -SearchType 'app' argument is used, this should be the application's DisplayName. 
         If the -SearchType 'path' argument is used, this should be the path to search for, Ex: C:\users\public\test.txt.
 
-    .PARAMETER SearchTitle
+    .PARAMETER OutputFile
         Used to create the output filename/path if supplied.
 
     .EXAMPLE
@@ -202,7 +202,7 @@ function Scan-ForAppOrFilePath {
                                 $obj.PathPresent = "Filepath not found"
                             }
                             $obj
-                        }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                        }  | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
                     }
                     ## Application search
                     elseif ($SearchType -eq 'App') {

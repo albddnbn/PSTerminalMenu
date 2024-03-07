@@ -182,7 +182,7 @@ function Get-ConnectedPrinters {
                 $pingreply = Test-connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
                     ## 3. If computer responded - collect printer info and add to results list.
-                    $connected_printer_info = Invoke-Command -ComputerName $single_computer -Scriptblock $list_local_printers_block | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    $connected_printer_info = Invoke-Command -ComputerName $single_computer -Scriptblock $list_local_printers_block | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
                     $results.Add($connected_printer_info) | out-null
                 }
                 else {

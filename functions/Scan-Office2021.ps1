@@ -174,7 +174,7 @@ function Scan-Office2021 {
                         }
 
                         $obj
-                    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    }  | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
             
                     $results.Add($office2021_check) | Out-Null
                 }

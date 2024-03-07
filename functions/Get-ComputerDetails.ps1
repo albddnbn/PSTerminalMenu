@@ -184,7 +184,7 @@ function Get-ComputerDetails {
                             SystemUptime    = $uptime
                         }
                         $obj
-                    } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+                    } | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
                     $results.add($single_result) | out-null
                 }

@@ -13,7 +13,7 @@ function Install-NeededModules {
     Additional notes about the file.
 #>
     # Check for internet connectivity:
-    $TestConnection = Test-Connection google.com -Count 1 -Quiet
+    $TestConnection = Test-Connection google.com -Count 2 -Quiet
     if ($TestConnection) {
         # make sure nuget is available
         $Nugetcheck = Get-PackageProvider | where-object { $_.Name -eq 'Nuget' }

@@ -194,7 +194,7 @@ function Scan-SoftwareInventory {
                                 }        
                             }
                         } 
-                    } | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    } | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
                     $results.add($target_software_inventory) | out-null
                 }
                 else {
@@ -209,7 +209,7 @@ function Scan-SoftwareInventory {
     END {
         if ($results) {
             ## 1. get list of UNIQUE pscomputername s from the results - a file needs to be created for EACH computer.
-            $unique_hostnames = $results.pscomputername | select -Unique
+            $unique_hostnames = $($results.pscomputername) | select -Unique
 
             ForEach ($single_computer_name in $unique_hostnames) {
                 # get that computers apps

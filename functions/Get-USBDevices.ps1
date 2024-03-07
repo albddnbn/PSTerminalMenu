@@ -166,7 +166,7 @@ function Get-USBDevices {
                         $connected_usb_devices = Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB' } | Select FriendlyName, Class, Status
 
                         $connected_usb_devices
-                    }  | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+                    }  | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
                     $results.add($connected_usb_info) | out-null
                 }

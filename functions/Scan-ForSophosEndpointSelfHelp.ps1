@@ -188,7 +188,7 @@ function Scan-ForSophosEndpointSelfHelp {
                             }
                             $obj
                         }
-                    }  | Select * -ExcludeProperty RunspaceId, PSShowComputerName
+                    }  | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
                     $results.Add($sophos_endpoint_check)
                 }

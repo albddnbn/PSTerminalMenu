@@ -203,7 +203,7 @@ function Get-AssetInformation {
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
                     Write-Host "Pinged $single_computer successfully, attempting to get asset info."
-                    $target_asset_info = Invoke-Command -ComputerName $single_computer -ScriptBlock $asset_info_scriptblock | Select * -ExcludeProperty RunspaceId, PSshowcomputername
+                    $target_asset_info = Invoke-Command -ComputerName $single_computer -ScriptBlock $asset_info_scriptblock | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
                     if ($target_asset_info) {
                         $results.add($target_asset_info) | out-null
                     }
