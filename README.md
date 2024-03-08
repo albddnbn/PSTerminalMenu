@@ -41,6 +41,7 @@ Parameter input:
 | TargetComputer | OutputFile |
 | --- | --- |
 | t-client-01 | client-01-details |
+
 <br><br> 2. Search for any functions offered in the menu containing the word 'Intune'. Select the **Get-IntuneHardwareIDs** function and enter parameter values to collect Intune hardware IDs from all devices with hostnames starting with 's-pc-'.<br><br>Add GroupTag 'EmployeePCs' to all device hwids. Output to file containing 's-pc-hwids'.
 
 ```
