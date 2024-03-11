@@ -115,7 +115,9 @@ This project was created by Alex B. in 2023.
 ### Powershell modules used:
 
 **PS-MENU**: https://github.com/chrisseroka/ps-menu
+
 **IMPORTEXCEL**: https://github.com/dfinke/ImportExcel
+
 **PSADT**: https://psappdeploytoolkit.com/
 
 ### Scripts:
@@ -124,7 +126,6 @@ This project was created by Alex B. in 2023.
 
 ## License
 
-The last section of a high-quality README file is the license. This lets other developers know what they can and cannot do with your project. If you need help choosing a license, refer to [https://choosealicense.com/](https://choosealicense.com/).
 
 ---
 
