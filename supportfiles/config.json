@@ -1,10 +1,5 @@
 {
-    "dns_suffix": ".dtcc.edu",
-    "filter_targets": false,
     "clear_after_each_parameter": "yes",
-    "num_hosts_limit": 30,
-    "_num_hosts_limit": "The ping_hosts_threshhold property - any targetcomputer value with less than this number of hosts, will be subjected to ping test to filter out offline hosts before running the chosen script/function. Not all functions use this variable.",
-    "help_file": "docs/menuhelpguide.html",
     "categories": {
         "printers": [
             "Add-PrinterLogicPrinter",
