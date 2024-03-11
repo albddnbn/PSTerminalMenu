@@ -26,6 +26,10 @@ function Read-HostNoColon {
     Write-Host $Prompt -NoNewLine -ForegroundColor Yellow
     return $Host.UI.ReadLine()
 }
+
+Try { Set-ExecutionPolicy -ExecutionPolicy 'ByPass' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
+
+
 ########################################################################################################
 ## CONFIG.JSON file --> found in ./supportfiles. It's where the script gets categories/function listings 
 ## that appear in terminal menu, along with some other configuration variables.
@@ -189,9 +193,13 @@ while ($exit_program -eq $false) {
         $functions_synopsis = $functions_synopsis -replace '@{Text=', ''
         $functions_synopsis = $functions_synopsis -replace '}', ''
 
+
         $function_description = $functionhelper.description
         $function_description = $function_description -replace '@{Text=', ''
         $function_description = $function_description -replace '}', ''
+        ## I think this might work too:
+        # $functions_synopsis = $functionhelper.synopsis.text
+        # $function_description = $functionhelper.description.text
 
 
         Write-Host "$function_selection -> " -foregroundcolor Green

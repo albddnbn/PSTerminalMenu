@@ -1,27 +1,22 @@
-function Get-ConnectedPrinters {
+Function List-TargetConnections {
     <#
     .SYNOPSIS
-        Checks the target computer, and returns the user that's logged in, and the printers that user has access to.
+        Target local or remote computers and list net TCP connections for a specific process, or all processes.
 
     .DESCRIPTION
-        This function, unlike some others, only takes a single string DNS hostname of a target computer.
+        Create report of Get-NetTCPConnection output for target computers, over period of time.
 
     .PARAMETER TargetComputer
         Target computer or computers of the function.
         Single hostname, ex: 't-client-01' or 't-client-01.domain.edu'
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-        First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
+        First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
+        g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
     .PARAMETER OutputFile
-        'n' or 'no' = terminal output only
+        'n' = terminal output only
         Entering anything else will create an output file in the 'reports' directory, in a folder with name based on function name, and OutputFile input.
         Ex: Outputfile = 'A220', output file(s) will be in $env:PSMENU_DIR\reports\AssetInfo - A220\
-
-    .PARAMETER FolderTitleSubstring
-        If specified, the function will create a folder in the 'reports' directory with the specified substring in the title, appended to the $REPORT_DIRECTORY String (relates to the function title).
-
-    .EXAMPLE
-        Get-ConnectedPrinters -TargetComputer 't-client-07'
 
     .NOTES
         ---
@@ -29,21 +24,17 @@ function Get-ConnectedPrinters {
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     [CmdletBinding()]
-    param(
-        [Parameter(
-            Mandatory = $true,
-            ValueFromPipeline = $true,
-            Position = 0
-        )]
-        [String[]]$TargetComputer,
-        [string]$Outputfile = ''
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$TargetComputer,
+        [Parameter(Mandatory = $false)]
+        $ProcessName,
+        [Parameter(Mandatory = $false)]
+        $TimeInterval = 1,
+        [Parameter(Mandatory = $false)]
+        $TimeLength = 60
     )
-
-    ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
-    ## 2. Create output filepath if necessary.
-    ## 3. Scriptblock that is executed on each target computer to retrieve connected printer info.
     BEGIN {
-        $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
@@ -101,10 +92,11 @@ function Get-ConnectedPrinters {
             if ($null -eq $TargetComputer) {
                 return
             }
-        }      
-        
+        }
+
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        $str_title_var = "Printers"
+        $str_title_var = "NetConnections"
+        
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
@@ -141,67 +133,79 @@ function Get-ConnectedPrinters {
                     }
                 }
                 catch {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory, will be output to $(pwd)" -Foregroundcolor Yellow
                 }
             }
         }
-        ## 3. Scriptblock - lists connected/default printers
-        $list_local_printers_block = {
-            # Everything will stay null, if there is no user logged in
-            $obj = [PScustomObject]@{
-                Username          = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
-                DefaultPrinter    = $null
-                ConnectedPrinters = $null
-            }
 
-            # Only need to check for connected printers if a user is logged in.
-            if ($obj.Username) {
-                # get connected printers:
-                get-ciminstance -class win32_printer | select name, Default | ForEach-Object {
-                    if (($_.name -notin ('Microsoft Print to PDF', 'Fax')) -and ($_.name -notlike "*OneNote*")) {
-                        if ($_.name -notlike "Send to*") {
-                            $obj.ConnectedPrinters = "$($obj.ConnectedPrinters), $($_.name)"
-                        }
-                    }   
-                }
-            }
-            $obj
-        }
-        ## Create empty results container to use during process block
+        Write-Host "These are the conditions of the 'Get Network Connection' loop:"
+        Write-Host "Process name: $ProcessName (if nothing is displayed here, all connections will be output for target computers)"
+        Write-Host "Time interval: $TimeInterval seconds (connections output at this frequency)"
+        Write-Host "Time length: $TimeLength seconds (connections will be output for this long)"
+
+        Write-Host ""
+        Write-Host "Please check the conditions listed above." -Foregroundcolor Yellow
+        Start-Sleep -Seconds 2
+        Read-Host "Press enter to continue, CTRL+C to cancel"
+
+        
+        ## 3. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
 
-    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
-    ## 2. Ping the single target computer one time as test before attempting remote session.
-    ## 3. If machine was responseive, run the 'get connected printers' scriptblock.
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
-            ## 1. TargetComputer can't be $null or '', it will display error during test-connection
+
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
-                ## 2. Single ping test to target computer
-                $pingreply = Test-connection $single_computer -Count 1 -Quiet
-                if ($pingreply) {
-                    ## 3. If computer responded - collect printer info and add to results list.
-                    $connected_printer_info = Invoke-Command -ComputerName $single_computer -Scriptblock $list_local_printers_block | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
-                    $results.Add($connected_printer_info) | out-null
+                ## 2. Send one test ping
+                $ping_result = Test-Connection $single_computer -count 1 -Quiet
+                if ($ping_result) {
+                    $netconnection_results = Invoke-Command -computername $TargetComputer -scriptblock {
+
+                        $NETTCP_PARAMS = @{
+                            ErrorAction = 'SilentlyContinue'
+                        }
+
+                        ## if processname was specified, use it:
+                        if ($using:ProcessName) {
+                            $NETTCP_PARAMS.Add('OwningProcess', (Get-Process -Name "$using:ProcessName" -ErrorAction SilentlyContinue | Select -Exp ID))
+                        }
+
+
+                        $counter = 0
+                        while ($counter -le ($using:TimeLength)) {
+                            $processids = Get-Process -Name "$using:ProcessName" -ErrorAction SilentlyContinue | Select -Exp ID
+                            if ($processids) {
+                                ForEach ($single_process in $processids) {
+                                    $connections_obj = Get-NetTCPConnection -OwningProcess $single_process -ErrorAction SilentlyContinue | Select LocalAddress, LocalPort, RemoteAddress, RemotePort, State, CreationTime, OwningProcess
+                                    $connections_obj
+                                }
+                            }
+                            Start-Sleep -Seconds $TimeInterval
+                            $counter += $TimeInterval
+                        }
+                    }
+
+                    ForEach ($single_result in $netconnection_results) {
+                        $results.Add($single_result) | Out-Null
+                    }
                 }
                 else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer didn't respond to one ping, skipping." -Foregroundcolor Yellow
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
                 }
             }
         }
+
     }
 
-    ## 1. If there are results - sort them by the hostname (pscomputername) property.
-    ## 2. If the user specified 'n' for outputfile - just output to terminal or gridview.
-    ## 3. Create .csv/.xlsx reports as necessary.
     END {
         if ($results) {
             ## 1. Sort any existing results by computername
             $results = $results | sort -property pscomputername
             ## 2. Output to gridview if user didn't choose report output.
             if ($outputfile.tolower() -eq 'n') {
-                $results | out-gridview -Title $str_title_var
+                $results | out-gridview -title $str_title_var
             }
             else {
                 ## 3. Create .csv/.xlsx reports if possible
@@ -211,7 +215,7 @@ function Get-ConnectedPrinters {
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
-                        TableName            = $str_title_var
+                        TableName            = "$REPORT_DIRECTORY"
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
                         WorksheetName        = $str_title_var
@@ -240,7 +244,5 @@ function Get-ConnectedPrinters {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to return results."
-        return $results
     }
 }

@@ -193,7 +193,7 @@ function Get-CurrentUser {
             $results = $results | sort -property pscomputername
             ## 2. Output to gridview if user didn't choose report output.
             if ($outputfile.tolower() -eq 'n') {
-                $results | out-gridview -title "Current Users"
+                $results | out-gridview -title $str_title_var
             }
             else {
                 ## 3. Create .csv/.xlsx reports if possible
@@ -203,10 +203,10 @@ function Get-CurrentUser {
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
+                        TableName            = $str_title_var
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'CurrentUsers'
+                        WorksheetName        = $str_title_var
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

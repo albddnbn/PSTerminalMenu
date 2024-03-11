@@ -17,3 +17,10 @@ takes the input string and uses it to grab a group of computers.
 
   **Instead of using the Get-AD .. cmdlets / ACtiveDirectory module - I'm using a different method to query the LDAP server.
     I adapted a script from here: https://
+
+
+***SEE IF YOU CAN HAVE FUNCTIONS RUN IN A DIFFERENT TERMINAL WINDOW WHEN THEY ARE CHOSEN
+  - would this allow you to go back to the main menu and choose another?
+  - it's definitely possible to open two windows, and run menu.ps1 twice to do this, but using the method above sounds a lot better.
+
+**TEst-WSMan or [System.IO.Directory]::Exists(UNC path) instead of Test-connection
