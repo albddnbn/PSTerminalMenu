@@ -224,10 +224,10 @@ function Ping-TestReport {
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_TITLE"
+                        TableName            = $str_title_var
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = $REPORT_TITLE
+                        WorksheetName        = $str_title_var
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

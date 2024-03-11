@@ -109,7 +109,7 @@ Function List-DotNets {
             ## 1. Sort any existing results by computername
             $results = $results | sort -property pscomputername
             ## 2. Output to gridview if user didn't choose report output.
-            $results | out-gridview
+            $results | out-gridview -Title "DotNet Versions"
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."

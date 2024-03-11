@@ -221,7 +221,7 @@ function Get-AssetInformation {
             ## Sort the results
             $results = $results | sort -property pscomputername
             if ($outputfile.tolower() -eq 'n') {
-                $results | out-gridview -Title "Asset Information"
+                $results | out-gridview -Title $str_title_var
             }
             else {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
@@ -231,10 +231,10 @@ function Get-AssetInformation {
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
+                        TableName            = $str_title_var
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'AssetInfo'
+                        WorksheetName        = $str_title_var
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

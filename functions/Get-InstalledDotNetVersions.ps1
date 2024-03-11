@@ -178,10 +178,10 @@ function Get-InstalledDotNetversions {
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'
-                        TableName            = "$REPORT_DIRECTORY"
+                        TableName            = $str_title_var
                         TableStyle           = 'Medium9' # => Here you can chosse the Style you like the most
                         BoldTopRow           = $true
-                        WorksheetName        = 'CurrentUsers'
+                        WorksheetName        = $str_title_var
                         PassThru             = $true
                         Path                 = "$Outputfile.xlsx" # => Define where to save it here!
                     }

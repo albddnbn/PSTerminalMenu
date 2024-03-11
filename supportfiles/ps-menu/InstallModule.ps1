@@ -11,7 +11,7 @@ Robocopy . $fullPath /mir
 Pop-Location
 
 
-## Above code was adapted from ImportExcel's InstallModule.ps1 - this didn't always work, so I wrote this as a failsafe
+## Above code was adapted from ImportExcel's InstallModule.ps1
 $PSHOME_PATH = "C:\Program Files\WindowsPowerShell\Modules"
 $MODULE_NAME = "PS-MENU"
 
