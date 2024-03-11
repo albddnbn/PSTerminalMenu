@@ -223,7 +223,7 @@ while ($exit_program -eq $false) {
             ## TargetComputer in their own way.
             ## If the parameter is TargetComputer - have user enter value, run through get-targetcomputers now.
             if ($parameter -eq 'TargetComputer') {
-                Write-Host "Takes user input and returns a list of hostnames." -foregroundcolor yellow
+                Write-Host "Please input value for TargetComputer." -foregroundcolor yellow
                 Write-Host "Input can be:"
                 Write-Host "    1. Single hostname string, ex: 's-a227-01'"
                 Write-Host "    2. Comma-separated list of hostnames, ex: s-a227-01,s-a227-02"
