@@ -14,6 +14,10 @@ function Clear-CorruptProfiles {
         'enable'      - script will delete user folders and files on target computers.
         Anything else - script will not delete user folders and files on target computers.
 
+    .PARAMETER SkipOccupiedComputers
+        'y' is default - script will skip computers with users logged in.
+        Anything else - script will run on computers with users logged in.
+
     .EXAMPLE
         Run without making changes to filesystems / deleting profiles or folders
         Clear-CorruptProfiles.ps1 -TargetComputer "t-client-" -Perform_deletions "n"
@@ -39,8 +43,10 @@ function Clear-CorruptProfiles {
             Position = 0
         )]
         [String[]]$TargetComputer,
-        [string]$Perform_deletions
+        [string]$Perform_deletions,
+        [string]$SkipOccupiedComputers = 'y'
     )
+
     ## 1. Set date and report title variables to be used in output filename creation
     ## 2. Check for clear-corruptprofiles.ps1 script in ./localscripts
     ## 3. Assign 'perform_deletions' a boolean value
@@ -48,6 +54,9 @@ function Clear-CorruptProfiles {
     ## 5. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     ## 6. Create empty results container
     BEGIN {
+        if ($SkipOCcupiedComputers -eq '') {
+            $SkipOccupiedComputers = 'y'
+        }
         ## 1. Set date and report title variables to be used in output filename creation
         $REPORT_TITLE = 'TempProfiles' # used to create the output filename, .xlsx worksheet title, and folder name inside the report\yyyy-MM-dd folder for today
         $thedate = Get-Date -Format 'yyyy-MM-dd'
@@ -133,36 +142,27 @@ function Clear-CorruptProfiles {
 
         ## 5. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         $str_title_var = "TempProfiles"
-        if ($Outputfile.tolower() -eq 'n') {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
+
+        if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
+            $REPORT_DIRECTORY = "$str_title_var"
+            $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
-            if (Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) {
-                if ($Outputfile.toLower() -eq '') {
-                    $REPORT_DIRECTORY = "$str_title_var"
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
+            $iterator_var = 0
+            while ($true) {
+                $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                    $iterator_var++
+                    $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
                 }
                 else {
-                    $REPORT_DIRECTORY = $outputfile            
-                }
-                $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-                if ($outputfile.tolower() -eq '') {
-                    $iterator_var = 0
-                    while ($true) {
-                        $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
-                        if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                            $iterator_var++
-                            $outputfile = "$env:PSMENU_DIR\reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$([string]$iterator_var)"
-                        }
-                        else {
-                            break
-                        }
-                    }
+                    break
                 }
             }
+                
         }
+        
 
         ## 6. Create empty results container
         $results = [system.collections.arraylist]::new()
@@ -178,6 +178,18 @@ function Clear-CorruptProfiles {
                 ## 2. test with ping:
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
+
+                    if ($SkipOccupiedComputers.ToLower() -eq 'y') {
+                        $check_for_user = Invoke-Command -Computername $single_computer -scriptblock {
+                            (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
+                        }
+                        if ($check_for_user) {
+                            $check_for_user = $check_for_user -replace "$env:USERDOMAIN\\", ''
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -Nonewline
+                            Write-Host "$check_for_user is logged in to $single_computer, skipping this computer." -Foregroundcolor Yellow
+                            continue
+                        }
+                    }
                     ## 3. Run script
                     $temp_profile_results = Invoke-Command -ComputerName $single_computer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
                     $results.add($temp_profile_results) | Out-Null
