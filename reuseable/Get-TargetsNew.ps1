@@ -70,7 +70,7 @@ Function Get-Targets {
     }
 
     # }
-    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null }
+    $TargetComputer = $TargetComputer | Where-object { $_ -ne $null } | Select -Unique
     # Safety catch
     if ($null -eq $TargetComputer) {
         return
