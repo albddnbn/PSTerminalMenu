@@ -233,8 +233,8 @@ while ($exit_program -eq $false) {
                 Write-Host "s-a227-" -nonewline -foregroundcolor Yellow
                 Write-Host " will create a list of all hostnames that start with s-a227-."
                 $target_computers = read-host "Enter target computer value"
-                $target_computers = Get-TargetComputers -TargetComputerInput $target_computers
-                $target_computers = [String[]]$target_computers
+                $target_computers = Get-Targets -TargetComputer $target_computers
+                #$target_computers = [String[]]$target_computers
             }
             else {
                 $current_parameter_info = $functionhelper.parameters.parameter | Where-Object { $_.name -eq $parameter }
