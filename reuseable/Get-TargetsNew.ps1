@@ -1,6 +1,6 @@
 Function Get-Targets {
     # Standalone 'get target machines' function
-    ## takes COMMA-separated hostname substring list!
+    ## Tested with single/multiple hostnames and hostname substrings, as well as localhost values.
 
     param(
         [String[]]$TargetComputer
@@ -26,7 +26,6 @@ Function Get-Targets {
         $TargetComputer = @('127.0.0.1')
     }
     elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
-        Write-Host "Getting content." -foregroundcolor yellow
         $TargetComputer = Get-Content $TargetComputer
     }
 
