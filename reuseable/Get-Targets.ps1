@@ -14,7 +14,12 @@ Function Get-Targets {
     ## Do we have to add if targetcomputer eq $null? Will function ever be used like: Get-Targets
 
     if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
-        $TargetComputer = @('127.0.0.1')
+        if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
+            $TargetComputer = @('127.0.0.1')
+        }
+        else {
+            $null
+        }
     }
     elseif ($TargetComputer -is [string[]]) {
         if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
