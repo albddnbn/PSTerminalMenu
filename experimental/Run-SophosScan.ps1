@@ -35,7 +35,7 @@ Function Run-SophosScan {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        $TargetComputer,
+        [String[]]$TargetComputer,
         # should be comma separated list of target folders/files to scan for on target computers.
         $Targetpaths,
         [string]$Outputfile
@@ -46,8 +46,65 @@ Function Run-SophosScan {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
 
 
-        # Filter TargetComputer input to create hostname list:
-        $TargetComputer = Get-TargetComputers -TargetComputerInput $TargetComputer
+        ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
+        if ($null -eq $TargetComputer) {
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
+        }
+        else {
+            ## Assigns localhost value
+            if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
+                $TargetComputer = @('127.0.0.1')
+            }
+            ## If input is a file, gets content
+            elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
+                $TargetComputer = Get-Content $TargetComputer
+            }
+            ## A. Separates any comma-separated strings into an array, otherwise just creates array
+            ## B. Then, cycles through the array to process each hostname/hostname substring using LDAP query
+            else {
+                ## A.
+                if ($Targetcomputer -like "*,*") {
+                    $TargetComputer = $TargetComputer -split ','
+                }
+                else {
+                    $Targetcomputer = @($Targetcomputer)
+                }
+        
+                ## B. LDAP query each TargetComputer item, create new list / sets back to Targetcomputer when done.
+                $NewTargetComputer = [System.Collections.Arraylist]::new()
+                foreach ($computer in $TargetComputer) {
+                    ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
+                    if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
+                        Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"
+                        Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
+                    }
+                    else {
+        
+                        # if no domain specified fallback to PowerShell environment variable
+                        if ([string]::IsNullOrEmpty($searchRoot)) {
+                            $searchRoot = $env:USERDNSDOMAIN
+                        }
+                        $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
+                        $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
+                        $searcher.SearchRoot = "LDAP://$searchRoot"
+                        [void]$searcher.PropertiesToLoad.Add("name")
+                        $list = [System.Collections.Generic.List[String]]@()
+                        $results = $searcher.FindAll()
+                        foreach ($result in $results) {
+                            $resultItem = $result.Properties
+                            [void]$List.add($resultItem.name)
+                        }
+                        $NewTargetComputer += $list
+                    }
+                }
+                $TargetComputer = $NewTargetComputer
+            }
+            $TargetComputer = $TargetComputer | Where-object { $_ -ne $null } | Select -Unique
+            # Safety catch
+            if ($null -eq $TargetComputer) {
+                return
+            }
+        }
 
         # create an output filepath, not including file extension that can be used to create .csv / .xlsx report files at end of function
         if ($outputfile -eq '') {

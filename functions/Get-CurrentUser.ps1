@@ -53,16 +53,18 @@ function Get-CurrentUser {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
+            ## Assigns localhost value
             if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
                 $TargetComputer = @('127.0.0.1')
             }
+            ## If input is a file, gets content
             elseif ($(Test-Path $Targetcomputer -erroraction SilentlyContinue) -and ($TargetComputer.count -eq 1)) {
                 $TargetComputer = Get-Content $TargetComputer
             }
-        
+            ## A. Separates any comma-separated strings into an array, otherwise just creates array
+            ## B. Then, cycles through the array to process each hostname/hostname substring using LDAP query
             else {
-                ## Prepare TargetComputer for LDAP query in ForEach loop
-                ## if TargetComputer contains commas - it's either multiple comma separated hostnames, or multiple comma separated hostname substrings - either way LDAP query will verify
+                ## A.
                 if ($Targetcomputer -like "*,*") {
                     $TargetComputer = $TargetComputer -split ','
                 }
@@ -70,7 +72,7 @@ function Get-CurrentUser {
                     $Targetcomputer = @($Targetcomputer)
                 }
         
-                ## LDAP query each TargetComputer item, create new list / sets back to Targetcomputer when done.
+                ## B. LDAP query each TargetComputer item, create new list / sets back to Targetcomputer when done.
                 $NewTargetComputer = [System.Collections.Arraylist]::new()
                 foreach ($computer in $TargetComputer) {
                     ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
