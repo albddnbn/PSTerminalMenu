@@ -131,6 +131,35 @@ ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.
     . "$($utility_function.fullname)"
 }
 
+
+
+## Create list of functions that should be run as background jobs
+$jobfunctions = $config_file.jobfunctions
+
+Write-Host "Creating filesystem watcher for $env:PSMENU_DIR\completedjobs directory."
+Write-Host "Job functions include: $($jobfunctions -join ', ')" -Foregroundcolor Yellow
+
+## Configure filesystem watcher for completedjobs directory:
+$watcher = New-Object System.IO.FileSystemWatcher
+$watcher.Path = "$env:PSMENU_DIR\completedjobs"
+# $watcher.Filter = "*.txt"
+$watcher.EnableRaisingEvents = $true
+
+# watcher action
+$action = {
+    $path = $Event.SourceEventArgs.FullPath
+    $name = $Event.SourceEventArgs.Name
+    $changeType = $Event.SourceEventArgs.ChangeType
+    $timeStamp = $Event.TimeGenerated
+    Write-Host "File $name $changeType at $timeStamp"
+    # $watcher.EnableRaisingEvents = $false
+    # $watcher.Dispose()
+    # $watcher = $null
+    Invoke-Item "$path"
+}
+
+Register-ObjectEvent $watcher 'Created' -Action $action
+
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
 Read-Host "Thank you! Press enter to continue."
@@ -251,14 +280,25 @@ while ($exit_program -eq $false) {
             }
 
         }
-        # execute the command using parameter names, and their accompanying values
-        # If targetcomputers was set - use it
-        ## We could ALSO try PIPING Target computers into the cmdlets that allow it
-        if ($target_computers) { 
-            $target_computers | & $command @splat
+        ## JOBS:
+        if ($command -in $jobfunctions) {
+            if ($target_computers) {
+                $splat.Add('TargetComputer', $target_computers)
+            }
+            $job = Start-Job -ScriptBlock { param($command, $splat) & $command @splat } -ArgumentList $command, $splat
+            Write-Host "Job started with ID: $($job.id)"
+            # continue
         }
         else {
-            & $command @splat
+            # execute the command using parameter names, and their accompanying values
+            # If targetcomputers was set - use it
+            ## We could ALSO try PIPING Target computers into the cmdlets that allow it
+            if ($target_computers) { 
+                $target_computers | & $command @splat
+            }
+            else {
+                & $command @splat
+            }
         }
         # Reset Target_computers to null so it is ready for next loop
         $target_computers = $null

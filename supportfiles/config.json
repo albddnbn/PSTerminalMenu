@@ -15,6 +15,7 @@
         ],
         "installations": [
             "Install-Application",
+            "Install-ApplicationJob",
             "Install-BIOSUpdates",
             "Install-VeyonRoom",
             "Install-SMARTNotebookSoftware",
@@ -67,5 +68,8 @@
             "Open-Guide"
         ],
         "search": []
-    }
+    },
+    "jobfunctions": [
+        "Install-ApplicationJob"
+    ]
 }
