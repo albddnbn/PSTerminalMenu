@@ -264,11 +264,12 @@ function Install-ApplicationJob {
         #Read-Host "Press enter to continue."
         ## Output announcement to completedjobs directory
         $Announcement = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Install-Application for $AppName with do not disturb set to $skip_pcs on $($TargetComputer -join ', ') completed."
+
+        $Announcement += "`nUnresponsive Computers"
+        $Announcement += $unresponsive_computers | Sort-Object
+        $Announcement += "`nSkipped Applications"
+        $Announcement += $skipped_applications | Sort-Object
         $Announcement | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
-        "`nUnresponsive Computers" | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
-        $unresponsive_computers | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
-        "`nSkipped Applications" | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
-        $skipped_applications | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
     }
     
 }

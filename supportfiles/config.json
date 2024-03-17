@@ -70,6 +70,7 @@
         "search": []
     },
     "jobfunctions": [
-        "Install-ApplicationJob"
+        "Install-ApplicationJob",
+        "Scan-SoftwareInventoryJob"
     ]
 }
