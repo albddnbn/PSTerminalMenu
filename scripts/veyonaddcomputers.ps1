@@ -45,3 +45,27 @@ function Get-ComputersLDAP {
     }
     # }
 }
+$HOSTNAME_SUBSTRING = ''
+$ROOM_NAME = ''
+## IF Veyon is already installed on master and client computers - you just need to readd the clients to master if not present
+$Student_Computers = Get-ComputersLDAP -ComputerName "$HOSTNAME_SUBSTRING"
+$RoomName = "$ROOM_NAME"
+$veyon = "C:\Program Files\Veyon\veyon-cli"
+&$veyon networkobjects add location $RoomName
+ForEach ($single_computer in $Student_Computers) {		
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ::  Adding student computer: $single_computer."
+
+    If ( Test-Connection -BufferSize 32 -Count 1 -ComputerName $single_computer -Quiet ) {
+        Start-Sleep -m 300
+        $IPAddress = (Resolve-DNSName $single_computer).IPAddress
+        $MACAddress = Invoke-Command -Computername $single_computer -scriptblock {
+            $obj = (get-netadapter -physical | where-object { $_.name -eq 'Ethernet' }).MAcaddress
+            $obj
+        }
+        Write-Host " $veyon networkobjects add computer $single_computer $IPAddress $MACAddress $RoomName "
+        &$veyon networkobjects add computer $single_computer $IPADDRESS $MACAddress $RoomName
+    }
+    Else {
+        Write-Host "Didn't add $single_computer because it's offline." -foregroundcolor Red
+    }
+}

@@ -1,0 +1,11 @@
+List of functions that should probably run in new window
+
+install-application
+apply-dellcommandupdates
+clear-corruptprofiles
+install-veyonroom
+install-newteams
+remove-teamsclassic
+scan-forapporfilepath
+scan-office2021
+scan-softwareinventory
