@@ -132,40 +132,30 @@ ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.
 }
 
 
-
+## JOB FUNCTIONS
 ## Create list of functions that should be run as background jobs
 $jobfunctions = $config_file.jobfunctions
 
 Write-Host "Creating filesystem watcher for $env:PSMENU_DIR\completedjobs directory."
 Write-Host "Job functions include: $($jobfunctions -join ', ')" -Foregroundcolor Yellow
 
-
-$filesystem_watcher_scriptblock = {
-    param(
-        [string]$watchedpath
-    )
-    ## Configure filesystem watcher for completedjobs directory:
-    $watcher = New-Object System.IO.FileSystemWatcher
-    $watcher.Path = "$watchedpath"
-    # $watcher.Filter = "*.txt"
-    $watcher.EnableRaisingEvents = $true
-
-    # watcher action
-    $action = {
-        $path = $Event.SourceEventArgs.FullPath
-        $name = $Event.SourceEventArgs.Name
-        $changeType = $Event.SourceEventArgs.ChangeType
-        $timeStamp = $Event.TimeGenerated
-        Write-Host "File $name $changeType at $timeStamp"
-        # $watcher.EnableRaisingEvents = $false
-        # $watcher.Dispose()
-        # $watcher = $null
-        Invoke-Item "$path"
-    }
-
-    Register-ObjectEvent $watcher 'Created' -Action $action
+## start ./utils/watcher.ps1 in new powershell window, and pass it the $(pwd)/completedjobs path as oparameter
+$watcher_ps1 = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.ps1" -File -ErrorAction SilentlyContinue
+#$watcher_exe = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.exe" -File -ErrorAction SilentlyContinue
+if (-not $watcher_ps1) {
+    Write-Host "Couldn't find watcher.ps1 in $env:MENU_UTILS, exiting." -foregroundcolor red
+    exit
 }
-Start Powershell.exe -Command $filesystem_watcher_scriptblock -Args $("$env:PSMENU_DIR\completedjobs") -Windowstyle Hidden
+
+## Assign the path that will be watched (when job functions complete, they create .txt files with info in th is directory)
+## * Note - make these json.
+$watchedpath = "$(pwd)\completedjobs"
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command . $($watcher_ps1.FullName) $watchedpath" -WindowStyle Hidden
+# start watcher exe process in new window
+#Start-Process "$($watcher_exe.FullName)" $watchedpath
+
+
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
 Read-Host "Thank you! Press enter to continue."
@@ -288,6 +278,7 @@ while ($exit_program -eq $false) {
         }
         ## JOBS:
         if ($command -in $jobfunctions) {
+            Read-Host "its in job functions"
             if ($target_computers) {
                 $splat.Add('TargetComputer', $target_computers)
             }
