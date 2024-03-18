@@ -139,27 +139,33 @@ $jobfunctions = $config_file.jobfunctions
 Write-Host "Creating filesystem watcher for $env:PSMENU_DIR\completedjobs directory."
 Write-Host "Job functions include: $($jobfunctions -join ', ')" -Foregroundcolor Yellow
 
-## Configure filesystem watcher for completedjobs directory:
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = "$env:PSMENU_DIR\completedjobs"
-# $watcher.Filter = "*.txt"
-$watcher.EnableRaisingEvents = $true
 
-# watcher action
-$action = {
-    $path = $Event.SourceEventArgs.FullPath
-    $name = $Event.SourceEventArgs.Name
-    $changeType = $Event.SourceEventArgs.ChangeType
-    $timeStamp = $Event.TimeGenerated
-    Write-Host "File $name $changeType at $timeStamp"
-    # $watcher.EnableRaisingEvents = $false
-    # $watcher.Dispose()
-    # $watcher = $null
-    Invoke-Item "$path"
+$filesystem_watcher_scriptblock = {
+    param(
+        [string]$watchedpath
+    )
+    ## Configure filesystem watcher for completedjobs directory:
+    $watcher = New-Object System.IO.FileSystemWatcher
+    $watcher.Path = "$watchedpath"
+    # $watcher.Filter = "*.txt"
+    $watcher.EnableRaisingEvents = $true
+
+    # watcher action
+    $action = {
+        $path = $Event.SourceEventArgs.FullPath
+        $name = $Event.SourceEventArgs.Name
+        $changeType = $Event.SourceEventArgs.ChangeType
+        $timeStamp = $Event.TimeGenerated
+        Write-Host "File $name $changeType at $timeStamp"
+        # $watcher.EnableRaisingEvents = $false
+        # $watcher.Dispose()
+        # $watcher = $null
+        Invoke-Item "$path"
+    }
+
+    Register-ObjectEvent $watcher 'Created' -Action $action
 }
-
-Register-ObjectEvent $watcher 'Created' -Action $action
-
+Start Powershell.exe -Command $filesystem_watcher_scriptblock -Args $("$env:PSMENU_DIR\completedjobs") -Windowstyle Hidden
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
 Read-Host "Thank you! Press enter to continue."
