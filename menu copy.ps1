@@ -277,52 +277,26 @@ while ($exit_program -eq $false) {
 
         }
         ## JOBS:
-        # if ($command -in $jobfunctions) {
-        #     Read-Host "its in job functions"
-        #     # if ($target_computers) {
-        #     #     $splat.Add('TargetComputer', $target_computers)
-        #     # }## use $using:command to access command inside scriptblock
-        #     $stringsplat = $splat.getenumerator() | ForEach-Object { "-$($_.Name) $($_.Value)" }
-
-        #     ## Targetcomputer param and value
-
-
-
-        #     ## get absolute path to function.ps1 file in functions dir
-        #     $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
-        #     $job = Start-Job -ScriptBlock { . "$using:functionpath"; ($using:target_computers) | & $using:command $using:stringsplat }
-        #     Write-Host "Job started with ID: $($job.id)"
-        #     # continue
-        # }
-        # else {
-        # execute the command using parameter names, and their accompanying values
-        # If targetcomputers was set - use it
-        ## We could ALSO try PIPING Target computers into the cmdlets that allow it
-
-        if ($target_computers) { 
-
-            $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
-            start-job -scriptblock {
-                Set-Location $args[0];
-                ## Uncomment for testing
-                # pwd | out-file 'test.txt';
-                # $args[0] | out-file 'test.txt' -append;
-                # $args[1] | out-file 'test.txt' -append;
-                # $args[2] | out-file 'test.txt' -append;
-                # $args[3] | out-file 'test.txt' -append;
-                # $args[4] | out-file 'test.txt' -append;
-                # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
-                . "$($args[1])";
-                $innersplat = $args[4];
-                $args[2] |  & ($args[3]) @innersplat;
-            } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
-            ## start the job - pip target computers into the command splat
-
+        if ($command -in $jobfunctions) {
+            Read-Host "its in job functions"
+            if ($target_computers) {
+                $splat.Add('TargetComputer', $target_computers)
+            }
+            $job = Start-Job -ScriptBlock { param($command, $splat) & $command @splat } -ArgumentList $command, $splat
+            Write-Host "Job started with ID: $($job.id)"
+            # continue
         }
         else {
-            & $command @splat
+            # execute the command using parameter names, and their accompanying values
+            # If targetcomputers was set - use it
+            ## We could ALSO try PIPING Target computers into the cmdlets that allow it
+            if ($target_computers) { 
+                $target_computers | & $command @splat
+            }
+            else {
+                & $command @splat
+            }
         }
-        # }
         # Reset Target_computers to null so it is ready for next loop
         $target_computers = $null
     }
