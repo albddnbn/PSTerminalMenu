@@ -139,10 +139,32 @@ function Send-Files {
     }
     ## 1. Write an ending message to terminal.
     END {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: File transfer(s) complete." -foregroundcolor green  
-        Write-Host "If you'd like to check for file/folder's existence on computers, use: " -NoNewline
-        Write-Host "Filesystem operations -> Scan-ForApporFilepath" -Foregroundcolor Yellow
-
-        Read-Host "`nPress [ENTER] to continue."
+        ## announcement file for when function is run as background job
+        if (-not $env:PSMENU_DIR) {
+            $env:PSMENU_DIR = pwd
+        }
+        ## create simple output path to reports directory
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        $DIRECTORY_NAME = 'SendFiles'
+        $OUTPUT_FILENAME = 'SendFiles'
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
+        }
+        
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+        
+        
+        ## Append text to file here:
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: File transfer(s) complete for $sourcepath to $destinationpath on:" | Out-File -FilePath $output_filepath -Append
+        $TargetComputer | Out-File -FilePath $output_filepath -Append
+        "`nThe Scan-ForApporFilepath function can be used to verify file/folders' existence on target computers." | Out-File -FilePath $output_filepath -Append -Force
+        
+        ## then open the file:
+        Invoke-Item "$output_filepath"
+        
+        # read-host "`nPress [ENTER] to continue."
     }
 }

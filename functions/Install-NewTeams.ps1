@@ -14,6 +14,11 @@ Function Install-NewTeams {
         First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
+    .PARAMETER skip_occupied_computers
+        This script KILLS ANY RUNNING TEAMS PROCESSES.
+        'y' will skip computers that have users logged in, 'n' will not skip them.
+        Default is 'y'.
+
     .EXAMPLE
         Install new teams client and provision for future users - all AD computers with hostnames starting with pc-a227-
         Install-NewTeams -TargetComputer "pc-a227-"
@@ -34,7 +39,8 @@ Function Install-NewTeams {
             ValueFromPipeline = $true,
             Position = 0
         )]
-        [String[]]$TargetComputer
+        [String[]]$TargetComputer,
+        [string]$skip_occupied_computers = 'y'
     )
     BEGIN {
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
@@ -98,7 +104,7 @@ Function Install-NewTeams {
         }
 
         
-        $skip_occupied_computers = Read-Host "Install of Teams will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
+        # $skip_occupied_computers = Read-Host "Install of Teams will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
         # get newteams folder from irregular applications
         $NewTeamsFolder = Get-ChildItem -Path "$env:PSMENU_DIR\deploy\irregular" -Filter 'NewTeams' -Directory -ErrorAction SilentlyContinue
         if (-not $NewTeamsFolder) {
@@ -194,12 +200,30 @@ Function Install-NewTeams {
     ## 1. Output the missed computers list to a text file in reports dir / new teams
     ## 2. Function complete - read-host to allow pause for debugging errors/etc
     END {
-        ## 1.
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Creating list of missed/skipped computers at: $env:PSMENU_DIR\reports\$thedate\NewTeams\missed-pcs-$(Get-Date -format 'yyyy-MM-dd-hh-mm-ss').txt" -foregroundcolor green
-        $missed_computers | Out-File "$env:PSMENU_DIR\reports\$thedate\NewTeams\missed-pcs-$(Get-Date -format 'yyyy-MM-dd-hh-mm-ss').txt"
-        ## 2.
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Installation of Teams complete on $($TargetComputer -join ', ')" -foregroundcolor green
+        if (-not $env:PSMENU_DIR) {
+            $env:PSMENU_DIR = pwd
+        }
+        $DIRECTORY_NAME = 'NewTeams'
+        $OUTPUT_FILENAME = 'newteamsresults'
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
+        }
         
-        Read-Host "Press enter to continue."
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: New Teams not installed on these computers." | Out-File -Append -FilePath $output_filepath
+        $missed_computers | Out-File -Append -FilePath $output_filepath
+
+        "`n" | Out-File -Append -FilePath $output_filepath
+
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Complete list of target computers below." | Out-File -Append -FilePath $output_filepath
+        $TargetComputer | Out-File -Append -FilePath $output_filepath
+
+        Invoke-Item $output_filepath
+        
+        # read-host "Press enter to continue."
     }
 }

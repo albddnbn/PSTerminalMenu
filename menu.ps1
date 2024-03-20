@@ -134,27 +134,9 @@ ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.
 
 ## JOB FUNCTIONS
 ## Create list of functions that should be run as background jobs
-$jobfunctions = $config_file.jobfunctions
+$notjobfunctions = $config_file.notjobfunctions
 
-Write-Host "Creating filesystem watcher for $env:PSMENU_DIR\completedjobs directory."
-Write-Host "Job functions include: $($jobfunctions -join ', ')" -Foregroundcolor Yellow
-
-## start ./utils/watcher.ps1 in new powershell window, and pass it the $(pwd)/completedjobs path as oparameter
-$watcher_ps1 = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.ps1" -File -ErrorAction SilentlyContinue
-#$watcher_exe = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.exe" -File -ErrorAction SilentlyContinue
-if (-not $watcher_ps1) {
-    Write-Host "Couldn't find watcher.ps1 in $env:MENU_UTILS, exiting." -foregroundcolor red
-    exit
-}
-
-## Assign the path that will be watched (when job functions complete, they create .txt files with info in th is directory)
-## * Note - make these json.
-$watchedpath = "$(pwd)\completedjobs"
-
-Start-Process powershell -ArgumentList "-NoExit", "-Command . $($watcher_ps1.FullName) $watchedpath" -WindowStyle Hidden
-# start watcher exe process in new window
-#Start-Process "$($watcher_exe.FullName)" $watchedpath
-
+Write-Host "Job functions include: $($notjobfunctions -join ', ')" -Foregroundcolor Yellow
 
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
@@ -301,22 +283,28 @@ while ($exit_program -eq $false) {
 
         if ($target_computers) { 
 
-            $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
-            start-job -scriptblock {
-                Set-Location $args[0];
-                ## Uncomment for testing
-                # pwd | out-file 'test.txt';
-                # $args[0] | out-file 'test.txt' -append;
-                # $args[1] | out-file 'test.txt' -append;
-                # $args[2] | out-file 'test.txt' -append;
-                # $args[3] | out-file 'test.txt' -append;
-                # $args[4] | out-file 'test.txt' -append;
-                # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
-                . "$($args[1])";
-                $innersplat = $args[4];
-                $args[2] |  & ($args[3]) @innersplat;
-            } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
-            ## start the job - pip target computers into the command splat
+            if ($function_selection -in $notjobfunctions) {
+                $target_computers | & $command @splat
+            }
+            else {
+
+                ## ***** Could I just pass $command into the job??
+                $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
+                start-job -scriptblock {
+                    Set-Location $args[0];
+                    ## Uncomment for testing
+                    # pwd | out-file 'test.txt';
+                    # $args[0] | out-file 'test.txt' -append;
+                    # $args[1] | out-file 'test.txt' -append;
+                    # $args[2] | out-file 'test.txt' -append;
+                    # $args[3] | out-file 'test.txt' -append;
+                    # $args[4] | out-file 'test.txt' -append;
+                    # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
+                    . "$($args[1])";
+                    $innersplat = $args[4];
+                    $args[2] |  & ($args[3]) @innersplat;
+                } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
+            }
 
         }
         else {

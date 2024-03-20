@@ -147,8 +147,29 @@ function Install-SMARTNotebookSoftware {
     }
 
     END {
-        Write-Host ""
-        Write-Host "Finished SMART Learning Suite installation(s)."
-        Read-Host "Press enter to continue."
+
+        ## create file to announce completion for when being run as background job
+        if (-not $env:PSMENU_DIR) {
+            $env:PSMENU_DIR = pwd
+        }
+        ## create simple output path to reports directory
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        $DIRECTORY_NAME = 'SMARTNotebook'
+        $OUTPUT_FILENAME = 'SMARTInstall'
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
+        }
+        
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished SMART Learning Suite installation(s)." | Out-File -FilePath $output_filepath -Append
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Installation method: $InstallationTypeReply" | Out-File -FilePath $output_filepath -Append
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Target computer(s):" | Out-File -FilePath $output_filepath -Append
+        $TargetComputer | Out-File -FilePath $output_filepath -Append
+        
+        # Read-Host "Press enter to continue."
     }
 }

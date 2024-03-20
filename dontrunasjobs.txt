@@ -1,0 +1,10 @@
+These functions won't be able to run as background jobs (as is) since they have to take user input.
+
+Copy-cannedResponse
+New-cannedResponse
+Copy-SnippetToClipboard
+Scan-Inventory
+Install-Application (Install-ApplicationJob should be OK)
+Install-VeyonRoom
+New-DriveMappingExe
+Send-Reboots

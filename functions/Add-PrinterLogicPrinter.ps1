@@ -187,7 +187,7 @@ function Add-PrinterLogicPrinter {
         Write-Host ""
         $missed_computers
         Write-Host ""
-        Read-Host "Press enter to return results."
+        # read-host "Press enter to return results."
 
         ## 3. return results arraylist
         return $results

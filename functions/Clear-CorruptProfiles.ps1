@@ -79,7 +79,7 @@ function Clear-CorruptProfiles {
             $whatif_setting = $true
             Write-Host "Deletions DISABLED - script won't delete files/folders on target computers." -Foregroundcolor Green
         }
-        Read-Host "Press enter to acknowledge perform_deletions value."
+        # read-host "Press enter to acknowledge perform_deletions value."
 
         ## 4. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
@@ -238,7 +238,7 @@ function Clear-CorruptProfiles {
 
         ## This is included for menu purposes, so there's a pause before the function ends and terminal window reverts
         ## to opening menu options.
-        Read-Host "Press enter to return results."
+        # read-host "Press enter to return results."
         return $results
     }
 }

@@ -203,7 +203,7 @@ function Get-USBDevices {
                 # else {
                 #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
                 #     $computers_results |  format-table -autosize
-                #     Read-Host "Press enter to show next computer's results"
+                #     # read-host "Press enter to show next computer's results"
                 # }
             }
             ## 4.
@@ -222,7 +222,7 @@ function Get-USBDevices {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "Press enter to return results."
+        # read-host "Press enter to return results."
         return $results    
     }
 }

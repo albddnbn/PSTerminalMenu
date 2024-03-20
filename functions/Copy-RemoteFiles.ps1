@@ -141,6 +141,6 @@ function Copy-RemoteFiles {
         if (Test-Path "$Outputpath" -erroraction SilentlyContinue) {
             Invoke-item "$Outputpath"
         }
-        Read-Host "Press enter to continue."
+        # read-host "Press enter to continue."
     }
 }

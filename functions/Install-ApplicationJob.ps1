@@ -253,6 +253,18 @@ function Install-ApplicationJob {
     ## 1. Open the folder that will contain reports if necessary.
     END {
 
+        ## create simple output path to reports directory
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\installs" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\installs" -ItemType Directory -Force | Out-Null
+        }
+
+
+        $output_filepath = "$env:PSMENU_DIR\reports\$thedate\installs\InstallApps-$(Get-Date -Format 'yyyy-MM-dd').txt"
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\installs\InstallApps-$(Get-Date -Format 'yyyy-MM-dd-HH-mm')-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+
         if ($unresponsive_computers) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unresponsive computers:" -Foregroundcolor Yellow
             $unresponsive_computers | Sort-Object
@@ -269,7 +281,9 @@ function Install-ApplicationJob {
         $Announcement += $unresponsive_computers | Sort-Object
         $Announcement += "`nSkipped Applications"
         $Announcement += $skipped_applications | Sort-Object
-        $Announcement | Out-File "$env:PSMENU_DIR\completedjobs\Install-Application-$($AppName -replace ',','')-$(Get-Date -Format 'yyyy-MM-dd').txt" -Append
+        $Announcement | Out-File "$output_filepath" -Append
+        ## open the file to let user know that function (as background job) has completed.
+        Invoke-Item "$output_filepath"
     }
     
 }

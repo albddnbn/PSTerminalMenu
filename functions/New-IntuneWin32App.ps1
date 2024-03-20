@@ -25,8 +25,11 @@ function New-IntuneWin32App {
         Project Site: https://github.com/albddnbn/PSTerminalMenu
     #>
     param(
+        [Parameter(Mandatory = $true)]
         [string]$Scriptfolder,
+        [Parameter(Mandatory = $true)]
         [string]$InstallationFile,
+        [Parameter(Mandatory = $true)]
         [string]$OutputFolder
     )
 
@@ -53,18 +56,6 @@ function New-IntuneWin32App {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($Intunewinapputil_exe.fullname) in $env:PSMENU_DIR."
     }
 
-    if (-not $ScriptFolder) {
-        $ScriptFolder = Read-Host "Please enter absolute path to PSADT Folder you'd like to turn into an .intunewin package"
-    }
-
-    if (-not $Installationfile) {
-        $Installationfile = Read-Host "Please enter absolute path to PSADT Installation Script you'd like to turn into an .intunewin package"
-    }
-
-    if (-not $OutputFolder) {
-        $OutputFolder = Read-Host "Please enter absolute path to the folder where you'd like to create the .intunewin package"
-    }
-
     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Creating .intunewin package from " -NoNewLine
     Write-Host "$ScriptFolder" -Foregroundcolor Green -NoNewline
     Write-Host ", using " -NoNewLine
@@ -80,5 +71,5 @@ function New-IntuneWin32App {
 
     Write-Host "If the package follows traditional PSADT format, the execution line should be:"
     Write-Host "powershell.exe -ExecutionPolicy Bypass .\$($InstallationFile | Split-Path -Leaf) -DeploymentType 'Install' -DeployMode 'Silent'" -Foregroundcolor Yellow
-    Read-Host "This is an experimental function, press ENTER to continue after screenshotting any error messages, please!"
+    # Read-Host "This is an experimental function, press ENTER to continue after screenshotting any error messages, please!"
 }

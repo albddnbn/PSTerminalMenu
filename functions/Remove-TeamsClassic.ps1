@@ -29,7 +29,8 @@ Function Remove-TeamsClassic {
             ValueFromPipeline = $true,
             Position = 0
         )]
-        [String[]]$TargetComputer
+        [String[]]$TargetComputer,
+        [string]$do_not_disturb_users = 'y'
     )
     ## 1. Handling of TargetComputer input
     ## 2. ask to skip occupied computers
@@ -96,7 +97,7 @@ Function Remove-TeamsClassic {
         }
 
         ## 2. Ask to skip occupied computers
-        $do_not_disturb_users = Read-Host "Removal of Teams Classic will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
+        # $do_not_disturb_users = Read-Host "Removal of Teams Classic will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
     
         try {
             $do_not_disturb_users = $do_not_disturb_users.ToLower()
@@ -143,7 +144,28 @@ Function Remove-TeamsClassic {
 
     ## Function completion msg
     END {
-        Write-Host "Finished removing Microsoft Teams 'Classic' from $($Targetcomputer -join ', ').`n"
-        Read-Host "Press enter to continue."
+
+        ## create file to announce completion, for when function is run as background job
+        if (-not $env:PSMENU_DIR) {
+            $env:PSMENU_DIR = pwd
+        }
+        ## create simple output path to reports directory
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        $DIRECTORY_NAME = 'TeamsRemoval'
+        $OUTPUT_FILENAME = 'TeamsRemoval'
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
+        }
+        
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+
+
+
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished removing Microsoft Teams 'Classic' from these computers." | Out-File -FilePath $output_filepath -Append
+        $TargetComputer | Out-File -FilePath $output_filepath -Append
+        # Read-Host "Press enter to continue."
     }
 }

@@ -241,7 +241,7 @@ function Scan-ForSophosEndpointSelfHelp {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "`nPress [ENTER] to return results."
+        # Read-Host "`nPress [ENTER] to return results."
         return $results
     }
 }

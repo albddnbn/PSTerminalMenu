@@ -69,8 +69,15 @@
         ],
         "search": []
     },
-    "jobfunctions": [
-        "Install-ApplicationJob",
-        "Scan-SoftwareInventoryJob"
+    "notjobfunctions": [
+        "Copy-CannedResponse",
+        "New-CannedResponse",
+        "Copy-SnippetToClipboard",
+        "Scan-Inventory",
+        "Install-Application",
+        "Install-VeyonRoom",
+        "New-DriveMappingExe",
+        "Send-Reboots",
+        "Apply-DellCommandUpdates"
     ]
 }

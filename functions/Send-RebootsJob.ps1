@@ -1,11 +1,11 @@
-function Stop-WifiAdapters {
+function Send-RebootsJob {
     <#
     .SYNOPSIS
-        Attempts to turn off (and disable if 'y' entered for 'DisableWifiAdapter') Wi-Fi adapter of target device(s).
-        Having an active Wi-Fi adapter/connection when the Ethernet adapter is also active can cause issues.
+        DIFFERENCE FROM SEND-REBOOTS - this function does not have any Read-Host 's to prompt/confirm details.
+        Reboots the target computer(s) either with/without a message displayed to logged in users.
 
     .DESCRIPTION
-        Function needs work - 1/13/2024.
+        If a reboot msg isn't provided, no reboot msg/warning will be shown to logged in users.
 
     .PARAMETER TargetComputer
         Target computer or computers of the function.
@@ -13,17 +13,8 @@ function Stop-WifiAdapters {
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
         First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
 
-    .PARAMETER DisableWifiAdapter
-        Optional parameter to disable the Wi-Fi adapter. If not specified, the function will only turn off wifi adapter.
-        'y' or 'Y' will disable target Wi-Fi adapters.
-
     .EXAMPLE
-        Stop-WifiAdapters -TargetComputer s-tc136-02 -DisableWifiAdapter y
-        Turns off and disables Wi-Fi adapter on single computer/hostname s-tc136-02.
-
-    .EXAMPLE
-        Stop-WifiAdapters -TargetComputer t-client- -DisableWifiAdapter n
-        Turns off Wi-Fi adapters on computers w/hostnames starting with t-client-, without disabling them.
+        Send-Reboot -TargetComputer "t-client-" -RebootMessage "This computer will reboot in 5 minutes." -RebootTimeInSeconds 300
 
     .NOTES
         ---
@@ -38,11 +29,21 @@ function Stop-WifiAdapters {
             Position = 0
         )]
         [String[]]$TargetComputer,
-        [string]$DisableWifiAdapter = 'n'
+        [Parameter(Mandatory = $false)]
+        [string]$RebootMessage,
+        # the time before reboot in seconds, 3600 = 1hr, 300 = 5min
+        [Parameter(Mandatory = $false)]
+        [string]$RebootTimeInSeconds = 300
     )
-    ## 1. Handling of TargetComputer input
-    ## 2. Define Turn off / disable wifi adapter scriptblock that gets run on each target computer
+    ## 1. Confirm time before reboot w/user
+    ## 2. Handling of TargetComputer input
+    ## 3. typecast reboot time to double to be sure
+    ## 4. container for offline computers
     BEGIN {
+        ## 1. Confirmation
+        # $reply = Read-Host "Sending reboot in $RebootTimeInSeconds seconds, or $([double]$RebootTimeInSeconds / 60) minutes, OK? (y/n)"
+        # if ($reply.ToLower() -eq 'y') {
+    
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
@@ -102,52 +103,46 @@ function Stop-WifiAdapters {
                 return
             }
         }
+        # }
+        ## 3. typecast to double
+        $RebootTimeInSeconds = [double]$RebootTimeInSeconds
 
-        $DisableWifiAdapter = $DisableWifiAdapter.ToLower()
-        ## 2. Turn off / disable wifi adapter scriptblock
-        $turnoff_wifi_adapter_scriptblock = {
-            param(
-                $DisableWifi
-            )
-            $EthStatus = (Get-Netadapter | where-object { $_.Name -eq 'Ethernet' }).status
-            if ($ethstatus -eq 'Up') {
-                Write-Host "[$env:COMPUTERNAME] :: Eth is up, turning off Wi-Fi..." -foregroundcolor green
-                Set-NetAdapterAdvancedProperty -Name "Wi-Fi" -AllProperties -RegistryKeyword "SoftwareRadioOff" -RegistryValue "1"
-                # should these be uncommented?
-                if ($DisableWifi -eq 'y') {
-                    Disable-NetAdapterPowerManagement -Name "Wi-Fi"
-                    Disable-NetAdapter -Name "Wi-Fi" -Force
-                }            
-            }
-            else {
-                Write-Host "[$env:COMPUTERNAME] :: Eth is down, leaving Wi-Fi alone..." -foregroundcolor red
-            }
-        }
-    } 
-    
-    ## Test connection to target machine(s) and then run scriptblock to disable wifi adapter if ethernet adapter is active
+        ## 4. container for offline computers
+        $offline_computers = [system.collections.arraylist]::new()
+
+    }
+    ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
+    ## 2. Ping the single target computer one time as test before attempting remote session and/or reboot.
+    ## 3. Send reboot either with or without message
+    ## 4. If machine was offline - add it to list to output at end.
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
 
-            ## empty Targetcomputer values will cause errors to display during test-connection / rest of code
+            ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
-                ## Ping test
+                ## 2. Ping test
                 $ping_result = Test-Connection $single_computer -count 1 -Quiet
                 if ($ping_result) {
-                    if ($single_computer -eq '127.0.0.1') {
-                        $single_computer = $env:COMPUTERNAME
+                    if ($RebootMessage) {
+                        Invoke-Command -ComputerName $single_computer -ScriptBlock {
+                            shutdown  /r /t $using:reboottime /c "$using:RebootMessage"
+                        }
+                        $reboot_method = "Reboot w/popup msg"
                     }
-        
-                    Invoke-Command -ComputerName $single_computer -Scriptblock $turnoff_wifi_adapter_scriptblock -ArgumentList $DisableWifiAdapter
+                    else {
+                        Restart-Computer $single_computer
+                        $reboot_method = "Reboot using Restart-Computer (no Force)" # 2-28-2024
+                    }
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot sent to $single_computer using $reboot_method." -ForegroundColor Green
                 }
                 else {
-                    Write-Host "[$env:COMPUTERNAME] :: $single_computer is offline, skipping." -Foregroundcolor Yellow
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                    $offline_computers.add($single_computer) | Out-Null
                 }
             }
         }
     }
-
-    ## Pause before continuing back to terminal menu
+    ## Output offline computers to terminal, and to file if requested
     END {
 
         if (-not $env:PSMENU_DIR) {
@@ -155,8 +150,8 @@ function Stop-WifiAdapters {
         }
         ## create simple output path to reports directory
         $thedate = Get-Date -Format 'yyyy-MM-dd'
-        $DIRECTORY_NAME = 'StopWifi'
-        $OUTPUT_FILENAME = 'StopWifi'
+        $DIRECTORY_NAME = 'SentReboots'
+        $OUTPUT_FILENAME = 'SentReboots'
         if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
             New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
         }
@@ -166,12 +161,16 @@ function Stop-WifiAdapters {
             $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
         } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
 
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: These computers were already offline." | Out-File -FilePath $output_filepath -Append
+        $missed_computers | Out-File -FilePath $output_filepath -Append
 
-        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Stop-WifiAdapters function executed on computers listed below." | Out-File -FilePath $output_filepath -Append -Force
-        $TargetComputer | Out-File -FilePath $output_filepath -Append -Force
-        
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboots sent to computers listed below." | Out-File -FilePath $output_filepath -Append
+        $TargetComputer | Out-File -FilePath $output_filepath -Append
+
         Invoke-Item "$output_filepath"
 
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Reboot(s) sent."
         # Read-Host "`nPress [ENTER] to continue."
     }
 }
+

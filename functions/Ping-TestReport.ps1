@@ -254,7 +254,7 @@ function Ping-TestReport {
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
-        Read-Host "`nPress [ENTER] to return results."
+        # read-host "`nPress [ENTER] to return results."
         return $results
     }
 }

@@ -238,6 +238,6 @@ Function Get-IntuneHardwareIDs {
             Invoke-item "$outputfile"
         }
 
-        Read-Host "Press enter to return to menu."
+        # read-host "Press enter to return to menu."
     }
 }

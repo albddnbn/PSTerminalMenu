@@ -253,7 +253,7 @@ function Scan-SoftwareInventory {
                 Invoke-item "$outputfile-$($unique_hostnames | select -first 1).csv"
             }
         }
-        Read-Host "`nPress [ENTER] to return results."
+        # read-host "`nPress [ENTER] to return results."
         return $results
     }
 }
