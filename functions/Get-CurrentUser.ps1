@@ -201,6 +201,9 @@ function Get-CurrentUser {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
                 ## Try ImportExcel
                 try {
+
+                    Import-Module ImportExcel
+
                     $params = @{
                         AutoSize             = $true
                         TitleBackgroundColor = 'Blue'

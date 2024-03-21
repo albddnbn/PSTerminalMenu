@@ -27,7 +27,7 @@ function Read-HostNoColon {
     return $Host.UI.ReadLine()
 }
 
-Try { Set-ExecutionPolicy -ExecutionPolicy 'ByPass' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
+Try { Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
 
 
 ########################################################################################################
@@ -253,6 +253,16 @@ while ($exit_program -eq $false) {
                 }
                 # Read-HostNoColon is just Read-Host without the colon at the end, so that an = can be used.
                 $value = Read-HostNoColon -Prompt "$parameter = "
+
+                ## TESTING: If dealing with OUtputfile parameter, a job function, and output file is NOT 'n', then need to attach the current working directory to it, so report files aren't output to current directory.
+                if ($parameter.ToLower() -eq 'outputfile') {
+                    if ($function_selection -notin $notjobfunctions) {
+                        if ($($value.tolower()) -ne 'n') {
+                            $value = "$env:PSMENU_DIR\reports\$thedate\$value"
+                        }
+                    }
+                }
+
                 # adds whatever value user input to the hashtable containing parameter names and values.
                 $splat.Add($parameter, $value)
             }

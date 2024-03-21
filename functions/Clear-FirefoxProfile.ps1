@@ -81,5 +81,5 @@ function Clear-FirefoxProfile {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to remove profiles.ini from $TargetPC, or it wasn't there for $Username." -ForegroundColor Red
     }
 
-    Read-Host "Press enter to continue."
+    # read-host "Press enter to continue."
 }

@@ -228,6 +228,9 @@ function Get-AssetInformation {
                 $results | Export-Csv -Path "$outputfile.csv" -NoTypeInformation
                 ## Try ImportExcel
                 try {
+
+                    Import-Module ImportExcel
+
                     ## xlsx attempt:
                     $params = @{
                         AutoSize             = $true

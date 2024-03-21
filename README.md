@@ -25,7 +25,8 @@ This powershell menu was created to aid in the efficient access and execution of
 After cloning or downloading the repository to your computer, open an Admin powershell window and change directory to where the menu.ps1 file is located. Then run the following:
 
     ```
-    Set-ExecutionPolicy Bypass
+    ## Testing best way to deal with execution policy prompts
+    ## Set-ExecutionPolicy Unrestricted
     ./menu.ps1
     ```
 
@@ -125,7 +126,6 @@ This project was created by Alex B. in 2023.
 **Get-WindowsAutoPilotInfo.ps1**: https://github.com/Dattics/GetWindowsAutopilot
 
 ## License
-
 
 ---
 
