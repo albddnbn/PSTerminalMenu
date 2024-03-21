@@ -327,7 +327,42 @@ while ($exit_program -eq $false) {
 
         }
         else {
-            & $command @splat
+
+            ## ***** Could I just pass $command into the job??
+            $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
+            start-job -scriptblock {
+                Set-Location $args[0];
+
+                ## set environment variables:
+                $env:PSMENU_DIR = $args[0];
+                $env:MENU_UTILS = "$($args[0])\utils";
+                $env:LOCAL_SCRIPTS = "$($args[0])\localscripts";
+                $env:SUPPORTFILES_DIR = "$($args[0])\supportfiles";
+
+                ## dot source the utility functions, etc.
+                # . "$env:MENU_UTILS\terminal-menu-utils.ps1";
+                ## ./UTILS functions - Most importantly - Get-TargetComputers, Get-OutputFileString, general
+                ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
+                    . "$($utility_function.fullname)"
+                }
+                ## Uncomment for testing
+                # pwd | out-file 'test.txt';
+                # $args[0] | out-file 'test.txt' -append;
+                # $args[1] | out-file 'test.txt' -append;
+                # $args[2] | out-file 'test.txt' -append;
+                # $args[3] | out-file 'test.txt' -append;
+                # $args[4] | out-file 'test.txt' -append;
+                # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
+                . "$($args[1])";
+                $innersplat = $args[4];
+
+                ## This is one of the only differences between this code section, and the one using start-job and the $target_computers variable
+                & ($args[3]) @innersplat;
+            } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
+
+
+
+            # & $command @splat
         }
         # }
         # Reset Target_computers to null so it is ready for next loop
