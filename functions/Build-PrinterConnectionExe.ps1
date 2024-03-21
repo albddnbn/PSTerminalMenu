@@ -42,7 +42,7 @@ function Build-PrinterConnectionExe {
     }
 
     ## creates $exe_script variable depending on what kind of printer needs to be mapped
-    if ($PrinterType -like "*ps*") {
+    if ($PrinterType -notlike "*print*logic*") {
         $exe_script = @"
 `$printername = '\\$PrinterType\$PrinterName'
 try {
@@ -56,9 +56,9 @@ Start-Sleep -Seconds 5
 "@
 
         # create output filename for print server mapping:
-        $output_filename = "pserver-connect-$PrinterName"
+        $output_filename = "$PrinterType-connect-$PrinterName"
     }
-    elseif ($PrinterType -like "*logic*") {
+    else {
         # generate text for .ps1 file
         $exe_script = @"
 # 'get' the .exe
