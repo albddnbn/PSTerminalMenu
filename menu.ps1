@@ -302,6 +302,16 @@ while ($exit_program -eq $false) {
                 $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
                 start-job -scriptblock {
                     Set-Location $args[0];
+
+                    ## set environment variables:
+                    $env:PSMENU_DIR = $args[0];
+                    $env:MENU_UTILS = "$($args[0])\utils";
+                    $env:LOCAL_SCRIPTS = "$($args[0])\localscripts";
+                    $env:SUPPORTFILES_DIR = "$($args[0])\supportfiles";
+
+                    ## dot source the utility functions, etc.
+                    . "$env:MENU_UTILS\terminal-menu-utils.ps1";
+
                     ## Uncomment for testing
                     # pwd | out-file 'test.txt';
                     # $args[0] | out-file 'test.txt' -append;
