@@ -138,7 +138,7 @@ function Get-AssetInformation {
                     }
 
                     if (-not (Test-Path $($outputfile | split-path -parent) -ErrorAction SilentlyContinue)) {
-                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) -Force | Out-Null
                     }
                 }
             }

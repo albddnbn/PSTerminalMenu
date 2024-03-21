@@ -153,7 +153,7 @@ function Ping-TestReport {
                 try {
                     $outputdir = $outputfile | split-path -parent
                     if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
-                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) | Out-Null
+                        New-Item -ItemType Directory -Path $($outputfile | split-path -parent) -Force | Out-Null
                     }
                 }
                 catch {
