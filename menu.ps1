@@ -310,8 +310,11 @@ while ($exit_program -eq $false) {
                     $env:SUPPORTFILES_DIR = "$($args[0])\supportfiles";
 
                     ## dot source the utility functions, etc.
-                    . "$env:MENU_UTILS\terminal-menu-utils.ps1";
-
+                    # . "$env:MENU_UTILS\terminal-menu-utils.ps1";
+                    ## ./UTILS functions - Most importantly - Get-TargetComputers, Get-OutputFileString, general
+                    ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
+                        . "$($utility_function.fullname)"
+                    }
                     ## Uncomment for testing
                     # pwd | out-file 'test.txt';
                     # $args[0] | out-file 'test.txt' -append;
