@@ -36,7 +36,7 @@ function Copy-SnippetToClipboard {
 
     ## 2. Creates a list of filenames from the ./snippets directory that end in .txt (resulting filenames in list will
     ##    not include the .txt extension because of the BaseName property).
-    $snippet_options = Get-ChildItem -Path "$env:PSMENU_DIR\snippets" -Include *.txt | ForEach-Object { $_.BaseName }
+    $snippet_options = Get-ChildItem -Path "$env:PSMENU_DIR\snippets" -Include *.txt -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.BaseName }
     $snippet_choice = menu $snippet_options
 
     ## 3. Get the content of the chosen file and copy to clipboard

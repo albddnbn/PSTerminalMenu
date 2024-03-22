@@ -60,11 +60,17 @@ function Copy-CannedResponse {
     $variables = $chosen_response_content | Select-String -Pattern '\(\(.*\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
     ForEach ($single_variable in $variables) {
         $formatted_variable_name = $single_variable -split '=' | select -first 1
-        $formatted_variable_name = $formatted_variable_name.replace('(($', '')
-        
-        $variable_description = $single_variable -split '=' | select -last 1
-        $variable_description = $variable_description.replace('$))', '')
+        # $formatted_variable_name = $formatted_variable_name.replace('(($', '')
 
+        ForEach ($str_item in @('(($', '$))')) {
+            $formatted_variable_name = $formatted_variable_name.replace($str_item, '')
+        }
+
+
+        if ($single_variable -like "*=*") {
+            $variable_description = $single_variable -split '=' | select -last 1
+            $variable_description = $variable_description.replace('$))', '')
+        }
         Write-Host "Description: " -nonewline -foregroundcolor yellow
         Write-host "$variable_description"
         $variable_value = Read-Host "Enter value for $formatted_variable_name"
