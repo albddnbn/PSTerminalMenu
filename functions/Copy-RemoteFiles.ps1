@@ -37,12 +37,13 @@ function Copy-RemoteFiles {
         )]
         [String[]]$TargetComputer,
         [string]$TargetPath,
-        [string]$OutputPath
+        [string]$OutputFolder
     )
 
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
     ## 2. Make sure output folder path exists for remote files to be copied to.
     BEGIN {
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
@@ -103,11 +104,17 @@ function Copy-RemoteFiles {
             }
         }
 
-        ## 2. Make sure the outputpath folder exists (remote files are copied here):
-        if (-not(Test-Path "$Outputpath" -erroraction SilentlyContinue)) {
-            New-Item -ItemType Directory -Path "$Outputpath" -ErrorAction SilentlyContinue | out-null
+        ## If being run with terminal menu - use full output path
+        if ($env:PSMENU_DIR) {
+            $OutputFolder = "$env:PSMENU_DIR\output\$thedate\$OutputFolder"
         }
 
+        ## 2. Make sure the outputpath folder exists (remote files are copied here):
+
+        if (-not(Test-Path "$OutputFolder" -erroraction SilentlyContinue)) {
+            New-Item -ItemType Directory -Path "$OutputFolder" -ErrorAction SilentlyContinue | out-null
+        }
+        
     }
 
     ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
@@ -124,11 +131,14 @@ function Copy-RemoteFiles {
                 if ($pingreply) {
                     $target_session = New-PSSession $single_computer
                     try {
-                        Copy-Item -Path "$targetpath" -Destination "$outputpath\" -FromSession $target_session -Recurse
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($single_computer) to $outputpath  complete." -foregroundcolor green
+                        $target_filename = $targetpath | split-path -leaf
+
+
+                        Copy-Item -Path "$targetpath" -Destination "$OutputFolder\$single_computer-$target_filename" -FromSession $target_session -Recurse
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($single_computer) to $OutputFolder\$single_computer-$target_filename  complete." -foregroundcolor green
                     }
                     catch {
-                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $single_computer to $outputpath on local computer." -foregroundcolor red
+                        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $single_computer to $OutputFolder on local computer." -foregroundcolor red
                     }
                     ## 4. Bye pssession
                     Remove-PSSession $target_session
@@ -138,8 +148,8 @@ function Copy-RemoteFiles {
     }
     ## Open output folder, pause.
     END {
-        if (Test-Path "$Outputpath" -erroraction SilentlyContinue) {
-            Invoke-item "$Outputpath"
+        if (Test-Path "$OutputFolder" -erroraction SilentlyContinue) {
+            Invoke-item "$OutputFolder"
         }
         # read-host "Press enter to continue."
     }

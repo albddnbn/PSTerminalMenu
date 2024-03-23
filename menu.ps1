@@ -113,6 +113,18 @@ Write-Host "attempting to install dependencies" -NoNewline -ForegroundColor Yell
 Write-Host "."
 Install-NeededModules
 
+## Try to make sure the ps-menu module gets installed:
+if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
+    Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
+    if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+        Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+        Install-PackageProvider -Name NuGet -MinimumVersion -Force
+    }
+    Install-Module -Name PS-Menu -Force
+}
+Import-Module -Name PS-Menu -Force | Out-Null
+
+
 
 ## Dot Source ALL .PS1 Files in ./functions and ./experimental
 ## *IMPORTANT* --> if a .ps1 file is not structured into a function - the .ps1 code in file will be executed during 

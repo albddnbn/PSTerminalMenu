@@ -28,7 +28,7 @@ function Copy-SnippetToClipboard {
         Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
         if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
             Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
-            Install-PackageProvider -Name NuGet -MinimumVersion
+            Install-PackageProvider -Name NuGet -MinimumVersion -Force
         }
         Install-Module -Name PS-Menu -Force
     }

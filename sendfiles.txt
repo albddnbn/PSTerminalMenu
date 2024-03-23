@@ -119,11 +119,13 @@ function Send-Files {
     ## 4. Remove the pssession.
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
+            write-host "testing $single_computer" 
             ## 1. no empty Targetcomputer values past this point
             if ($single_computer) {
                 ## 2. Ping target machine one time
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
+                    write-host 'ping rely'
                     if (Test-Path "\\$single_computer\c$" -ErrorAction SilentlyContinue) {
 
                         $target_session = New-PSSession $single_computer
@@ -149,6 +151,7 @@ function Send-Files {
         if (-not $env:PSMENU_DIR) {
             $env:PSMENU_DIR = $(pwd)
         }
+        write-host 'finished'
         ## create simple output path to reports directory
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         $DIRECTORY_NAME = 'SendFiles'
