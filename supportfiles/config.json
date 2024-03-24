@@ -62,8 +62,7 @@
             "Test-ConnectivityQuick",
             "Copy-CannedResponse",
             "Convert-PNGtoICO"
-        ],
-        "search": []
+        ]
     },
     "notjobfunctions": [
         "Copy-CannedResponse",
@@ -75,6 +74,7 @@
         "New-DriveMappingExe",
         "Send-Reboots",
         "Apply-DellCommandUpdates",
-        "Format-SecondaryDrive"
+        "Format-SecondaryDrive",
+        "Open-RDP"
     ]
 }

@@ -1,3 +1,4 @@
+#Requires -Modules PS-Menu
 Function Format-SecondaryDrive {
     <#
     .SYNOPSIS

@@ -168,6 +168,9 @@ while ($exit_program -eq $false) {
     ## Add Help to options list
     $options.add('Help') | Out-Null
 
+    ## Add Search to options list
+    $options.add('Search') | Out-Null
+
     ## Allow the user to choose category - CORRESPONDS to categories listed in config.json
     $chosen_category = Menu $($options)
     #########
@@ -232,19 +235,9 @@ while ($exit_program -eq $false) {
     if ($command.Parameters.Count -gt 0) {
         # Getting detailed info on the command is what allows printing of parameter descriptions to terminal, above where user is being prompted for their values.
         $functionhelper = get-help $command -Detailed
-        # WRITE functions Description from the comment block / help to terminal at top, above where user will be prompted for parameter values:
-        $functions_synopsis = $functionhelper.synopsis
-        $functions_synopsis = $functions_synopsis -replace '@{Text=', ''
-        $functions_synopsis = $functions_synopsis -replace '}', ''
 
-
-        $function_description = $functionhelper.description
-        $function_description = $function_description -replace '@{Text=', ''
-        $function_description = $function_description -replace '}', ''
-        ## I think this might work too:
-        # $functions_synopsis = $functionhelper.synopsis.text
-        # $function_description = $functionhelper.description.text
-
+        $functions_synopsis = $functionhelper.synopsis.text
+        $function_description = $functionhelper.description.text
 
         Write-Host "$function_selection -> " -foregroundcolor Green
         Write-Host "Function description: " -nonewline -foregroundcolor yellow
@@ -269,13 +262,13 @@ while ($exit_program -eq $false) {
             if ($parameter -eq 'TargetComputer') {
                 Write-Host "Please input value for TargetComputer." -foregroundcolor yellow
                 Write-Host "Input can be:"
-                Write-Host "    1. Single hostname string, ex: 's-a227-01'"
-                Write-Host "    2. Comma-separated list of hostnames, ex: s-a227-01,s-a227-02"
+                Write-Host "    1. Single hostname string, ex: 's-client-01'"
+                Write-Host "    2. Comma-separated list of hostnames, ex: s-client-01,s-client-02"
                 Write-Host "    3. Path to text file containing one hostname per line, ex:" -NoNewline
                 Write-Host " 'D:\computers.txt'" -Foregroundcolor Yellow
                 Write-Host "    4. First section of a hostname to generate a list, ex: " -nonewline
-                Write-Host "s-a227-" -nonewline -foregroundcolor Yellow
-                Write-Host " will create a list of all hostnames that start with s-a227-."
+                Write-Host "s-client-" -nonewline -foregroundcolor Yellow
+                Write-Host " will create a list of all hostnames that start with s-client-."
                 $target_computers = read-host "Enter target computer value"
                 $target_computers = Get-Targets -TargetComputer $target_computers
                 #$target_computers = [String[]]$target_computers
@@ -283,12 +276,12 @@ while ($exit_program -eq $false) {
             else {
                 $current_parameter_info = $functionhelper.parameters.parameter | Where-Object { $_.name -eq $parameter }
                 # For each line in that text block (underneath .PARAMETER parameterName)
-                Write-Host "`n$parameter parameter description: " -NoNewLine -Foregroundcolor Yellow
+                Write-Host "`nParameter $parameter DESCRIPTION: `n" -NoNewLine -Foregroundcolor Yellow
                 ForEach ($textitem in $current_parameter_info.description) {
                     # Write each line to terminal.
                     $textitem.text
                 }
-
+                Write-Host "`n"
                 ## if its the install-application command and its the appname parameter:
                 if (($command -eq 'Install-Application') -and ($parameter -eq 'AppName')) {
                     ## get listing of deploy/applications folders
@@ -303,74 +296,19 @@ while ($exit_program -eq $false) {
             }
 
         }
-        ## JOBS:
-        # if ($command -in $jobfunctions) {
-        #     Read-Host "its in job functions"
-        #     # if ($target_computers) {
-        #     #     $splat.Add('TargetComputer', $target_computers)
-        #     # }## use $using:command to access command inside scriptblock
-        #     $stringsplat = $splat.getenumerator() | ForEach-Object { "-$($_.Name) $($_.Value)" }
 
-        #     ## Targetcomputer param and value
-
-
-
-        #     ## get absolute path to function.ps1 file in functions dir
-        #     $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
-        #     $job = Start-Job -ScriptBlock { . "$using:functionpath"; ($using:target_computers) | & $using:command $using:stringsplat }
-        #     Write-Host "Job started with ID: $($job.id)"
-        #     # continue
-        # }
-        # else {
-        # execute the command using parameter names, and their accompanying values
-        # If targetcomputers was set - use it
-        ## We could ALSO try PIPING Target computers into the cmdlets that allow it
-
-        if ($target_computers) { 
-
-            if ($function_selection -in $notjobfunctions) {
-                $target_computers | & $command @splat
-            }
-
-            ## check if 'n' was provided for outputfile parameter (if is one)
-            elseif ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n') {
-                $target_computers | & $command @splat
-            }
-            else {
-
-                ## ***** Could I just pass $command into the job??
-                $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
-                start-job -scriptblock {
-                    Set-Location $args[0];
-
-                    ## set environment variables:
-                    $env:PSMENU_DIR = $args[0];
-                    $env:MENU_UTILS = "$($args[0])\utils";
-                    $env:LOCAL_SCRIPTS = "$($args[0])\localscripts";
-                    $env:SUPPORTFILES_DIR = "$($args[0])\supportfiles";
-
-                    ## dot source the utility functions, etc.
-                    # . "$env:MENU_UTILS\terminal-menu-utils.ps1";
-                    ## ./UTILS functions - Most importantly - Get-TargetComputers, Get-OutputFileString, general
-                    ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
-                        . "$($utility_function.fullname)"
-                    }
-                    ## Uncomment for testing
-                    # pwd | out-file 'test.txt';
-                    # $args[0] | out-file 'test.txt' -append;
-                    # $args[1] | out-file 'test.txt' -append;
-                    # $args[2] | out-file 'test.txt' -append;
-                    # $args[3] | out-file 'test.txt' -append;
-                    # $args[4] | out-file 'test.txt' -append;
-                    # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
-                    . "$($args[1])";
-                    $innersplat = $args[4];
-                    $args[2] |  & ($args[3]) @innersplat;
-                } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
-            }
-
+        ## Check for any functions that need to be called by pipeline, if targetcomputers exists
+        if (($target_computers) -and (($function_selection -in $notjobfunctions) -or ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n'))) {
+            # if (($function_selection -in $notjobfunctions) -or ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n')) {
+            $target_computers | & $command @splat
+            # }
         }
-        else {
+        ## If Target computers wasn't provided, and the function is not a job function
+        elseif ((-not $target_computers) -and ($function_selection -in $notjobfunctions)) {
+            & $command @splat
+        }
+        ## else if $splat isn't empty (parameters exist / values were supplied)
+        elseif ($splat) {
 
             ## ***** Could I just pass $command into the job??
             $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
@@ -400,34 +338,37 @@ while ($exit_program -eq $false) {
                 . "$($args[1])";
                 $innersplat = $args[4];
 
-                ## This is one of the only differences between this code section, and the one using start-job and the $target_computers variable
-                & ($args[3]) @innersplat;
+
+                ## If Targetcomputers was supplied ($args[2]) use pipeline
+                if ($args[2]) {
+                    $args[2] |  & ($args[3]) @innersplat;
+                }
+                else {
+                    & ($args[3]) @innersplat;
+ 
+                }
             } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
-
-
-
-            # & $command @splat
+            
+            # Reset Target_computers to null so it is ready for next loop
+            $target_computers = $null
         }
-        # }
-        # Reset Target_computers to null so it is ready for next loop
-        $target_computers = $null
-    }
-    else {
-        # execute the command without parameters if it doesn't have any.
-        & $command
-    }
-    ## USER can press x to exit, or enter to return to main menu (category selection)
-    Write-Host "`nPress " -NoNewLine
-    Write-Host "'x'" -ForegroundColor Red -NoNewline
-    Write-Host " to exit, or " -NoNewline 
-    Write-Host "[ENTER] to return to menu." -ForegroundColor Yellow -NoNewline
+        else {
+            # execute the command without parameters if it doesn't have any.
+            & $command
+        }
+        ## USER can press x to exit, or enter to return to main menu (category selection)
+        Write-Host "`nPress " -NoNewLine
+        Write-Host "'x'" -ForegroundColor Red -NoNewline
+        Write-Host " to exit, or " -NoNewline 
+        Write-Host "[ENTER] to return to menu." -ForegroundColor Yellow -NoNewline
 
-    $key = $Host.UI.RawUI.ReadKey()
-    [String]$character = $key.Character
-    if ($($character.ToLower()) -eq 'x') {
-        exit
-    }
-    elseif ($($character.ToLower()) -eq '') {
-        continue
+        $key = $Host.UI.RawUI.ReadKey()
+        [String]$character = $key.Character
+        if ($($character.ToLower()) -eq 'x') {
+            exit
+        }
+        elseif ($($character.ToLower()) -eq '') {
+            continue
+        }
     }
 }
