@@ -123,6 +123,9 @@ function Send-Files {
             if ($single_computer) {
                 ## 2. Ping target machine one time
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
+
+                $file_copied = $false
+
                 if ($pingreply) {
                     if (Test-Path "\\$single_computer\c$" -ErrorAction SilentlyContinue) {
 
@@ -131,15 +134,24 @@ function Send-Files {
                             Copy-Item -Path "$sourcepath" -Destination "$destinationpath" -ToSession $target_session -Recurse
                             # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete." -foregroundcolor green
                             $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete.`n"
+
+                            $file_copied = $true
                         }
                         catch {
                             # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer." -foregroundcolor red\
-                            $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer.`n"
+                            # $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer.`n"
+                            $null
                         }
 
                         Remove-PSSession $target_session
                     }        
                 }
+            
+                if (-not $file_copied) {
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer." -foregroundcolor red
+                    $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer.`n"
+                }
+            
             }
         }
     }

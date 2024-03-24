@@ -124,7 +124,7 @@ function Send-Reboots {
                 if ($ping_result) {
                     if ($RebootMessage) {
                         Invoke-Command -ComputerName $single_computer -ScriptBlock {
-                            shutdown  /r /t $using:reboottime /c "$using:RebootMessage"
+                            shutdown  /r /t $using:RebootTimeInSeconds /c "$using:RebootMessage"
                         }
                         $reboot_method = "Reboot w/popup msg"
                     }

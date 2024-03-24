@@ -63,9 +63,6 @@
             "Copy-CannedResponse",
             "Convert-PNGtoICO"
         ],
-        "help": [
-            "Open-Guide"
-        ],
         "search": []
     },
     "notjobfunctions": [
@@ -77,6 +74,7 @@
         "Install-VeyonRoom",
         "New-DriveMappingExe",
         "Send-Reboots",
-        "Apply-DellCommandUpdates"
+        "Apply-DellCommandUpdates",
+        "Format-SecondaryDrive"
     ]
 }

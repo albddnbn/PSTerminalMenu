@@ -165,8 +165,11 @@ while ($exit_program -eq $false) {
         $options.add($newoption) | out-null
     }
 
+    ## Add Help to options list
+    $options.add('Help') | Out-Null
+
     ## Allow the user to choose category - CORRESPONDS to categories listed in config.json
-    $chosen_category = Menu $($options | sort)
+    $chosen_category = Menu $($options)
     #########
     ## SEARCH functionality - returns any file/functions in the functions directory with name containing the input search term.
     if ($chosen_category -eq 'search') {
@@ -176,6 +179,28 @@ while ($exit_program -eq $false) {
         $filenames = $allfunctionfiles | select -exp basename
         $function_list = $filenames | Where-Object { $_ -like "*$search_term*" }
     }
+    ## Open HTML Guide / Help file.
+    elseif ($chosen_category -eq 'Help') {
+        Write-Host "Opening $env:PSMENU_DIR\docs\index.html in default browser."
+
+        $GuideHtmlFile = Get-ChildItem -Path "$env:PSMENU_DIR\docs" -Filter "index.html" -File -Recurse -ErrorAction SilentlyContinue
+
+        try {
+            Invoke-Expression "$($guidehtmlfile.fullname)"
+        }
+        catch {
+            $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
+            if ($chrome_exe) {
+                &"$($chrome_exe.fullname)" "$($GuideHtmlFile.fullname)"
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open in default browser or Chrome, opening docs folder." -Foregroundcolor Red
+                Invoke-Item "$env:PSMENU_DIR\docs"
+            }
+        }
+        Read-Host "Press enter to continue."
+        continue
+    } ## If the user chooses to exit, the program will exit
     else {
         #reassemble the chosen category with _, if that method was chosen, if it wasn't - nothing will happen
         $chosen_category = $chosen_category -replace ' ', '_'
@@ -263,6 +288,13 @@ while ($exit_program -eq $false) {
                     # Write each line to terminal.
                     $textitem.text
                 }
+
+                ## if its the install-application command and its the appname parameter:
+                if (($command -eq 'Install-Application') -and ($parameter -eq 'AppName')) {
+                    ## get listing of deploy/applications folders
+                    (Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications" -Directory -ErrorAction SilentlyContinue).Name
+                }
+
                 # Read-HostNoColon is just Read-Host without the colon at the end, so that an = can be used.
                 $value = Read-HostNoColon -Prompt "$parameter = "
 

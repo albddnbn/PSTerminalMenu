@@ -1,4 +1,4 @@
-function Install-Application {
+function Install-ApplicationNotJob {
     <#
 	.SYNOPSIS
         Uses $env:PSMENU_DIR/deploy/applications folder to present menu to user. 

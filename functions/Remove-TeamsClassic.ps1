@@ -14,8 +14,13 @@ Function Remove-TeamsClassic {
         First section of a hostname to generate a list, ex: g-labpc- will create a list of all hostnames that start with 
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
 
+    .PARAMETER DoNotDisturbUsers
+        'y' will skip any computers that are occupied by a user.
+        'n' will attempt to remove Teams Classic from all computers, including those with users logged in.
+
     .EXAMPLE
-        Remove-TeamsClassic
+        Remove Microsoft Teams Classic from all computers that have hostnames starting with 't-computer-'
+        Remove-TeamsClassic -TargetComputer 't-computer-' -DoNotDisturbUsers 'y'
 
     .NOTES
         ---
@@ -30,7 +35,12 @@ Function Remove-TeamsClassic {
             Position = 0
         )]
         [String[]]$TargetComputer,
-        [string]$do_not_disturb_users = 'y'
+        [Parameter(
+            Mandatory = $true,
+            Position = 1
+        
+        )]
+        [string]$DoNotDisturbUsers
     )
     ## 1. Handling of TargetComputer input
     ## 2. ask to skip occupied computers
@@ -97,11 +107,11 @@ Function Remove-TeamsClassic {
         }
 
         ## 2. Ask to skip occupied computers
-        # $do_not_disturb_users = Read-Host "Removal of Teams Classic will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
+        # $DoNotDisturbUsers = Read-Host "Removal of Teams Classic will stop any running teams processes on target machines - skip computers that have users logged in? [y/n]"
     
         try {
-            $do_not_disturb_users = $do_not_disturb_users.ToLower()
-            if ($do_not_disturb_users -eq 'y') {
+            $DoNotDisturbUsers = $DoNotDisturbUsers.ToLower()
+            if ($DoNotDisturbUsers -eq 'y') {
                 Write-Host "Skipping occupied computers - acknowledged."
             }
             else {
@@ -110,8 +120,8 @@ Function Remove-TeamsClassic {
     
         }
         catch {
-            Write-Host "Wasn't able to convert $do_not_disturb_users to lowercase, assuming 'y'."
-            $do_not_disturb_users = 'y'
+            Write-Host "Wasn't able to convert $DoNotDisturbUsers to lowercase, assuming 'y'."
+            $DoNotDisturbUsers = 'y'
         }
 
         ## 3. Find the Purge-TeamsClassic.ps1 file.
@@ -135,7 +145,7 @@ Function Remove-TeamsClassic {
                 ## test with ping first:
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
-                    Invoke-Command -ComputerName $single_computer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $do_not_disturb_users
+                    Invoke-Command -ComputerName $single_computer -FilePath "$($teamsclassic_scrubber_ps1.fullname)" -ArgumentList $DoNotDisturbUsers
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Teams Classic removal attempt on $single_computer completed."
                 }
             }
