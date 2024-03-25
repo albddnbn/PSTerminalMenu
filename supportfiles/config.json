@@ -1,67 +1,68 @@
 {
-    "clear_after_each_parameter": "yes",
     "categories": {
+        "files": [
+            "Copy-Remotefiles",
+            "Send-Files"
+        ],
+        "installs & updates": [
+            "Apply-DellCommandUpdates",
+            "Install-ActiveDirectoryModule",
+            "Install-Application",
+            "Install-ApplicationNotJob",
+            "Install-NewTeams",
+            "Install-SMARTNotebookSoftware",
+            "Install-VeyonRoom",
+            "Remove-TeamsClassic"
+        ],
+        "intune": [
+            "Get-IntuneHardwareIDs",
+            "New-IntuneWin32App"
+        ],
+        "network": [
+            "Ping-TestReport",
+            "Test-ConnectivityQuick",
+            "Stop-WifiAdapters"
+        ],
+        "policies": [
+            "Set-ChromeClearDataOnExit"
+        ],
         "printers": [
             "Add-PrinterLogicPrinter",
             "Build-PrinterConnectionExe",
             "Get-ConnectedPrinters"
         ],
-        "filesystem_operations": [
-            "Copy-Remotefiles",
-            "Send-Files",
-            "Format-SecondaryDrive",
-            "Scan-ForAppOrFilePath"
-        ],
-        "installations": [
-            "Install-Application",
-            "Install-ApplicationJob",
-            "Install-BIOSUpdates",
-            "Install-VeyonRoom",
-            "Install-SMARTNotebookSoftware",
-            "Install-NewTeams",
-            "Remove-TeamsClassic"
-        ],
         "scans": [
-            "Get-ComputerDetails",
-            "Get-CurrentUser",
             "Get-AssetInformation",
-            "Get-USBDevices",
+            "Get-ComputerDetails",
             "Get-ConnectedPrinters",
-            "Get-IntuneHardwareIDs",
+            "Get-CurrentUser",
+            "Get-InstalledDotNetVersions",
+            "Get-USBDevices",
+            "List-Dotnets",
             "Scan-ForAppOrFilePath",
-            "Scan-SoftwareInventory",
             "Scan-ForSophosEndpointSelfHelp",
-            "Scan-Office2021"
+            "Scan-Office2021",
+            "Scan-SoftwareInventory",
+            "Scan-SoftwareInventoryJob",
+            "Scan-SoftwareInventoryTargeted"
         ],
-        "executables": [
-            "Build-PrinterConnectionExe",
-            "New-DriveMappingExe"
-        ],
-        "maintenance": [
+        "users": [
             "Clear-ChromeBrowsingData",
-            "Set-ChromeClearDataOnExit",
             "Clear-CorruptProfiles",
             "Clear-FirefoxProfile",
-            "Format-SecondaryDrive",
-            "Install-BIOSUpdates",
-            "Stop-WifiAdapters",
-            "Send-reboots"
+            "Get-CurrentUser"
         ],
         "utilities": [
+            "Convert-ImgToBitmap",
+            "Convert-PNGtoICO",
+            "Copy-CannedResponse",
+            "Copy-SnippetToClipboard",
             "New-CannedResponse",
             "New-DriveMappingExe",
-            "New-TechLoanDocs",
+            "Open-Guide",
             "Open-RDP",
-            "Send-Reboots",
             "Scan-Inventory",
-            "New-IntuneWin32App",
-            "New-DTCCHtmlReport",
-            "New-PSADTFolder",
-            "Ping-TestReport",
-            "Copy-SnippetToClipboard",
-            "Test-ConnectivityQuick",
-            "Copy-CannedResponse",
-            "Convert-PNGtoICO"
+            "Send-Reboots"
         ]
     },
     "notjobfunctions": [

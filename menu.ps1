@@ -158,7 +158,7 @@ $exit_program = $false
 while ($exit_program -eq $false) {
     Clear-Host
     # splitting function options into a list - it was string divided by spaces before
-    $split_options = $functions.keys -split ' '
+    $split_options = [string[]]$config_file.categories.PSObject.Properties.Name
     $options = [system.collections.arraylist]::new()
     Foreach ($option in $split_options) {
         $newoption = $option -replace '_', ' '
@@ -213,9 +213,9 @@ while ($exit_program -eq $false) {
     } ## If the user chooses to exit, the program will exit
     else {
         #reassemble the chosen category with _, if that method was chosen, if it wasn't - nothing will happen
-        $chosen_category = $chosen_category -replace ' ', '_'
+        # $chosen_category = $chosen_category -replace ' ', '_'
         # get the functions from the chosen category so they can be presented in the second menu
-        $function_list = $functions[$chosen_category]
+        $function_list = $functions["$chosen_category"]
     }
     Clear-Host
     $function_list = $function_list -replace '-', ' '
@@ -224,7 +224,7 @@ while ($exit_program -eq $false) {
         $function_list = @($function_list)
     }
     # put 'Return-ToPreviousMenu' at bottom of list - allows user to return to category choices
-    $function_list += 'Return-ToPreviousMenu'
+    $function_list += 'Return to previous menu'
 
     ## FUNCTION SELECTION - menu is presented using psmenu module
     $function_selection = Menu $function_list
@@ -233,7 +233,7 @@ while ($exit_program -eq $false) {
     # reconstruct the actual filename
     $function_selection = $function_selection -replace ' ', '-'
     # If return was chosen, continue to next iteration of infinite loop - continues until user chooses to exit
-    if ($function_selection -eq 'Return-ToPreviousMenu') {
+    if ($function_selection -eq 'Return to previous menu') {
         continue
     }
 
