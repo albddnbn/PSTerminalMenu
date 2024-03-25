@@ -163,6 +163,10 @@ function Install-Application {
         }
         elseif ($AppName) {
             $chosen_apps = $AppName -split ','
+
+            if ($chosen_apps -isnot [array]) {
+                $chosen_apps = @($chosen_apps)
+            }
             # validate the applist:
             ForEach ($single_app in $chosen_apps) {
                 if (-not (Test-Path "$env:PSMENU_DIR\deploy\applications\$single_app")) {
@@ -243,6 +247,13 @@ function Install-Application {
                     $single_target_session = New-PSSession $single_computer
                     ## 3. Install chosen apps by creating remote session and cycling through list
                     ForEach ($single_application in $chosen_apps) {
+
+                        $DeploymentFolder = Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications\" -Filter "$single_application" -Directory -ErrorAction SilentlyContinue
+                        if (-not $DeploymentFolder) {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_application not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+                            $skipped_applications.Add($single_application) | Out-Null
+                            Continue
+                        }
 
                         ## Make sure there isn't an existing deployment folder on target machine:
                         Invoke-Command -Session $single_target_session -scriptblock {
