@@ -59,24 +59,25 @@ Function New-PSADTFolder {
     $psadt_file = Get-Childitem -path "$outputfolder\$application_name" -Filter "Deploy-application.ps1" -File
 
     $psadt_file_content = get-content -path "$($psadt_file.fullname)"
-
-    $variables = $psadt_file_content | Select-String -Pattern '\(\(.*\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
-
-    # prompt user for values for each varaible:
+    $variables = $psadt_file_content | Select-String -Pattern '\(\(\$.*\$\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
     ForEach ($single_variable in $variables) {
         $formatted_variable_name = $single_variable -split '=' | select -first 1
-        $formatted_variable_name = $formatted_variable_name.replace('(($', '')
-        if ($formatted_Variable_name -in @('appname', 'apppublisher', 'author')) {
-        
+        # $formatted_variable_name = $formatted_variable_name.replace('(($', '')
+
+        ForEach ($str_item in @('(($', '$))')) {
+            $formatted_variable_name = $formatted_variable_name.replace($str_item, '')
+        }
+
+
+        if ($single_variable -like "*=*") {
             $variable_description = $single_variable -split '=' | select -last 1
             $variable_description = $variable_description.replace('$))', '')
-
-            Write-Host "Description: " -nonewline -foregroundcolor yellow
-            Write-host "$variable_description"
-            $variable_value = Read-Host "Enter value for $formatted_variable_name"
-            Write-Host "Replacing $single_variable with $variable_value"
-            $psadt_file_content = $psadt_file_content.replace($single_Variable, $variable_value)
         }
+        Write-Host "Description: " -nonewline -foregroundcolor yellow
+        Write-host "$variable_description"
+        $variable_value = Read-Host "Enter value for $formatted_variable_name"
+        Write-Host "Replacing $single_variable with $variable_value"
+        $psadt_file_content = $psadt_file_content.replace($single_Variable, $variable_value)
     }
     REmove-ITem -Path "$($psadt_file.fullname)"
 

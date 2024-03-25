@@ -59,7 +59,7 @@ function Copy-CannedResponse {
     ##    - for loop cycles through each unique variable, prompting the user for values.
 
     ## Need to double check this pattern, stings with only (())
-    $variables = $chosen_response_content | Select-String -Pattern '\(\(.*\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
+    $variables = $chosen_response_content | Select-String -Pattern '\(\(\$.*\$\)\)' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique
     ForEach ($single_variable in $variables) {
         $formatted_variable_name = $single_variable -split '=' | select -first 1
         # $formatted_variable_name = $formatted_variable_name.replace('(($', '')

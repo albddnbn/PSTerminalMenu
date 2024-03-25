@@ -16,6 +16,7 @@ function Build-PrinterConnectionExeProcess {
     .PARAMETER PrintServer
         If a value is supplied for PrintServer, script will assume it should be creating executables to map to print server.
         After testing with Get-Printer.
+        If no value / '' is supplied, then PrinterLogic executables will be created.
 
     .EXAMPLE
         Generate-PrinterLogicExe -PrinterName "printer-c136-01"

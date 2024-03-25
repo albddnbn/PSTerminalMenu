@@ -181,6 +181,13 @@ while ($exit_program -eq $false) {
         $allfunctionfiles = Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "*.ps1" -File -Erroraction SilentlyContinue
         $filenames = $allfunctionfiles | select -exp basename
         $function_list = $filenames | Where-Object { $_ -like "*$search_term*" }
+
+        ## if there are no results - allow user to continue back to original menu
+        if (-not $function_list) {
+            Write-Host "No results found for search term: $search_term."
+            Read-Host "Press enter to return to original menu."
+            continue
+        }
     }
     ## Open HTML Guide / Help file.
     elseif ($chosen_category -eq 'Help') {
@@ -307,8 +314,7 @@ while ($exit_program -eq $false) {
         elseif ((-not $target_computers) -and ($function_selection -in $notjobfunctions)) {
             & $command @splat
         }
-        ## else if $splat isn't empty (parameters exist / values were supplied)
-        elseif ($splat) {
+        else {
 
             ## ***** Could I just pass $command into the job??
             $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
@@ -352,23 +358,27 @@ while ($exit_program -eq $false) {
             # Reset Target_computers to null so it is ready for next loop
             $target_computers = $null
         }
-        else {
-            # execute the command without parameters if it doesn't have any.
-            & $command
-        }
-        ## USER can press x to exit, or enter to return to main menu (category selection)
-        Write-Host "`nPress " -NoNewLine
-        Write-Host "'x'" -ForegroundColor Red -NoNewline
-        Write-Host " to exit, or " -NoNewline 
-        Write-Host "[ENTER] to return to menu." -ForegroundColor Yellow -NoNewline
 
-        $key = $Host.UI.RawUI.ReadKey()
-        [String]$character = $key.Character
-        if ($($character.ToLower()) -eq 'x') {
-            exit
-        }
-        elseif ($($character.ToLower()) -eq '') {
-            continue
-        }
     }
+    else {
+        # execute the command without parameters if it doesn't have any.
+        & $command
+    }
+
+
+    ## USER can press x to exit, or enter to return to main menu (category selection)
+    Write-Host "`nPress " -NoNewLine
+    Write-Host "'x'" -ForegroundColor Red -NoNewline
+    Write-Host " to exit, or " -NoNewline 
+    Write-Host "[ENTER] to return to menu." -ForegroundColor Yellow -NoNewline
+
+    $key = $Host.UI.RawUI.ReadKey()
+    [String]$character = $key.Character
+    if ($($character.ToLower()) -eq 'x') {
+        exit
+    }
+    elseif ($($character.ToLower()) -eq '') {
+        continue
+    }
+
 }
