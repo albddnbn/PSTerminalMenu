@@ -27,7 +27,7 @@ function Read-HostNoColon {
     return $Host.UI.ReadLine()
 }
 
-Try { Set-ExecutionPolicy -ExecutionPolicy 'ByPass' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
+Try { Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
 
 
 ########################################################################################################
@@ -113,6 +113,18 @@ Write-Host "attempting to install dependencies" -NoNewline -ForegroundColor Yell
 Write-Host "."
 Install-NeededModules
 
+## Try to make sure the ps-menu module gets installed:
+if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
+    Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
+    if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+        Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+        Install-PackageProvider -Name NuGet -MinimumVersion -Force
+    }
+    Install-Module -Name PS-Menu -Force
+}
+Import-Module -Name PS-Menu -Force | Out-Null
+
+
 
 ## Dot Source ALL .PS1 Files in ./functions and ./experimental
 ## *IMPORTANT* --> if a .ps1 file is not structured into a function - the .ps1 code in file will be executed during 
@@ -134,27 +146,9 @@ ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.
 
 ## JOB FUNCTIONS
 ## Create list of functions that should be run as background jobs
-$jobfunctions = $config_file.jobfunctions
+$notjobfunctions = $config_file.notjobfunctions
 
-Write-Host "Creating filesystem watcher for $env:PSMENU_DIR\completedjobs directory."
-Write-Host "Job functions include: $($jobfunctions -join ', ')" -Foregroundcolor Yellow
-
-## start ./utils/watcher.ps1 in new powershell window, and pass it the $(pwd)/completedjobs path as oparameter
-$watcher_ps1 = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.ps1" -File -ErrorAction SilentlyContinue
-#$watcher_exe = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "watcher.exe" -File -ErrorAction SilentlyContinue
-if (-not $watcher_ps1) {
-    Write-Host "Couldn't find watcher.ps1 in $env:MENU_UTILS, exiting." -foregroundcolor red
-    exit
-}
-
-## Assign the path that will be watched (when job functions complete, they create .txt files with info in th is directory)
-## * Note - make these json.
-$watchedpath = "$(pwd)\completedjobs"
-
-Start-Process powershell -ArgumentList "-NoExit", "-Command . $($watcher_ps1.FullName) $watchedpath" -WindowStyle Hidden
-# start watcher exe process in new window
-#Start-Process "$($watcher_exe.FullName)" $watchedpath
-
+Write-Host "Job functions include: $($notjobfunctions -join ', ')" -Foregroundcolor Yellow
 
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
@@ -164,15 +158,21 @@ $exit_program = $false
 while ($exit_program -eq $false) {
     Clear-Host
     # splitting function options into a list - it was string divided by spaces before
-    $split_options = $functions.keys -split ' '
+    $split_options = [string[]]$config_file.categories.PSObject.Properties.Name
     $options = [system.collections.arraylist]::new()
     Foreach ($option in $split_options) {
         $newoption = $option -replace '_', ' '
         $options.add($newoption) | out-null
     }
 
+    ## Add Help to options list
+    $options.add('Help') | Out-Null
+
+    ## Add Search to options list
+    $options.add('Search') | Out-Null
+
     ## Allow the user to choose category - CORRESPONDS to categories listed in config.json
-    $chosen_category = Menu $($options | sort)
+    $chosen_category = Menu $($options)
     #########
     ## SEARCH functionality - returns any file/functions in the functions directory with name containing the input search term.
     if ($chosen_category -eq 'search') {
@@ -181,12 +181,41 @@ while ($exit_program -eq $false) {
         $allfunctionfiles = Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "*.ps1" -File -Erroraction SilentlyContinue
         $filenames = $allfunctionfiles | select -exp basename
         $function_list = $filenames | Where-Object { $_ -like "*$search_term*" }
+
+        ## if there are no results - allow user to continue back to original menu
+        if (-not $function_list) {
+            Write-Host "No results found for search term: $search_term."
+            Read-Host "Press enter to return to original menu."
+            continue
+        }
     }
+    ## Open HTML Guide / Help file.
+    elseif ($chosen_category -eq 'Help') {
+        Write-Host "Opening $env:PSMENU_DIR\docs\index.html in default browser."
+
+        $GuideHtmlFile = Get-ChildItem -Path "$env:PSMENU_DIR\docs" -Filter "index.html" -File -Recurse -ErrorAction SilentlyContinue
+
+        try {
+            Invoke-Expression "$($guidehtmlfile.fullname)"
+        }
+        catch {
+            $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
+            if ($chrome_exe) {
+                &"$($chrome_exe.fullname)" "$($GuideHtmlFile.fullname)"
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open in default browser or Chrome, opening docs folder." -Foregroundcolor Red
+                Invoke-Item "$env:PSMENU_DIR\docs"
+            }
+        }
+        Read-Host "Press enter to continue."
+        continue
+    } ## If the user chooses to exit, the program will exit
     else {
         #reassemble the chosen category with _, if that method was chosen, if it wasn't - nothing will happen
-        $chosen_category = $chosen_category -replace ' ', '_'
+        # $chosen_category = $chosen_category -replace ' ', '_'
         # get the functions from the chosen category so they can be presented in the second menu
-        $function_list = $functions[$chosen_category]
+        $function_list = $functions["$chosen_category"]
     }
     Clear-Host
     $function_list = $function_list -replace '-', ' '
@@ -195,7 +224,7 @@ while ($exit_program -eq $false) {
         $function_list = @($function_list)
     }
     # put 'Return-ToPreviousMenu' at bottom of list - allows user to return to category choices
-    $function_list += 'Return-ToPreviousMenu'
+    $function_list += 'Return to previous menu'
 
     ## FUNCTION SELECTION - menu is presented using psmenu module
     $function_selection = Menu $function_list
@@ -204,7 +233,7 @@ while ($exit_program -eq $false) {
     # reconstruct the actual filename
     $function_selection = $function_selection -replace ' ', '-'
     # If return was chosen, continue to next iteration of infinite loop - continues until user chooses to exit
-    if ($function_selection -eq 'Return-ToPreviousMenu') {
+    if ($function_selection -eq 'Return to previous menu') {
         continue
     }
 
@@ -213,19 +242,9 @@ while ($exit_program -eq $false) {
     if ($command.Parameters.Count -gt 0) {
         # Getting detailed info on the command is what allows printing of parameter descriptions to terminal, above where user is being prompted for their values.
         $functionhelper = get-help $command -Detailed
-        # WRITE functions Description from the comment block / help to terminal at top, above where user will be prompted for parameter values:
-        $functions_synopsis = $functionhelper.synopsis
-        $functions_synopsis = $functions_synopsis -replace '@{Text=', ''
-        $functions_synopsis = $functions_synopsis -replace '}', ''
 
-
-        $function_description = $functionhelper.description
-        $function_description = $function_description -replace '@{Text=', ''
-        $function_description = $function_description -replace '}', ''
-        ## I think this might work too:
-        # $functions_synopsis = $functionhelper.synopsis.text
-        # $function_description = $functionhelper.description.text
-
+        $functions_synopsis = $functionhelper.synopsis.text
+        $function_description = $functionhelper.description.text
 
         Write-Host "$function_selection -> " -foregroundcolor Green
         Write-Host "Function description: " -nonewline -foregroundcolor yellow
@@ -250,13 +269,13 @@ while ($exit_program -eq $false) {
             if ($parameter -eq 'TargetComputer') {
                 Write-Host "Please input value for TargetComputer." -foregroundcolor yellow
                 Write-Host "Input can be:"
-                Write-Host "    1. Single hostname string, ex: 's-a227-01'"
-                Write-Host "    2. Comma-separated list of hostnames, ex: s-a227-01,s-a227-02"
+                Write-Host "    1. Single hostname string, ex: 's-client-01'"
+                Write-Host "    2. Comma-separated list of hostnames, ex: s-client-01,s-client-02"
                 Write-Host "    3. Path to text file containing one hostname per line, ex:" -NoNewline
                 Write-Host " 'D:\computers.txt'" -Foregroundcolor Yellow
                 Write-Host "    4. First section of a hostname to generate a list, ex: " -nonewline
-                Write-Host "s-a227-" -nonewline -foregroundcolor Yellow
-                Write-Host " will create a list of all hostnames that start with s-a227-."
+                Write-Host "s-client-" -nonewline -foregroundcolor Yellow
+                Write-Host " will create a list of all hostnames that start with s-client-."
                 $target_computers = read-host "Enter target computer value"
                 $target_computers = Get-Targets -TargetComputer $target_computers
                 #$target_computers = [String[]]$target_computers
@@ -264,46 +283,89 @@ while ($exit_program -eq $false) {
             else {
                 $current_parameter_info = $functionhelper.parameters.parameter | Where-Object { $_.name -eq $parameter }
                 # For each line in that text block (underneath .PARAMETER parameterName)
-                Write-Host "`n$parameter parameter description: " -NoNewLine -Foregroundcolor Yellow
+                Write-Host "`nParameter $parameter DESCRIPTION: `n" -NoNewLine -Foregroundcolor Yellow
                 ForEach ($textitem in $current_parameter_info.description) {
                     # Write each line to terminal.
                     $textitem.text
                 }
+                Write-Host "`n"
+                ## if its the install-application command and its the appname parameter:
+                if (($command -eq 'Install-Application') -and ($parameter -eq 'AppName')) {
+                    ## get listing of deploy/applications folders
+                    (Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications" -Directory -ErrorAction SilentlyContinue).Name
+                }
+
                 # Read-HostNoColon is just Read-Host without the colon at the end, so that an = can be used.
                 $value = Read-HostNoColon -Prompt "$parameter = "
+
                 # adds whatever value user input to the hashtable containing parameter names and values.
                 $splat.Add($parameter, $value)
             }
 
         }
-        ## JOBS:
-        if ($command -in $jobfunctions) {
-            Read-Host "its in job functions"
-            if ($target_computers) {
-                $splat.Add('TargetComputer', $target_computers)
-            }
-            $job = Start-Job -ScriptBlock { param($command, $splat) & $command @splat } -ArgumentList $command, $splat
-            Write-Host "Job started with ID: $($job.id)"
-            # continue
+
+        ## Check for any functions that need to be called by pipeline, if targetcomputers exists
+        if (($target_computers) -and (($function_selection -in $notjobfunctions) -or ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n'))) {
+            # if (($function_selection -in $notjobfunctions) -or ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n')) {
+            $target_computers | & $command @splat
+            # }
+        }
+        ## If Target computers wasn't provided, and the function is not a job function
+        elseif ((-not $target_computers) -and ($function_selection -in $notjobfunctions)) {
+            & $command @splat
         }
         else {
-            # execute the command using parameter names, and their accompanying values
-            # If targetcomputers was set - use it
-            ## We could ALSO try PIPING Target computers into the cmdlets that allow it
-            if ($target_computers) { 
-                $target_computers | & $command @splat
-            }
-            else {
-                & $command @splat
-            }
+
+            ## ***** Could I just pass $command into the job??
+            $functionpath = (Get-ChildItem -Path "$env:PSMENU_DIR\functions" -Filter "$function_selection.ps1" -File -Recurse -ErrorAction SilentlyContinue).Fullname
+            start-job -scriptblock {
+                Set-Location $args[0];
+
+                ## set environment variables:
+                $env:PSMENU_DIR = $args[0];
+                $env:MENU_UTILS = "$($args[0])\utils";
+                $env:LOCAL_SCRIPTS = "$($args[0])\localscripts";
+                $env:SUPPORTFILES_DIR = "$($args[0])\supportfiles";
+
+                ## dot source the utility functions, etc.
+                # . "$env:MENU_UTILS\terminal-menu-utils.ps1";
+                ## ./UTILS functions - Most importantly - Get-TargetComputers, Get-OutputFileString, general
+                ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
+                    . "$($utility_function.fullname)"
+                }
+                ## Uncomment for testing
+                # pwd | out-file 'test.txt';
+                # $args[0] | out-file 'test.txt' -append;
+                # $args[1] | out-file 'test.txt' -append;
+                # $args[2] | out-file 'test.txt' -append;
+                # $args[3] | out-file 'test.txt' -append;
+                # $args[4] | out-file 'test.txt' -append;
+                # dot sources the function, assigns the splat hashtable to a non arg variable, and then pipes target computers (from args) into the command
+                . "$($args[1])";
+                $innersplat = $args[4];
+
+
+                ## If Targetcomputers was supplied ($args[2]) use pipeline
+                if ($args[2]) {
+                    $args[2] |  & ($args[3]) @innersplat;
+                }
+                else {
+                    & ($args[3]) @innersplat;
+ 
+                }
+            } -ArgumentList @($(pwd), $functionpath, $target_computers, $function_selection, $splat)
+            
+            # Reset Target_computers to null so it is ready for next loop
+            $target_computers = $null
         }
-        # Reset Target_computers to null so it is ready for next loop
-        $target_computers = $null
+
     }
     else {
         # execute the command without parameters if it doesn't have any.
         & $command
     }
+
+
     ## USER can press x to exit, or enter to return to main menu (category selection)
     Write-Host "`nPress " -NoNewLine
     Write-Host "'x'" -ForegroundColor Red -NoNewline
@@ -318,4 +380,5 @@ while ($exit_program -eq $false) {
     elseif ($($character.ToLower()) -eq '') {
         continue
     }
+
 }

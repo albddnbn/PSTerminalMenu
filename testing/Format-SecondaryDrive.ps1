@@ -31,7 +31,7 @@ Function Format-SecondaryDrive {
             Mandatory = $true,
             ValueFromPipeline = $true
         )]
-        $TargetComputer
+        [String[]]$TargetComputer
     )
     BEGIN {
         $thedate = Get-Date -Format 'yyyy-MM-dd'

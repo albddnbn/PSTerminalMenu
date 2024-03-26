@@ -70,7 +70,6 @@
         "New-CannedResponse",
         "Copy-SnippetToClipboard",
         "Scan-Inventory",
-        "Install-Application",
         "Install-VeyonRoom",
         "New-DriveMappingExe",
         "Send-Reboots",
