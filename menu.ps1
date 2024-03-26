@@ -317,6 +317,7 @@ while ($exit_program -eq $false) {
             }
         }
         else {
+            $runasjob = $null
             ## Prompt if it should be run as job.
             while ($runasjob -notin @('y', 'n')) {
                 $runasjob = Read-Host "Run as job? (y/n)"

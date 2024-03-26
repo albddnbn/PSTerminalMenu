@@ -75,6 +75,7 @@
         "Send-Reboots",
         "Apply-DellCommandUpdates",
         "Format-SecondaryDrive",
-        "Open-RDP"
+        "Open-RDP",
+        "Add-PrinterLogicPrinter"
     ]
 }
