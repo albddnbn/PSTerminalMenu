@@ -290,9 +290,12 @@ while ($exit_program -eq $false) {
                 }
                 Write-Host "`n"
                 ## if its the install-application command and its the appname parameter:
-                if (($command -eq 'Install-Application') -and ($parameter -eq 'AppName')) {
-                    ## get listing of deploy/applications folders
+                if (($function_selection -eq 'Install-Application') -and ($parameter -eq 'AppName')) {
+                    ## get listing of deploy/applications folders? - have to clean this up / get it working
+                    # Write-Host "$((Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications" -Directory -ErrorAction SilentlyContinue).Name)"
+                    Write-Host "Available applications: " -Foregroundcolor Green
                     (Get-ChildItem -Path "$env:PSMENU_DIR\deploy\applications" -Directory -ErrorAction SilentlyContinue).Name
+                    Write-Host "`n"
                 }
 
                 # Read-HostNoColon is just Read-Host without the colon at the end, so that an = can be used.
