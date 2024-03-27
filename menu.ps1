@@ -148,7 +148,7 @@ ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.
 ## Create list of functions that should be run as background jobs
 $notjobfunctions = $config_file.notjobfunctions
 
-Write-Host "Job functions include: $($notjobfunctions -join ', ')" -Foregroundcolor Yellow
+Write-Host "Functions that will not be run as jobs include: $($notjobfunctions -join ', ')" -Foregroundcolor Yellow
 
 # this line is here just so it will stop if there are errors when trying to install/import modules
 Write-Host "`nDebugging point in case errors are encountered - please screenshot and share if you're able." -Foregroundcolor Yellow
