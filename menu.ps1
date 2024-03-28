@@ -231,11 +231,11 @@ while ($exit_program -eq $false) {
 
     Clear-Host
     # reconstruct the actual filename
-    $function_selection = $function_selection -replace ' ', '-'
     # If return was chosen, continue to next iteration of infinite loop - continues until user chooses to exit
     if ($function_selection -eq 'Return to previous menu') {
         continue
     }
+    $function_selection = $function_selection -replace ' ', '-'
 
     # 'Get' info on the command, if there is 1+ parameter(s) - cycle through them prompting the user for values.
     $command = Get-Command $function_selection
