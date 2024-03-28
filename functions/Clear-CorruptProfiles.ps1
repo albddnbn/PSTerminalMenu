@@ -145,31 +145,25 @@ function Clear-CorruptProfiles {
         $str_title_var = "TempProfiles"
 
         if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
-            if ($Outputfile.toLower() -eq '') {
-                $REPORT_DIRECTORY = "$str_title_var"
-            }
-            else {
-                $REPORT_DIRECTORY = $outputfile            
-            }
+            $REPORT_DIRECTORY = "$str_title_var"
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Function was not run as part of Terminal Menu - does not have utility functions." -Foregroundcolor Yellow
-            if ($outputfile.tolower() -eq '') {
-                $iterator_var = 0
-                while ($true) {
-                    $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
-                    if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
-                        $iterator_var++
-                        $outputfile += "$([string]$iterator_var)"
-                    }
-                    else {
-                        break
-                    }
+            $iterator_var = 0
+            while ($true) {
+                $outputfile = "reports\$thedate\$REPORT_DIRECTORY\$str_title_var-$thedate"
+                if ((Test-Path "$outputfile.csv") -or (Test-Path "$outputfile.xlsx")) {
+                    $iterator_var++
+                    $outputfile += "$([string]$iterator_var)"
                 }
-
-
+                else {
+                    break
+                }
             }
+
+
+            
             try {
                 $outputdir = $outputfile | split-path -parent
                 if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
