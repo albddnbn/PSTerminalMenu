@@ -22,6 +22,7 @@ Function Apply-DellCommandUpdates {
                 to set weekly updates on Sundays at 2am.           
         'n'     will not set weekly update times, leaving update schedule as default (every 3 days).
 
+
     .NOTES
         Executing like this: Start-Process "$($dellcommandexe.fullname)" -argumentlist $params doesn't show output.
         Trying $result = (Start-process file -argumentlist $params -wait -passthru).exitcode -> this still rebooted s-c136-03

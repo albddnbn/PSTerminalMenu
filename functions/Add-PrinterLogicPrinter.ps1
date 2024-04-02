@@ -18,6 +18,13 @@ function Add-PrinterLogicPrinter {
         Name of the printer in printerlogic. Ex: 't-prt-lib-01', you can use the name or the full 'path' to the printer, ex: 'STANTON\B WING..\s-prt-b220-01'
         Name must match the exact 'name' of the printer, as listed in PrinterLogic.
 
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, printer name, connection status, and client software status.
+        The results arraylist is also displayed in a GridView.
+
     .EXAMPLE
         Connect single remote target computer to t-prt-lib-01 printer:
         Add-PrinterLogicPrinter -TargetComputer "t-client-28" -PrinterName "t-prt-lib-01"
@@ -25,6 +32,10 @@ function Add-PrinterLogicPrinter {
     .EXAMPLE
         Connect a group of computers using hostname txt filepath to t-prt-lib-02 printer:
         Add-PrinterLogicPrinter -TargetComputer "D:\computers.txt" -PrinterName "t-prt-lib-02"
+
+    .EXAMPLE
+        Submit target computer(s) by hostname through pipeline and add specified printerlogic printer.
+        @('t-client-01', 't-client-02', 't-client-03') | Add-PrinterLogicPrinter -PrinterName "t-prt-lib-03"
         
     .NOTES
         ---
