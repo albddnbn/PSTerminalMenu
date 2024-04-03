@@ -21,6 +21,10 @@ function Install-Application {
     .PARAMETER AppName
         If supplied, the function will look for a folder in $env:PSMENU_DIR\deploy\applications with a name that = $AppName.
         If not supplied, the function will present menu of all folders in $env:PSMENU_DIR\deploy\applications to user.
+    
+    .PARAMETER SkipOccupied
+        If anything other than 'n' is supplied, the function will skip over computers that have users logged in.
+        If 'n' is supplied, the function will install the application(s) regardless of users logged in.
 
 	.EXAMPLE
         Run installation(s) on all hostnames starting with 's-a231-':
@@ -58,7 +62,8 @@ function Install-Application {
                     return $false
                 }
             })]
-        [string]$AppName
+        [string]$AppName,
+        [string]$SkipOccupied
     )
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
     ## 2. If AppName parameter was not supplied, apps chosen through menu will be installed on target machine(s).
@@ -211,7 +216,12 @@ function Install-Application {
         ## 4. Prompt - should this script skip over computers that have users logged in?
         ##    - script runs 'silent' installation of PSADT - this means installations will likely close the app / associated processes
         ##      before uninstalling / installing. This could disturb users.
-        $skip_pcs = Read-Host "Scripts are set to close the application (if running) before installing - skip computers with users logged in? [y/n]"
+        if ($SkipOccupied.ToLower() -eq 'n') {
+            $skip_pcs = 'n'
+        }
+        else {
+            $skip_pcs = 'y'
+        }
     
         ## 5. create empty containers for reports:
         ## computers that were unresponsive
