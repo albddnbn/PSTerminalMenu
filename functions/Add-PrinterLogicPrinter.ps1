@@ -192,6 +192,12 @@ function Add-PrinterLogicPrinter {
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
+
+            "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output." | Out-File -FilePath "$env:PSMENU_DIR\reports\PrinterLogicConnectResults_$thedate.txt" -Append
+            "These computers did not respond to ping:" | Out-File -FilePath "$env:PSMENU_DIR\reports\PrinterLogicConnectResults_$thedate.txt" -Append
+            $missed_computers | Out-File -FilePath "$env:PSMENU_DIR\reports\PrinterLogicConnectResults_$thedate.txt" -Append
+
+            Invoke-Item "$env:PSMENU_DIR\reports\PrinterLogicConnectResults_$thedate.txt"
         }
         ## 2. Output unresponsive computers
         Write-Host "These computers did not respond to ping:"
