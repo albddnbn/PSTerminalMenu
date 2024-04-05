@@ -240,6 +240,10 @@ function Get-ConnectedPrinters {
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
+
+            "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output from Get-ConnectedPrinters." | Out-File -FilePath "$outputfile.csv"
+
+            Invoke-Item "$outputfile.csv"
         }
         # read-host "Press enter to return results."
         return $results

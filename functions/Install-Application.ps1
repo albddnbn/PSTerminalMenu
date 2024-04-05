@@ -229,6 +229,9 @@ function Install-Application {
         ## - If they were presented in menu / chosen, apps should definitely be in deployment folder, though.
         $unresponsive_computers = [system.collections.arraylist]::new()
         $skipped_applications = [system.collections.arraylist]::new()
+
+        ## installation COMPLETED list - not necessarily completed successfully. just to help with tracking / reporting.
+        $installation_completed = [system.collections.arraylist]::new()
     
     
     }
@@ -282,6 +285,8 @@ function Install-Application {
                         Invoke-Command -Session $single_target_session -command {
                             Remove-Item -Path "$($using:folder_to_delete)" -Recurse -Force -ErrorAction SilentlyContinue
                         }
+
+                        $installation_completed.add($single_computer) | out-null
                     }
                 }
                 else {
@@ -294,16 +299,25 @@ function Install-Application {
     ## 1. Open the folder that will contain reports if necessary.
     END {
 
-        if ($unresponsive_computers) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unresponsive computers:" -Foregroundcolor Yellow
-            $unresponsive_computers | Sort-Object
-        }
-        if ($skipped_applications) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipped applications:" -Foregroundcolor Yellow
-            $skipped_applications | Sort-Object
-        }
-        Read-Host "Press enter to continue."
+        # if ($unresponsive_computers) {
+        #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unresponsive computers:" -Foregroundcolor Yellow
+        #     $unresponsive_computers | Sort-Object
+        # }
+        # if ($skipped_applications) {
+        #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipped applications:" -Foregroundcolor Yellow
+        #     $skipped_applications | Sort-Object
+        # }
 
+        "Function completed execution on: [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+        "Installation process completed (not necessarily successfully) on the following computers:" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+
+        $installation_completed | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+
+        "Unresponsive computers:" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+
+        $unresponsive_computers | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+
+        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt"
     }
     
 }

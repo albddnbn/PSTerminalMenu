@@ -256,6 +256,7 @@ function Get-AssetInformation {
         }
         else {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
+
         }
         # read-host "Press enter to return results."
         return $results
