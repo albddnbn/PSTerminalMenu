@@ -1,26 +1,10 @@
-Install-Application:
-    - add a parameter or something along those lines, so script will run the function exactly the same way, except it will use the
-      -DeploymentType 'Uninstall' parameter value as opposed to 'Install'
-
-
-All uses of foreach-object - try to use -parallel switch to speed up execution time
-  - make foreach block run in parallel instead of one after the other
-  (powershell 7)
-
-- in get-targetcomputers and being blocks for report-generating functions
-  - instead of the $ad_check variable using get-adcomputer, AND the test-connection (think this is how they are now)
-    - Try just using test-connection - if it works, should be a single computer name.
-**^This actually does work, but it turns out that I can scrap this whole section, and combine it with the section that
-takes the input string and uses it to grab a group of computers.
-  - if input string was input with intent to grab one computer - it's only going to be able to grab the one computer
-  - if its part of a hostname and not linked to a real hostname itself - it will be used to generate a list.
-
-  **Instead of using the Get-AD .. cmdlets / ACtiveDirectory module - I'm using a different method to query the LDAP server.
-    I adapted a script from here: https://
-
-
-***SEE IF YOU CAN HAVE FUNCTIONS RUN IN A DIFFERENT TERMINAL WINDOW WHEN THEY ARE CHOSEN
-  - would this allow you to go back to the main menu and choose another?
-  - it's definitely possible to open two windows, and run menu.ps1 twice to do this, but using the method above sounds a lot better.
-
 **TEst-WSMan or [System.IO.Directory]::Exists(UNC path) instead of Test-connection
+    - this may be quicker
+
+** An INTERACTIVE category of the menu - allows you to attempt to enter a remote session on single target computer,
+    - brings the PS-Menu module along (I think this is possible)
+    - Offers a variety of options including but not limited to:
+        1. Gathering basic cpu usage stats
+        2. Basic details already offered through the menu
+        3.
+        4.

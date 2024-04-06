@@ -317,7 +317,7 @@ function Install-Application {
 
         $unresponsive_computers | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
 
-        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt"
+        Invoke-Item "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" 
     }
     
 }
