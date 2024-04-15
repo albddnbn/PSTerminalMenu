@@ -24,6 +24,12 @@ Function Get-IntuneHardwareIDs {
         Used to create the name of the output .csv file, output to local computer.
         If not supplied, an output filepath will be created using formatted string.
 
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        Outputs .csv file containing HWID information for target devices, to upload them into Intune.
+
     .EXAMPLE
         Get Intune Hardware IDs from all computers in room A227 on Stanton campus:
         Get-IntuneHardwareIDs -TargetComputer "t-client-" -OutputFile "TClientIDs" -DeviceGroupTag 'Student Laptops'

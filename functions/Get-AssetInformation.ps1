@@ -16,7 +16,12 @@ function Get-AssetInformation {
         'n' = terminal output only
         Entering anything else will create an output file in the 'reports' directory, in a folder with name based on function name, and OutputFile input.
         Ex: Outputfile = 'A220', output file(s) will be in $env:PSMENU_DIR\reports\AssetInfo - A220\
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
 
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, printer name, connection status, and client software status.
+        The results arraylist is also displayed in a GridView.
     .EXAMPLE
         Get-AssetInformation
 

@@ -17,6 +17,13 @@ function Get-ComputerDetails {
         Entering anything else will create an output file in the 'reports' directory, in a folder with name based on function name, and OutputFile input.
         Ex: Outputfile = 'A220-Info', output file(s) will be in the $env:PSMENU_DIR\reports\2023-11-1\A220-Info\ directory.
 
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, computer model, bios version/release date, last boot time, and other info.
+        The results arraylist is also displayed in a GridView.
+
     .EXAMPLE
         Output details for a single hostname to "sa227-28-details.csv" and "sa227-28-details.xlsx" in the 'reports' directory.
         Get-ComputerDetails -TargetComputer "t-client-28" -Outputfile "tclient-28-details"

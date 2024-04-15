@@ -17,6 +17,13 @@ function Get-USBDevices {
         If blank, default filename will be created.
         Any other input will be used for creation of output folder/file names.
 
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, and connected USB device information.
+        The results arraylist is also displayed in a GridView.
+
     .EXAMPLE
         Get-USBDevicess
 

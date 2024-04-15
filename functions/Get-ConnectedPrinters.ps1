@@ -19,6 +19,13 @@ function Get-ConnectedPrinters {
 
     .PARAMETER FolderTitleSubstring
         If specified, the function will create a folder in the 'reports' directory with the specified substring in the title, appended to the $REPORT_DIRECTORY String (relates to the function title).
+    
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing hostname, logged in user, and list of connected printers.
+        The results arraylist is also displayed in a GridView.
 
     .EXAMPLE
         Get-ConnectedPrinters -TargetComputer 't-client-07'
