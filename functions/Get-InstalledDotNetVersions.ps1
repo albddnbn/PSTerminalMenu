@@ -18,6 +18,13 @@ function Get-InstalledDotNetversions {
         Entering anything else will create an output file in the 'reports' directory, in a folder with name based on function name, and OutputFile input.
         Ex: Outputfile = 'A220', output file(s) will be in $env:PSMENU_DIR\reports\AssetInfo - A220\
 
+    .INPUTS
+        [String[]] - an array of hostnames can be submitted through pipeline for Targetcomputer parameter.
+
+    .OUTPUTS
+        [System.Collections.ArrayList] - Returns an arraylist of objects containing the hostname and info on installed .net versions.
+        The results arraylist is also displayed in a GridView.
+
     .EXAMPLE
         1. Get dotnet versions on single computer, output results to terminal/gridview
         Get-InstalledDotNetVersions -TargetComputer "t-client-01" -outputfile 'n'
