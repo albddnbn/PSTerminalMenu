@@ -67,6 +67,12 @@ Function Install-DellMUPDriver {
         $chosen_executable = $executables | Where-Object { $_.Name -eq $chosen_executable }
 
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Proceeding with driver executable: $($chosen_executable.fullname)." -ForegroundColor Green
+    
+        ## create results lists:
+        $driver_installed = [System.Collections.ArrayList]::new()
+        $skipped_machines = [System.Collections.ArrayList]::new()
+        $failed_machines = [System.Collections.ArrayList]::new()
+        
     }
 
 
@@ -99,12 +105,21 @@ Function Install-DellMUPDriver {
 
                         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Found $($exe_file.fullname), executing with /S paramter."
 
-                        Start-Process -Path "$($exe_file.fullname)" -ArgumentList '/S' -Wait
+                        $install_result = (Start-Process -Path "$($exe_file.fullname)" -ArgumentList '/S' -Wait -Passthru).ExitCode
+                        if ($install_result -eq 0) {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Installation of $filename was successful." -ForegroundColor Green
+                            ($using:driver_installed).Add($env:COMPUTERNAME) | Out-Null
+                        }
+                        else {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: Installation of $filename failed with exit code $install_result." -ForegroundColor Red
+                            ($using:failed_machines).Add($env:COMPUTERNAME) | Out-Null
+                        }
                     }
 
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -ForegroundColor Red
+                    $skipped_machines.Add($single_computer) | Out-Null
                     continue
 
                 }
@@ -114,7 +129,31 @@ Function Install-DellMUPDriver {
     }
     ## This section definitely needs some work.
     END {
-        Write-Host "Finished function."
+        if (-not $env:PSMENU_DIR) {
+            $env:PSMENU_DIR = pwd
+        }
+        ## create simple output path to reports directory
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
+        $DIRECTORY_NAME = 'DellMUPDriver'
+        $OUTPUT_FILENAME = 'install_results'
+        if (-not (Test-Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ErrorAction SilentlyContinue)) {
+            New-Item -Path "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME" -ItemType Directory -Force | Out-Null
+        }
+        
+        $counter = 0
+        do {
+            $output_filepath = "$env:PSMENU_DIR\reports\$thedate\$DIRECTORY_NAME\$OUTPUT_FILENAME-$counter.txt"
+        } until (-not (Test-Path $output_filepath -ErrorAction SilentlyContinue))
+        
+        ## Append text to file here:
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($chosen_executable.name) installed on $($driver_installed -join ', ')" | Out-File -FilePath $output_filepath -Append
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: FAILED (did not return exit code 0) on:" | Out-File -FilePath $output_filepath -Append
+        $failed_machines | Out-File -FilePath $output_filepath -Append
+        "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: These machines were skipped: " | Out-File -FilePath $output_filepath -Append
+        $skipped_machines | Out-File -FilePath $output_filepath -Append
+
+        ## then open the file:
+        Invoke-Item "$output_filepath"
     }
 
 }
