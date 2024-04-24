@@ -76,6 +76,7 @@
         "Apply-DellCommandUpdates",
         "Format-SecondaryDrive",
         "Open-RDP",
-        "Add-PrinterLogicPrinter"
+        "Add-PrinterLogicPrinter",
+        "Build-PrinterConnectionExe"
     ]
 }
