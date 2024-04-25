@@ -53,7 +53,7 @@ function Ping-TestReport {
 
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
@@ -177,6 +177,15 @@ function Ping-TestReport {
         ForEach ($single_computer in $TargetComputer) {
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
+
+                ## check if network path exists first - that way we don't waste time pinging machine thats offline?
+                if (-not ([System.IO.Directory]::Exists("\\$single_computer\c$"))) {
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not online." -foregroundcolor red
+                    continue
+                }
+            
+
+
                 ## 2. Create object to store results of ping test on single machine
                 $obj = [pscustomobject]@{
                     Sourcecomputer       = $env:COMPUTERNAME
@@ -186,6 +195,7 @@ function Ping-TestReport {
                     AvgResponseTime      = 0
                     PacketLossPercentage = 0
                 }
+                Write-Host "Sending $pingcount pings to $single_computer..."
                 ## 3. Send $PINGCOUNT number of pings to target device, store results
                 $send_pings = Test-Connection -ComputerName $single_computer -count $PingCount -ErrorAction SilentlyContinue
                 ## 4. Set number of responses from target machine

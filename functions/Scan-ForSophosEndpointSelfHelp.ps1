@@ -38,7 +38,7 @@ function Scan-ForSophosEndpointSelfHelp {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
