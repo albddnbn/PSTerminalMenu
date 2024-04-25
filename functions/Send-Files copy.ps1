@@ -15,6 +15,8 @@ function Send-Files {
         The path on the target computer where you want to send the file/folder. 
         The script will cut off any preceding drive letters and insert \\hostname\c$ - so destination paths should be on C drive of target computers.
         ex: C:\users\public\desktop\test.txt
+        If sourcepath is a file, and destinationpath is a folder - the file will be copied to that folder on remote systems.
+        If sourcepath is a folder, and destinationpath is a folder - the source folder will be copied as a subdirectory to folder on remote systems.
 
     .PARAMETER TargetComputer
         Target computer or computers of the function.
@@ -117,6 +119,10 @@ function Send-Files {
         }
 
         $informational_string = ""
+
+        ## make sure destination path is formatted correctly:
+        # if destination path is a folder path, add the source file name to the end of the path
+
     }
     ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
     ## 2. Ping the single target computer one time as test before attempting remote session.
@@ -127,30 +133,30 @@ function Send-Files {
         ForEach ($single_computer in $TargetComputer) {
             ## 1. no empty Targetcomputer values past this point
             if ($single_computer) {
-                ## 2. Ping target machine one time
-                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
-
+                ## 2. Make sure machine is responsive on network
                 $file_copied = $false
+                if ([System.IO.Directory]::Exists("\\$single_computer\c$")) {
+                    ## make sure target directory exists:
+                    Invoke-Command -ComputerName $single_computer -Scriptblock {
 
-                if ($pingreply) {
-                    if (Test-Path "\\$single_computer\c$" -ErrorAction SilentlyContinue) {
-
-                        $target_session = New-PSSession $single_computer
-                        try {
-                            Copy-Item -Path "$sourcepath" -Destination "$destinationpath" -ToSession $target_session -Recurse
-                            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete." -foregroundcolor green
-                            $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete.`n"
-
-                            $file_copied = $true
+                        $destination_folder = $using:destinationpath
+                        if (-not (Test-Path $destination_folder -ErrorAction SilentlyContinue)) {
+                            Write-Host "Creating $destination_folder directory on $env:COMPUTERNAME."
+                            New-Item -Path $destination_folder -ItemType Directory -Force | Out-Null
                         }
-                        catch {
-                            # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer." -foregroundcolor red\
-                            # $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $sourcepath to $destinationpath on $single_computer.`n"
-                            $null
-                        }
+                    }
 
-                        Remove-PSSession $target_session
-                    }        
+                    $target_session = New-PSSession $single_computer
+
+                    Copy-Item -Path "$sourcepath" -Destination "$destinationpath" -ToSession $target_session -Recurse
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete." -foregroundcolor green
+                    $informational_string += "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $sourcepath to $destinationpath ($single_computer) complete.`n"
+
+                    $file_copied = $true
+
+
+                    Remove-PSSession $target_session
+                            
                 }
             
                 if (-not $file_copied) {
