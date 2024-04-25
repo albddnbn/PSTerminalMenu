@@ -163,6 +163,10 @@ function Get-CurrentUser {
 
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
+                # if single_Computer = the full hostname and dns suffix of local computer
+                if ($single_computer -eq $env:COMPUTERNAME) {
+                    $single_computer = '127.0.0.1'
+                }
                 ## 2. Send one test ping
                 $ping_result = Test-Connection $single_computer -count 1 -Quiet
                 if ($ping_result) {

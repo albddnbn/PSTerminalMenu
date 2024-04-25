@@ -6,12 +6,28 @@
             "Build-PrinterConnectionExe",
             "Get-ConnectedPrinters"
         ],
+<<<<<<< Updated upstream
         "filesystem_operations": [
             "Copy-Remotefiles",
             "Copy-RemotefilesProcess",
             "Send-Files",
             "Format-SecondaryDrive",
             "Scan-ForAppOrFilePath"
+=======
+        "scans": [
+            "Get-AssetInformation",
+            "Get-ComputerDetails",
+            "Get-ConnectedPrinters",
+            "Get-CurrentUser",
+            "Get-InstalledDotNetVersions",
+            "Get-USBDevices",
+            "List-Dotnets",
+            "Scan-ForAppOrFilePath",
+            "Scan-ForSophosEndpointSelfHelp",
+            "Scan-Office2021",
+            "Scan-SoftwareInventory",
+            "Targeted-SoftwareScan"
+>>>>>>> Stashed changes
         ],
         "installations": [
             "Install-Application",

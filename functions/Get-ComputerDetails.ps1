@@ -159,6 +159,10 @@ function Get-ComputerDetails {
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
             if ($single_computer) {
+                # if single_Computer = the full hostname and dns suffix of local computer
+                if ($single_computer -eq $env:COMPUTERNAME) {
+                    $single_computer = '127.0.0.1'
+                }
                 # ping test
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {

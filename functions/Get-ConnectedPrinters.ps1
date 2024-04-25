@@ -179,6 +179,10 @@ function Get-ConnectedPrinters {
         ForEach ($single_computer in $TargetComputer) {
             ## 1. TargetComputer can't be $null or '', it will display error during test-connection
             if ($single_computer) {
+                # if single_Computer = the full hostname and dns suffix of local computer
+                if ($single_computer -eq $env:COMPUTERNAME) {
+                    $single_computer = '127.0.0.1'
+                }
                 ## 2. Single ping test to target computer
                 $pingreply = Test-connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {

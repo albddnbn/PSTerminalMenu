@@ -154,6 +154,10 @@ function Add-PrinterLogicPrinter {
         ForEach ($single_computer in $TargetComputer) {
             ## 1.
             if ($single_computer) {
+                # if single_Computer = the full hostname and dns suffix of local computer
+                if ($single_computer -eq $env:COMPUTERNAME) {
+                    $single_computer = '127.0.0.1'
+                }
                 ## 2. test with ping:
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
@@ -183,11 +187,21 @@ function Add-PrinterLogicPrinter {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
         ## 2. Output unresponsive computers
+<<<<<<< Updated upstream
         Write-Host "These computers did not respond to ping:"
         Write-Host ""
         $missed_computers
         Write-Host ""
         Read-Host "Press enter to return results."
+=======
+        if ($missed_computers) {
+            Write-Host "These computers did not respond to ping:"
+            Write-Host ""
+            $missed_computers
+            Write-Host ""
+        }
+        # read-host "Press enter to return results."
+>>>>>>> Stashed changes
 
         ## 3. return results arraylist
         return $results

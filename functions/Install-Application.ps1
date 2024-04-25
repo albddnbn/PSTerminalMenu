@@ -63,7 +63,7 @@ function Install-Application {
     ## 1. Handle Targetcomputer input if it's not supplied through pipeline.
     ## 2. If AppName parameter was not supplied, apps chosen through menu will be installed on target machine(s).
     ##    - menu presented uses the 'PS-Menu' module: https://github.com/chrisseroka/ps-menu
-    ## 3. Define scriptblock - installs specified app using PSADT folder/script on local machine.
+    ## 3. Define scriptblock - installs specified app  PSADT folder/script on local machine.
     ## 4. Prompt - should this script skip over computers that have users logged in?
     ## 5. create empty containers for reports:
     BEGIN {
@@ -231,12 +231,13 @@ function Install-Application {
 
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
+                # if single_Computer = the full hostname and dns suffix of local computer
+                if ($single_computer -eq $env:COMPUTERNAME) {
+                    $single_computer = '127.0.0.1'
+                }
                 ## 2. Ping test
                 $ping_result = Test-Connection $single_computer -count 1 -Quiet
                 if ($ping_result) {
-                    if ($single_computer -eq '127.0.0.1') {
-                        $single_computer = $env:COMPUTERNAME
-                    }
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer responded to one ping, proceeding with installation(s)." -Foregroundcolor Green
 
                     ## create sesion

@@ -159,7 +159,10 @@ function Get-InstalledDotNetversions {
     ## 3. If machine was responseive, run scriptblock to logged in user, info on teams/zoom processes, etc.
     PROCESS {
         ForEach ($single_computer in $TargetComputer) {
-
+            # if single_Computer = the full hostname and dns suffix of local computer
+            if ($single_computer -eq $env:COMPUTERNAME) {
+                $single_computer = '127.0.0.1'
+            }
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
                 ## 2. Send one test ping
