@@ -43,13 +43,12 @@ function Send-Files {
         )]
         [String[]]$TargetComputer,
         [ValidateScript({
-                $make_sure_path_exists = Test-Path $_ -ErrorAction SilentlyContinue
-                if (-not $make_sure_path_exists) {
-                    Write-Error "SourcePath does not exist. Please enter a valid path."
-                    return $false
+                if (Test-Path $_ -ErrorAction SilentlyContinue) {
+                    return $true
                 }
                 else {
-                    return $true
+                    Write-Error "SourcePath does not exist. Please enter a valid path."
+                    return $false                
                 }
             })]
         [string]$sourcepath,
