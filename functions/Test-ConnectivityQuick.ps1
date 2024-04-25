@@ -106,7 +106,7 @@ function Test-ConnectivityQuick {
         ForEach ($single_computer in $TargetComputer) {
 
             if ($single_computer) {
-                $connection_result = Test-Connection $single_computer -count $PING_COUNT
+                $connection_result = Test-Connection $single_computer -count $PING_COUNT -ErrorAction SilentlyContinue
                 $ping_responses = $([string[]]($connection_result | where-object { $_.statuscode -eq 0 })).count
 
                 ## Create object
