@@ -72,6 +72,7 @@ function Install-Application {
     ## 4. Prompt - should this script skip over computers that have users logged in?
     ## 5. create empty containers for reports:
     BEGIN {
+        $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
@@ -308,14 +309,12 @@ function Install-Application {
         #     $skipped_applications | Sort-Object
         # }
 
-        "Function completed execution on: [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
-        "Installation process completed (not necessarily successfully) on the following computers:" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+        "Installation of $AppName completed at: [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+        $installation_completed | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append
 
-        $installation_completed | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+        "Unresponsive computers:" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append
 
-        "Unresponsive computers:" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
-
-        $unresponsive_computers | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
+        $unresponsive_computers | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append
 
         Invoke-Item "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" 
     }

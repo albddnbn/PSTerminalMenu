@@ -126,22 +126,27 @@ function Copy-RemoteFiles {
         ForEach ($single_computer in $TargetComputer) {
             ## 1. no empty Targetcomputer values past this point
             if ($single_computer) {
-                ## 2. Ping target machine one time
-                $pingreply = Test-Connection $single_computer -Count 1 -Quiet
-                if ($pingreply) {
-                    $target_session = New-PSSession $single_computer
-                    try {
+                ## 2. Make sure machine is responsive on the network
+                $target_network_path = $targetpath -replace 'C:', "\\$single_computer\c$"
+                if ([system.IO.Directory]::Exists("\\$single_computer\c$")) {
+                    if (Test-Path "$target_network_path" -erroraction SilentlyContinue) {
+
+                    
+                        $target_session = New-PSSession $single_computer
+
                         $target_filename = $targetpath | split-path -leaf
 
 
                         Copy-Item -Path "$targetpath" -Destination "$OutputFolder\$single_computer-$target_filename" -FromSession $target_session -Recurse
                         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Transfer of $targetpath ($single_computer) to $OutputFolder\$single_computer-$target_filename  complete." -foregroundcolor green
+                    
+                        Remove-PSSession $target_session
+
                     }
-                    catch {
+                    else {
                         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Failed to copy $targetpath on $single_computer to $OutputFolder on local computer." -foregroundcolor red
                     }
                     ## 4. Bye pssession
-                    Remove-PSSession $target_session
                 }
             }
         }
