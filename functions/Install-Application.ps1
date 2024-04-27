@@ -7,6 +7,7 @@ function Install-Application {
             Ex: For the Notepad++ application, the folder name is 'Notepad++', and installation script is 'Deploy-Notepad++.ps1'.
 
 	.DESCRIPTION
+        After the installations have completed, function will open a text file on local computer to show offline computers.
         You can find some pre-made PSADT installation folders here:
         https://dtccedu-my.sharepoint.com/:f:/g/personal/abuddenb_dtcc_edu/Ervb5x-KkbdHvVcCBb9SK5kBCINk2Jtuvh240abVnpsS_A?e=kRsjKx
         Applications in the 'working' folder have been tested and are working for the most part.
@@ -19,12 +20,14 @@ function Install-Application {
         g-labpc- (g-labpc-01. g-labpc-02, g-labpc-03..).
         
     .PARAMETER AppName
+        If nothing is supplied for AppName, a menu will be presented to use to choose from as long as the function is not as as a job.
+        --
         If supplied, the function will look for a folder in $env:PSMENU_DIR\deploy\applications with a name that = $AppName.
         If not supplied, the function will present menu of all folders in $env:PSMENU_DIR\deploy\applications to user.
     
     .PARAMETER SkipOccupied
-        If anything other than 'n' is supplied, the function will skip over computers that have users logged in.
         If 'n' is supplied, the function will install the application(s) regardless of users logged in.
+        If anything other than 'n' is supplied, the function will skip over computers that have users logged in.
 
 	.EXAMPLE
         Run installation(s) on all hostnames starting with 's-a231-':
@@ -52,16 +55,17 @@ function Install-Application {
             Position = 0
         )]
         [String[]]$TargetComputer,
-        [ValidateScript({
-                if (Test-Path "$env:PSMENU_DIR\deploy\applications\$_" -ErrorAction SilentlyContinue) {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($_) in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Green
-                    return $true
-                }
-                else {
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($_) not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
-                    return $false
-                }
-            })]
+        ## If this is uncommented - it has to take into account when appname is submitted as comma separated list of app names.
+        # [ValidateScript({
+        #         if (Test-Path "$env:PSMENU_DIR\deploy\applications\$_" -ErrorAction SilentlyContinue) {
+        #             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $($_) in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Green
+        #             return $true
+        #         }
+        #         else {
+        #             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($_) not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
+        #             return $false
+        #         }
+        #     })]
         [string]$AppName,
         [string]$SkipOccupied
     )
@@ -141,7 +145,8 @@ function Install-Application {
             $applist = ($ApplicationList).Name
 
             # divide applist into app_list_one and app_list_two
-            ## THIS HAS TO BE DONE (AT LEAST WITH THIS PS-MENU MODULE - ANYTHING OVER ~30 ITEMS WILL CAUSE THE MENU TO FREEZE UP)
+            ## From what I found - anything over 30 items would cause the menu to freeze up - unsure if this is a limitation
+            ## because of my code or in the ps-menu module itself.
             $app_list_one = [system.collections.arraylist]::new()
             $app_list_two = [system.collections.arraylist]::new()
             $app_name_counter = 0
@@ -177,8 +182,12 @@ function Install-Application {
             ForEach ($single_app in $chosen_apps) {
                 if (-not (Test-Path "$env:PSMENU_DIR\deploy\applications\$single_app")) {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_app not found in $env:PSMENU_DIR\deploy\applications." -Foregroundcolor Red
-                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Ending function." -Foregroundcolor Red
-                    return
+                    # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Ending function." -Foregroundcolor Red
+                    ## remove single_app from chosen_apps
+                    $chosen_apps = $chosen_apps | Where-Object { $_ -ne $single_app }
+
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Removed $single_app from chosen_apps." -Foregroundcolor Yellow
+                    Start-Sleep -Seconds 2
                 }
             }
         }
@@ -297,17 +306,8 @@ function Install-Application {
             }
         }
     }
-    ## 1. Open the folder that will contain reports if necessary.
+    ## 1. Either creates or appends to a text file, to let user know that script has finished execution (mostly for when its run as a background job)
     END {
-
-        # if ($unresponsive_computers) {
-        #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unresponsive computers:" -Foregroundcolor Yellow
-        #     $unresponsive_computers | Sort-Object
-        # }
-        # if ($skipped_applications) {
-        #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Skipped applications:" -Foregroundcolor Yellow
-        #     $skipped_applications | Sort-Object
-        # }
 
         "Installation of $AppName completed at: [$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')]" | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append -Force
         $installation_completed | Sort-Object | Out-File "$env:PSMENU_DIR\reports\$thedate\install-application-$thedate.txt" -append
