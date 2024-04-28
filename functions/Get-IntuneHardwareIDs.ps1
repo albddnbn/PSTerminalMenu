@@ -206,10 +206,10 @@ Function Get-IntuneHardwareIDs {
 
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
-                ## 2. Send one test ping
-                $ping_result = Test-Connection $single_computer -count 1 -Quiet
-                ## 3. Responsive machines...
-                if ($ping_result) {
+                ## 2. Make sure machine is responsive on the network
+                if ([System.IO.Directory]::Exists("\\$single_computer\c$")) {
+                    ## chop the domain off end of computer name
+                    $single_computer = $single_computer.split('.')[0]
                     ## Define parameters to be used when executing Get-WindowsAutoPilotInfo
                     $params = @{
                         ComputerName = $single_computer
