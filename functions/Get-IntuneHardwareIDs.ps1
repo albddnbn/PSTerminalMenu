@@ -172,7 +172,7 @@ Function Get-IntuneHardwareIDs {
             # Attempt to download script if there's Internet
             # $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
             $check_internet_connection = Test-Connection "google.com" -Count 2 -ErrorAction SilentlyContinue
-            if ($check_internet_connection.PingSucceeded) {
+            if ($check_internet_connection) {
                 # check for nuget / install
                 $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
                 if ($null -eq $check_for_nuget) {
