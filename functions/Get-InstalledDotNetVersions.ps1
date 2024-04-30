@@ -55,7 +55,7 @@ function Get-InstalledDotNetversions {
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 1. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
@@ -177,8 +177,11 @@ function Get-InstalledDotNetversions {
                         Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP' -Recurse | `
                             Get-ItemProperty -Name version -EA 0 | Where { $_.PSChildName -Match '^(?!S)\p{L}' } |`
                             Select PSChildName, version
+
                     } | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
-                    $results.add($target_installed_dotnet) | out-null
+                    ForEach ($single_result in $target_installed_dotnet) {
+                        $results.add($single_result) | out-null
+                    }
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
@@ -191,6 +194,14 @@ function Get-InstalledDotNetversions {
     ## 3. Create .csv/.xlsx reports as necessary.
     END {
         if ($results) {
+            # $testresults = [system.collections.arraylist]::new()
+
+            ForEach ($single_result in $results) {
+                $single_result
+            }
+            read-host "press enter"
+
+
             ## 1. Sort any existing results by computername
             $results = $results | sort -property pscomputername
             ## 2. Output to gridview if user didn't choose report output.
