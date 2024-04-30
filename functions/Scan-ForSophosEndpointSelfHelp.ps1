@@ -191,7 +191,7 @@ function Scan-ForSophosEndpointSelfHelp {
                         }
                     }  | Select PSComputerName, * -ExcludeProperty RunspaceId, PSshowcomputername -ErrorAction SilentlyContinue
 
-                    $results.Add($sophos_endpoint_check)
+                    $results.Add($sophos_endpoint_check) | Out-Null
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is not responding to ping, skipping." -Foregroundcolor Yellow
