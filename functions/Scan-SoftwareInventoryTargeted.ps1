@@ -39,25 +39,24 @@ function Scan-SoftwareInventoryTargeted {
         [Parameter(
             Mandatory = $true)]
         [string]$OutputFile,
-        [string]$AppsToLookFor
+        $AppsToLookFor
     )
     ## 1. Define title, date variables
     ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
     ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     ## 4. Create empty results container
     BEGIN {
-        $AppsToLookFor = $AppsToLookFor -split ','
+        $AppsToLookFor = $AppsToLookFor.split(",")
         if ($AppsToLookFor -isnot [array]) {
             $AppsToLookFor = @($AppsToLookFor)
         }
-
 
         ## 1. Define title, date variables
         $REPORT_TITLE = 'SoftwareScan'
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
@@ -171,7 +170,6 @@ function Scan-SoftwareInventoryTargeted {
                     $target_software_inventory = invoke-command -computername $single_computer -scriptblock {
 
                         $targetapps = ($using:AppsToLookFor)
-
                         $registryPaths = @(
                             "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
                             "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
