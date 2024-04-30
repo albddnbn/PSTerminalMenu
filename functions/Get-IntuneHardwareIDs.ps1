@@ -170,7 +170,8 @@ Function Get-IntuneHardwareIDs {
         $getwindowsautopilotinfo = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "Get-WindowsAutoPilotInfo.ps1" -File -ErrorAction SilentlyContinue
         if (-not $getwindowsautopilotinfo) {
             # Attempt to download script if there's Internet
-            $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
+            # $check_internet_connection = Test-NetConnection "google.com" -ErrorAction SilentlyContinue
+            $check_internet_connection = Test-Connection "google.com" -Count 2 -ErrorAction SilentlyContinue
             if ($check_internet_connection.PingSucceeded) {
                 # check for nuget / install
                 $check_for_nuget = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
