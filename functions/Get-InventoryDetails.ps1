@@ -164,6 +164,8 @@ function Get-InventoryDetails {
 
         ## 3. Create empty results container
         $results = [system.collections.arraylist]::new()
+
+        $not_inventoried = [system.collections.arraylist]::new()
     }
 
     ## 1. Make sure no $null or empty values are submitted to the ping test or scriptblock execution.
@@ -176,7 +178,7 @@ function Get-InventoryDetails {
             if ($single_computer) {
                 ## 2. Check if computer is repsonsive on the network.
                 if (Test-Connection $single_computer -Count 2 -Quiet -ErrorAction SilentlyContinue) {
-                    $result_obj = Invoke-Command -ComputerName $_.hostname -scriptblock {
+                    $result_obj = Invoke-Command -ComputerName $single_computer -scriptblock {
                         $pc_asset_tag = Get-Ciminstance -class win32_systemenclosure | select -exp smbiosassettag
                         $pc_model = Get-Ciminstance -class win32_computersystem | select -exp model
                         $pc_serial = Get-Ciminstance -class Win32_SystemEnclosure | select -exp serialnumber
@@ -207,15 +209,45 @@ function Get-InventoryDetails {
                             monitor_serials       = $(($monitors.serialnumberid) -join ',')
                             monitor_manufacturers = $(($monitors.ManufacturerName) -join ',')
                             monitor_models        = $(($monitors.UserFriendlyName) -join ',')
+                            inventoried           = $true
                         }
-                        Write-Host "Gathered details from $env:COMPUTERNAME"
-                        Write-Host "$obj"
+                        # Write-Host "Gathered details from $env:COMPUTERNAME"
+                        # Write-Host "$obj"
                         $obj
                     } | Select * -ExcludeProperty PSShowComputerName, RunspaceId
+
+                    if (-not ($result_obj.pscomputername)) {
+                        $result_obj = [pscustomobject]@{
+                            pscomputername        = $single_computer
+                            computer_asset        = ''
+                            computer_location     = $(($single_computer -split '-')[1]) ## at least make an attempt to get location.
+                            computer_model        = ''
+                            computer_serial       = ''
+                            computer_manufacturer = ''
+                            monitor_serials       = ''
+                            monitor_manufacturers = ''
+                            monitor_models        = ''
+                            inventoried           = $false
+                        }
+                    }
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is offline." -Foregroundcolor Yellow
+                    $result_obj = [pscustomobject]@{
+                        pscomputername        = $single_computer
+                        computer_asset        = ''
+                        computer_location     = $(($single_computer -split '-')[1]) ## at least make an attempt to get location.
+                        computer_model        = ''
+                        computer_serial       = ''
+                        computer_manufacturer = ''
+                        monitor_serials       = ''
+                        monitor_manufacturers = ''
+                        monitor_models        = ''
+                        inventoried           = $false
+                    }
                 }
+                $results.Add($result_obj) | out-null
+
             }
         }
     }
