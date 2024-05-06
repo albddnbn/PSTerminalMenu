@@ -12,6 +12,9 @@ function Test-ConnectivityQuick {
         Path to text file containing one hostname per line, ex: 'D:\computers.txt'
         First section of a hostname to generate a list, ex: t-pc-0 will create a list of all hostnames that start with t-pc-0. (Possibly t-pc-01, t-pc-02, t-pc-03, etc.)
 
+    .PARAMETER PingCount
+        Number of pings sent to each target machine. Default is 1.
+
     .EXAMPLE
         Check all hostnames starting with t-client- for online/offline status.
         Test-ConnectivityQuick -TargetComputer "t-client-"
@@ -28,16 +31,17 @@ function Test-ConnectivityQuick {
             ValueFromPipeline = $true,
             Position = 0
         )]
-        [String[]]$TargetComputer
+        [String[]]$TargetComputer,
+        $PingCount = 1
     )
     ## 1. Set PingCount - # of pings sent to each target machine.
     ## 2. Handle Targetcomputer if not supplied through the pipeline.
     BEGIN {
         ## 1. Set PingCount - # of pings sent to each target machine.
-        $PING_COUNT = 1
+        $PING_COUNT = $PingCount
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
