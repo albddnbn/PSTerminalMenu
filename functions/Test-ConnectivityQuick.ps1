@@ -111,7 +111,7 @@ function Test-ConnectivityQuick {
 
             if ($single_computer) {
                 $connection_result = Test-Connection $single_computer -count $PING_COUNT -ErrorAction SilentlyContinue
-                $ping_responses = $([string[]]($connection_result | where-object { $_.statuscode -eq 0 })).count
+                $ping_responses = $([string[]]($connection_result | where-object { $_.status -eq 'Success' })).count
 
                 ## Create object
                 $ping_response_obj = [pscustomobject]@{
@@ -121,7 +121,7 @@ function Test-ConnectivityQuick {
                     NumberPings   = $PING_COUNT
                 }
 
-                if ($connection_result) {
+                if ($connection_result.status -contains 'Success') {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is online [$ping_responses responses]" -foregroundcolor green
                     # $list_of_online_computers.add($single_computer) | Out-Null
                     $ping_response_obj.Status = 'online'
