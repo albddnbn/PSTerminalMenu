@@ -32,8 +32,8 @@ function Clear-ChromeBrowsingData {
     param (
         [Parameter(Mandatory = $false)]
         [String]$Username,
-        [Parameter(Mandatory = $true)]
-        [String]$TargetPC,
+        [Parameter(Mandatory = $false)]
+        [String]$TargetPC = '127.0.0.1',
         [string]$UseCaution,
         [string]$TargetAllProfiles
     )
@@ -74,7 +74,8 @@ function Clear-ChromeBrowsingData {
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] " -NoNewline
         Write-Host "[$env:COMPUTERNAME]" -nonewline -ForegroundColor Yellow
         Write-Host " :: Stopping any running chrome processes."
-        Get-Process -name 'chrome' -erroraction SilentlyContinue | Stop-Process -force -ErrorAction SilentlyContinue
+        # Get-Process -name 'chrome' -erroraction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+        Get-Process chrome | ForEach-Object { $_.CloseMainWindow() | Out-Null }
 
         $items_to_remove = @(
             'History',
