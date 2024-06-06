@@ -111,10 +111,9 @@ function Test-ConnectivityQuick {
 
             if ($single_computer) {
                 $connection_result = Test-Connection $single_computer -count $PING_COUNT -ErrorAction SilentlyContinue
-				$connection_result
-				READ-HOST "ENTER"
+                # $connection_result
                 # $ping_responses = $([string[]]($connection_result | where-object { $_.status -eq 'Success' })).count
-				$PING_RESPONSES = $connection_result.count
+                $PING_RESPONSES = $connection_result.count
                 ## Create object
                 $ping_response_obj = [pscustomobject]@{
                     ComputerName  = $single_computer
