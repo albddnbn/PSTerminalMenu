@@ -37,7 +37,7 @@ Try { Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'Process' -Forc
 $CONFIG_FILENAME = "config.json"
 
 # Set window title:
-$host.ui.RawUI.WindowTitle = "Menu - $(Get-Date -Format 'mm-dd-yyyy')"
+$host.ui.RawUI.WindowTitle = "Menu - $(Get-Date -Format 'MM-dd-yyyy')"
 
 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -nonewline
 Write-Host "Loading $CONFIG_FILENAME.." -ForegroundColor Yellow
