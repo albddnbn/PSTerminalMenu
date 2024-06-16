@@ -182,12 +182,17 @@ function Compare-Folders {
                         ## Insert function code here (code that gets run on for each target computer)
                         $Reference_obj = $using:ReferenceFolder
                         $difference_obj = $using:DifferenceFolder
+						
+						$reference_obj = Get-ChildItem -path "$reference_obj" -Recurse
+						$difference_obj = Get-ChildItem -Path "$difference_obj" -Recurse
+						
 
                         $comparison_results = Compare-Object -ReferenceObject $Reference_obj -DifferenceObject $difference_obj
 
-                        $files_present_in_ref = $comparison_results | ? { $_.SideIndicator -eq '<=' } | Select -exp @{Name = 'FileName'; Expression = { $_.InputObject } }
-                        $files_present_in_diff = $comparison_results | ? { $_.SideIndicator -eq '=>' } | Select -exp @{Name = 'FileName'; Expression = { $_.InputObject } }
-
+                        # $files_present_in_ref = $comparison_results | ? { $_.SideIndicator -eq '<=' } | Select -exp @{Name = 'FileName'; Expression = { $_.InputObject } }
+                        # $files_present_in_diff = $comparison_results | ? { $_.SideIndicator -eq '=>' } | Select -exp @{Name = 'FileName'; Expression = { $_.InputObject } }
+                        $files_present_in_ref = $comparison_results | ? { $_.SideIndicator -eq '<=' } | Select -exp inputobject
+                        $files_present_in_diff = $comparison_results | ? { $_.SideIndicator -eq '=>' } | Select -exp inputobject
 
                         $obj = [pscustomobject]@{
                             ComputerName             = $env:COMPUTERNAME
