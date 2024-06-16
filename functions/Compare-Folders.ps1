@@ -183,9 +183,10 @@ function Compare-Folders {
                         $Reference_obj = $using:ReferenceFolder
                         $difference_obj = $using:DifferenceFolder
 						
-						$reference_obj = Get-ChildItem -path "$reference_obj" -Recurse
-						$difference_obj = Get-ChildItem -Path "$difference_obj" -Recurse
-						
+                        # $reference_obj = Get-ChildItem -path "$reference_obj" -Recurse
+                        # $difference_obj = Get-ChildItem -Path "$difference_obj" -Recurse
+                        $reference_obj = Get-ChildItem -path "$reference_obj" -Recurse | Get-FileHash -Algorithm MD5
+                        $difference_obj = Get-ChildItem -Path "$difference_obj" -Recurse | Get-FileHash -Algorithm MD5
 
                         $comparison_results = Compare-Object -ReferenceObject $Reference_obj -DifferenceObject $difference_obj
 
