@@ -1,0 +1,4 @@
+Information Gathering
+Installation
+Registry Edits
+Remote Sessions Tests and Updates

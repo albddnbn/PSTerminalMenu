@@ -1,0 +1,6 @@
+Get-User
+Get-AssetInfo
+Get-InstalledApps
+Get-USBdevs
+Get-UserPrinter
+Get-ConnectedMonitors

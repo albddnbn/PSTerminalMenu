@@ -1,3 +1,0 @@
-$printersname = Read-Host "Enter printer name, or path to printer if it's a networked one"
-
-rundll32.exe printui.dll,PrintUIEntry /o /n "$printersname"

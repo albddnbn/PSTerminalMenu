@@ -1,0 +1,7 @@
+Get-mspaint
+Get-Npad
+Get-RSAT
+Get-WinkeyBack
+Get-PowershellISE
+Install-Zoom
+Install-LoggerPro

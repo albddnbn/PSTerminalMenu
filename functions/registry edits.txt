@@ -1,0 +1,3 @@
+Remove-NewRichText
+Import-CopyAsPath
+Restore-NewTextDoc
