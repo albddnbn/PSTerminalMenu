@@ -1,0 +1,277 @@
+
+
+# ----------------------------------------------------------------------------------------------------------------
+# ------- Functions that use DISM -------
+function Get-Npad {
+    <#
+    .SYNOPSIS
+    Disables the local Windows Update server and attempts to install Notepad from Microsoft's servers.
+
+    .DESCRIPTION
+    May also be able to supply ComputerName computer or hostname file eventually.
+
+    .EXAMPLE
+    Get-Npad
+    - OR - 
+    # Test the below command
+    Invoke-Command -ComputerName <HostName> -ScriptBlock ${function:Get-Npad}
+
+    .NOTES
+    Additional notes about the function.
+    #>
+    Echo 'Setting UseWUServer Registry to 0...'
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '0'
+    Echo 'Restarting Windows Update Service...'
+    Restart-Service -Name 'wuauserv'
+    Echo 'Installing Notepad...'
+    DISM /online /Add-Capability /CapabilityName:Microsoft.Windows.Notepad~~~~0.0.1.0
+    Echo 'Setting UseWUServer Registry back to 1...'
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '1'
+    Echo 'Restarting Windows Update Service...'
+    Restart-Service -Name 'wuauserv'
+    Stop-Process -Name explorer -Force
+    Start-Process explorer
+}
+
+# Install RSAT (Windows Remote Server Admin Tool)
+function Get-RSAT {
+    <#
+    .SYNOPSIS
+    Disables the local Windows Update server and attempts to install RSAT from Microsoft's servers.
+
+    .DESCRIPTION
+    May also be able to supply ComputerName computer or hostname file eventually.
+
+    .EXAMPLE
+    Get-RSAT
+    - OR - 
+    # Test the below command
+    Invoke-Command -ComputerName <HostName> -ScriptBlock ${function:Get-RSAT}
+
+    .NOTES
+    Additional notes about the function.
+    #>
+    Write-Host "Shutting down Windows Update Service"
+    # change windows update service registry key value:
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '0'
+    # restart windows update
+    Restart-Service -Name 'wuauserv'
+    Write-Host "Attempting to add RSAT capability"
+    # use DISM to add RSAT capability
+    dism.exe /online /add-capability /capabilityname:Rsat.activedirectory.DS-LDS.Tools~~~~0.0.1.0 /Capabilityname:Rsat.GroupPolicy.Management.tools~~~~0.0.1.0 /capabilityname:rsat.wsus.tools~~~~0.0.1.0
+    # set windows update registry key value back to how it was:
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '1'
+    # restart service:
+    Restart-Service -Name 'wuauserv'
+    Stop-Process -Name explorer -Force
+    Start-Process explorer
+}
+
+# Clipboard history and WIN+SHIFT+S shortcut
+function Get-WinkeyBack {
+    <#
+    .SYNOPSIS
+    Disables the local Windows Update server and attempts to restore the use of the WIN+SHIFT+S screenshot shortcut and Snipping Tool from Microsoft's servers.
+
+    .DESCRIPTION
+    May also be able to supply ComputerName computer or hostname file eventually.
+
+    .EXAMPLE
+    Get-WinKeyBack
+    - OR - 
+    # Test the below command
+    Invoke-Command -ComputerName <HostName> -ScriptBlock ${function:Get-WinKeyBack}
+
+    .NOTES
+    Additional notes about the function.
+    #>
+    # change windows update service registry key value
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '0'
+    # restart service
+    Restart-Service -Name 'wuauserv'
+    # use dism to add functionality back
+    # DISM /Online /Add-Capability /CapabilityName:Windows.Client.ShellComponents~~~~0.0.1.0
+    Dism /online /Enable-Feature /FeatureName:"NetFx3"
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '1'
+    
+    Restart-Service -Name 'wuauserv'
+    Stop-Process -Name explorer -Force
+    Start-Process explorer
+}
+
+# Install Powershell ISE
+function Get-PowershellISE {
+    <#
+    .SYNOPSIS
+    Disables the local Windows Update server and attempts to install Powershell Integrated Scripting Environment from Microsoft's servers.
+
+    .DESCRIPTION
+    May also be able to supply ComputerName computer or hostname file eventually.
+
+    .EXAMPLE
+    Get-PowershellISE
+    - OR - 
+    # Test the below command
+    Invoke-Command -ComputerName <HostName> -ScriptBlock ${function:Get-PowershellISE}
+
+    .NOTES
+    Additional notes about the function.
+    #>
+    # change windows update service registry key value
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '0'
+    # restart service
+    Restart-Service -Name 'wuauserv'
+    # use dism to add powershell ise capability
+    dism /online /add-capability /capabilityname:microsoft.windows.powershell.ise~~~~0.0.1.0
+    # turn windows update service registry key value back to normal
+    Set-Itemproperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Name 'UseWUServer' -value '1'
+    Restart-Service -Name 'wuauserv'
+
+    # I've noticed that with installations using DISM, restarting explorer.exe somtimes helpes in lieu of a full reboot to make the changes effective
+    Stop-Process -Name explorer -Force
+    Start-Process explorer
+}
+
+
+
+# ----------- end of get users connected printers functions ----------------
+
+
+function Start-Updates {
+    <#
+    .SYNOPSIS
+    Attempts to start available Microsoft/Windows updates on a single or group of remote PCs.
+
+    .DESCRIPTION
+    You can also use a hostname txt file for this function.
+
+    .PARAMETER ComputerName
+    The ComputerName computer or hostname txt file to start the updates on.
+
+    .EXAMPLE
+    Start-Updates
+    - OR - 
+    Start-Updates -ComputerName "computername"
+
+    .NOTES
+    Additional notes about the function.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromPipeline = $true)]
+        [string[]]$ComputerName = $env:COMPUTERNAME
+    )
+    if (Test-Path $ComputerName) {
+        $ComputerNames = Get-Content $ComputerName
+    }
+    else {
+        $ComputerNames = $ComputerName
+    }
+
+    # Install the PSWindowsUpdate module
+    if (!(Get-Module -Name PSWindowsUpdate)) {
+        Write-Host "Installing PSWindowsUpdate module..." -ForegroundColor Yellow
+        Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser
+    }
+    # Import the PSWindowsUpdate module
+    Import-Module -Name PSWindowsUpdate -Force
+
+    # run updates
+    Invoke-WUJob -ComputerName $ComputerNames -Script {
+        ipmo PSWindowsUpdate;
+        Install-WindowsUpdate -AcceptAll -AutoReboot -MicrosoftUpdate | Out-File "$env:SystemDrive\Windows\PSWindowsUpdate.log"
+    } -RunNow -Confirm:$false -Verbose -ErrorAction Ignore
+    
+
+}
+
+# function Import-CopyAsPath {
+#     <#
+#     .SYNOPSIS
+#     Imports a reg file into user's registry, so that 'Copy as Path' is available in the right-click context menu when right-clicking folder/file.
+
+#     .DESCRIPTION
+#     Detailed description
+
+#     .EXAMPLE
+#     Import-CopyAsPath
+
+#     .NOTES
+#     Additional notes about the function.
+#     #>
+#     [CmdletBinding()]
+#     # ask user if they want to import the copy as path reg file
+#     $copyaspath = Read-Host "Do you want to import the copy as path reg file? (y/n)"
+#     if ($copyaspath -eq "y") {
+#         # import the copy as path reg file
+#         reg import ./add-copy-as-path.reg
+#         # restart explorer.exe
+#         Stop-Process -Name explorer -Force
+#         Start-Process explorer
+#     }
+
+# }
+
+# function Restore-NewTextDoc {
+#     <#
+#     .SYNOPSIS
+#     Restores the new text document context menu item in Windows 10.
+
+#     .DESCRIPTION
+#     Detailed description
+
+#     .EXAMPLE
+#     Restore-NewTextDoc
+
+#     .NOTES
+#     Additional notes about the function.
+#     #>
+#     [CmdletBinding()]
+#     # ask user if they want to restore the new text document context menu item
+#     $newtextdoc = Read-Host "Do you want to restore the new text document context menu item? (y/n)"
+#     if ($newtextdoc -eq "y") {
+#         # restore the new text document context menu item
+#         reg import ./restore-new-text-doc.reg
+#         # restart explorer.exe
+#         Stop-Process -Name explorer -Force
+#         Start-Process explorer
+#     }
+# }
+
+# function Remove-NewRichText {
+#     <#
+#     .SYNOPSIS
+#     Removes the 'Create New Rich Text Document' from the Windows right-click context menu by editing the registry.
+
+#     .DESCRIPTION
+#     Detailed description
+
+#     .EXAMPLE
+#     Remove-NewRichText
+
+#     .NOTES
+#     Additional notes about the function.
+#     #>
+#     [CmdletBinding()]
+#     # ask user if they want to remove the new rich text document context menu item
+#     $newrichtext = Read-Host "Do you want to remove the new rich text document context menu item? (y/n)"
+#     if ($newrichtext -eq "y") {
+#         # remove the new rich text document context menu item
+#         reg import ./remove-new-richtext-doc.reg
+#         # restart explorer.exe
+#         Stop-Process -Name explorer -Force
+#         Start-Process explorer
+#     }
+# }
+
+# can this function take a hostlist txt file as ComputerName in addition to single hostname?
+
+
+
+<# CURRENTLY THE BOTTOM OF THE FILE #>
+
+<#
+Generic msi installer function form
+#>
+
+

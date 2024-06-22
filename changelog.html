@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Change Log</title>
+  <style>
+    body {
+      background-color: #1f1f1f;
+      color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #44aad6;
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      color: #44aad6;
+      font-size: 20px;
+      margin-top: 30px;
+    }
+
+    .change {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #333333;
+      border-radius: 5px;
+    }
+
+    .highlight {
+      background-color: #44aad6;
+      color: #f0f0f0;
+      font-weight: bold;
+      padding: 3px 5px;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .informational-screenshot {
+      width: 80%;
+      margin: 0 auto;
+      display: block;
+      padding: 10px;
+      padding-bottom: 15px;
+      padding-top: 12px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>PS1 Menu...with Functions! Change Log</h1>
+  <div class="change">
+    <h2>September 9, 2023</h2>
+    <ul>
+      <li>
+        <span class="highlight">Removed:</span>The Browser Functions category, renamed the text file to .old. Functions
+        are never used.
+      </li>
+      <p style="margin-left: 2em">
+        The actual function files are still there, but the category won't show in menu until it's readded to
+        categories.txt, and the Browser Functions.txt.old file has .old removed.
+      </p>
+      <br>
+      <li>
+        <span class="highlight">Removed:</span>Install-Teams, Install-Zoom, Install-LoggerPro from the installation.txt
+        file. They won't show in menu until the funciton names are re-added to installation.txt.
+      </li>
+      <p style="margin-left: 2em">
+        These functions are never used, and the Ps App toolkit deployments basically take care of all of them.
+
+      </p>
+      <br>
+      <li>
+        <span class="highlight">Modified:</span>The try-catch section of menu.ps1. Before, it would stop dot-sourcing
+        functions as soon as it ran into an error.
+      </li>
+      <p style="margin-left: 2em">
+        Now it will write a notification to the terminal in red, wait 3 seconds, then continue dot sourcing the rest of
+        the functions if there are any.
+
+      </p>
+      <div class="informational-screenshot">
+        <img src="IMG\try-catch-menu-ps1-change-9-9-2023.png">
+      </div>
+      <!-- <li><span class="highlight">Fixed:</span> Issue B</li> -->
+    </ul>
+  </div>
+  <div class="change">
+    <h2>June 25, 2023</h2>
+    <ul>
+      <li>
+        <span class="highlight">Added:</span> A way for users to request the
+        description of a parameter being prompted for parameter value.
+      </li>
+      <p style="margin-left: 2em">
+        Used Get-Help to access the parameter descriptions, so the function
+        has to have those in order for a parameter's description to be printed
+        to terminal.
+      </p>
+      <li>Improved performance</li>
+      <!-- <li><span class="highlight">Fixed:</span> Issue B</li> -->
+    </ul>
+  </div>
+
+  <!-- <div class="change">
+      <h2>Version 1.0.0</h2>
+      <p>Release Date: January 1, 2023</p>
+      <ul>
+        <li><span class="highlight">Added:</span> New feature A</li>
+        <li>Improved performance</li>
+        <li><span class="highlight">Fixed:</span> Issue B</li>
+      </ul>
+    </div> -->
+
+  <!-- <div class="change">
+      <h2>Version 0.9.0</h2>
+      <p>Release Date: December 15, 2022</p>
+      <ul>
+        <li>Initial release</li>
+      </ul>
+    </div> -->
+</body>
+
+</html>

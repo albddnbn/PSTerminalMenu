@@ -1,0 +1,38 @@
+[CmdletBinding()]
+param (
+    # can be a file or an arraylist
+    [Parameter()]
+    $FileName
+)
+# deal with filename as long as its string or arraylist
+if ($filename.gettype().name -eq "String") {
+    try {
+        $computers = Get-Content $FileName
+    }
+    catch {
+        $filename = Read-Host "Enter the path to the file containing the list of computers"
+        $computers = Get-Content $FileName
+    }
+}
+elseif ($filename.getType().Name -eq "ArrayList") {
+    $computers = $filename
+}
+else {
+    $computers = Read-Host "Enter the path to the file containing the list of computers"
+    $computers = Get-Content $computers
+}
+
+$online = [System.Collections.ArrayList]::new()
+$offline = [System.Collections.ArrayList]::new()
+
+
+Foreach ($PC in $Computers) {
+    If ((Test-NetConnection $PC -InformationLevel Quiet)) {
+        write-host "$PC is online" -Foregroundcolor Green
+        $online.add($PC) 
+    }
+    else { 
+        Write-Host "$PC is offline" -ForegroundColor Red
+        $offline.add($PC)
+    }
+}

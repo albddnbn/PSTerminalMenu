@@ -1,0 +1,9 @@
+Get-User
+Get-AssetInfo
+Get-InstalledAppsThruUninstallKeys
+Get-USBdevs
+Get-UserPrinter
+Get-ConnectedMonitors
+Test-ForFile
+Find-DNSNotInAD
+Search-PCsForSoftware

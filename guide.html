@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Powershell menu guide</title>
+</head>
+
+<body>
+  <div class="container">
+    <h1 style="margin-bottom: 35px">Powershell menu...with functions!</h1>
+    <style>
+      .topnav {
+        overflow: hidden;
+        background-color: #333;
+      }
+
+      .topnav a {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+        font-size: 17px;
+      }
+
+      .topnav a:hover {
+        background-color: #ddd;
+        color: black;
+      }
+
+      .topnav a.active {
+        background-color: #04aa6d;
+        color: white;
+      }
+
+      .topnav .icon {
+        display: none;
+      }
+
+      @media screen and (max-width: 600px) {
+        .topnav a:not(:first-child) {
+          display: none;
+        }
+
+        .topnav a.icon {
+          float: right;
+          display: block;
+        }
+      }
+
+      @media screen and (max-width: 600px) {
+        .topnav.responsive {
+          position: relative;
+        }
+
+        .topnav.responsive .icon {
+          position: absolute;
+          right: 0;
+          top: 0;
+        }
+
+        .topnav.responsive a {
+          float: none;
+          display: block;
+          text-align: left;
+        }
+      }
+    </style>
+    <div class="topnav w3-container" id="myTopnav">
+      <a onclick="document.getElementById('adding-category-to-menu').scrollIntoView({behavior: 'smooth'});">add
+        category</a>
+      <a onclick="document.getElementById('adding-function-to-menu').scrollIntoView({behavior: 'smooth'});">add
+        function</a>
+
+      <a href="javascript:void(0);" class="icon" onclick="myFunction()">
+        <i class="fa fa-bars"></i>
+      </a>
+    </div>
+
+    <p>Prints an interactive menu to the terminal where IT person can:</p>
+    <style>
+      div.navbar {
+        padding: 0px;
+        /* padding: 1em;
+          padding-left: 2em; */
+        border-radius: 5px;
+        background: linear-gradient(to right, #06a0ec, #0088cc);
+      }
+
+      /* first child */
+      #firstnav {
+        margin-left: 15px;
+      }
+
+      div.navbar>div {
+        display: inline-block;
+        padding-top: 1em;
+        padding-bottom: 1em;
+        padding-left: 3px;
+        padding-right: 3px;
+        cursor: pointer;
+      }
+
+      div.navbar a {
+        text-decoration: none;
+      }
+
+      div.navbar>div:hover {
+        color: #90adbc;
+        background: linear-gradient(to right, #06a0ec, #0088cc);
+      }
+
+      body {
+        background-color: #222;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #00aaff;
+        text-align: center;
+        font-size: 36px;
+      }
+
+      p {
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #00aaff;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+      }
+
+      .button:hover {
+        background-color: #0088cc;
+      }
+
+      /* ol {
+          list-style-type: none;
+          counter-reset: item;
+          padding: 0;
+        } */
+
+      li {
+        counter-increment: item;
+        margin-top: 12px;
+        margin-bottom: 12px;
+      }
+
+      ol.inner-list>li::before {
+        content: counters(section, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      ol {
+        list-style-type: none;
+      }
+
+      ol.other-list>li::before {
+        content: counters(item, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      ol.add-function li::before {
+        content: counters(additem, ".") ".";
+        display: inline-block;
+        font-size: 30px;
+        font-weight: bold;
+        width: 36px;
+        margin-right: 6px;
+        color: #00aaff;
+      }
+
+      h2 {
+        margin-top: 2em;
+        margin-bottom: 1em;
+        color: #0088cc;
+        text-align: center;
+      }
+    </style>
+
+    <ol class="other-list">
+      <li>
+        Select a category of function (this is done so there aren't 20+
+        functions printed to terminal menu at once)
+      </li>
+      <li>Select function to run</li>
+      <li>Script will prompt for values for any existing parameters</li>
+      <ul>
+        <li>
+          Right now, the script doesn't prompt for the common variables (see
+          comments in script, it'd be good to improve that whole section to
+          deal with more complex functions)
+        </li>
+      </ul>
+    </ol>
+    <hr />
+
+    <!-- <ol>
+      <li style="margin-bottom: 24px" class="w3-third w3-padding">
+        Copy the entire function you'd like to add and paste it to the end of
+        <b>'menu_functions.ps1'</b>. It may be helpful to add a short comment
+        section above the function explaining what it does.
+      </li>
+      <div style="margin-top: 15px; margin-bottom: 35px" class="w3-twothird">
+        <img style="max-width: 100%" src="IMG\pasting-function-to-functions-file.png" />
+      </div>
+      <li class="w3-twothird w3-padding">
+        Write the name of the function into one of the text files inside the
+        functions directory. See below for more detail.
+      </li>
+      <div style="margin-top: 15px; margin-bottom: 45px" class="w3-third">
+        <img style="max-width: 100%" src="IMG\writing-function-name-in-category.png" />
+      </div>
+      <div class="w3-container">
+        <div class="w3-card-4 w3-padding" style="background-color: #9a9a9a;border-radius:5px;">
+          <ul>
+            <li>Inside the <b style="color:#ffd900">functions directory</b> are four text files.</li>
+            <li>
+              Each text file represents a function category. Category choices
+              are shown in first menu.
+            </li>
+            <li>
+              Choose which category the function should appear in, and write the
+              name of the function into the next open line in the text file.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </ol> -->
+
+    <h2 id="adding-category-to-menu">How to add a category to the menu</h2>
+    <p>
+      <span style="color: #bfbfbf; margin-right: 6px; font-size: 18px">Example below: </span>Adding the category -
+      Browser Functions - to the menu.
+    </p>
+    <div style="display: block">
+      <div>
+        <ol class="inner-list" style="counter-reset: section; list-style-type: none">
+          <li style="counter-increment: section; float: left; max-width: 50%">
+            Type the category name into 'categories.txt'. Since I want the
+            Browser option to show directly below Information Gathering,
+            that's where I put it in the text file.
+          </li>
+
+          <div style="
+                margin-top: 15px;
+                margin-bottom: 35px;
+                float: right;
+                max-width: 50%;
+              ">
+            <img style="max-width: 100%" src="IMG\new-category-in-categories-txt.png" />
+          </div>
+          <br />
+          <div class="w3-container"></div>
+
+          <div style="
+                margin-top: 15px;
+                margin-bottom: 35px;
+                float: right;
+                max-width: 55%;
+              ">
+            <img style="max-width: 100%" src="IMG\creating-category-text-file.png" />
+          </div>
+          <li style="counter-increment: section; float: left; max-width: 45%">
+            Create a new text file in the functions directory with the same
+            name as the category. In this case, I created a text file called
+            'browser functions.txt'.
+          </li>
+          <br />
+          <div class="w3-container"></div>
+
+          <div style="
+                margin-top: 15px;
+                margin-bottom: 35px;
+                float: right;
+                max-width: 55%;
+              ">
+            <img style="max-width: 100%" src="IMG\new-option-showing-on-menu.png" />
+          </div>
+          <li style="counter-increment: section; float: left; max-width: 45%">
+            At this point, try bringing up the menu to make sure your new
+            category is showing.
+          </li>
+
+          <div class="w3-container">
+            <h2 id="adding-function-to-menu">
+              How to add a function to the menu
+            </h2>
+          </div>
+          <p>
+            <span style="color: #bfbfbf; margin-right: 6px; font-size: 18px">Example below: </span>Adding a function
+            (Install-GenericMSI in this case) to the menu.
+          </p>
+        </ol>
+        <ol class="add-function" style="counter-reset: additem">
+          <div style="
+                margin-top: 15px;
+                margin-bottom: 35px;
+                float: right;
+                max-width: 55%;
+              ">
+            <img style="max-width: 100%" src="IMG\new-function-file.png" />
+          </div>
+
+          <li style="counter-increment: additem; float: left; max-width: 45%">
+            Now I'm going to put a new Get-ChromeExtensions.ps1 file/function
+            into that category. Since the function is a pretty long one, I'm
+            going to create a file called Get-ChromeExtensions.ps1 in the same
+            directory as menu.ps1 and put the Get-ChromeExtensions function
+            inside that.
+          </li>
+          <div class="w3-container"></div>
+          <li style="counter-increment: additem; float: left; max-width: 45%">
+            Lastly, write the name of the file/function into it's
+            corresponding category text file. In this case, I'm adding
+            'Get-ChromeExtensions' to 'Browser Functions'.
+          </li>
+          <div style="
+                margin-top: 15px;
+                margin-bottom: 35px;
+                float: right;
+                max-width: 55%;
+              ">
+            <img style="max-width: 100%" src="IMG\new-function-file.png" />
+          </div>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <div class="w3-container">
+    <div class="w3-card-4 w3-padding" style="
+          background-color: #9a9a9a;
+          border-radius: 5px;
+          margin-top: 3%;
+          margin-bottom: 1%;
+        ">
+      <p style="text-align: center">
+        <i>Please contact Alex with any suggestions, or - don't
+          hesitate to make your own changes.</i>
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

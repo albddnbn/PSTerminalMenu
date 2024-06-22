@@ -1,0 +1,9 @@
+Get-mspaint
+Get-Npad
+Get-RSAT
+Get-WinkeyBack
+Get-PowershellISE
+
+Remove-NewRichText
+Import-CopyAsPath
+Restore-NewTextDoc

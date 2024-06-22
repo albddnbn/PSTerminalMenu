@@ -1,0 +1,3 @@
+Install-GenericMSI
+Install-DismItem
+Deploy-PSToolKitApp

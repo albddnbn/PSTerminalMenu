@@ -1,3 +1,0 @@
-Sample Help Desk Phone #1     : (555) 555-5555
-Sample Help Desk Link         : http://www.example.com/helpdesk
-Sample Help Desk Email        : techsupport@wecaretoomuch.edu

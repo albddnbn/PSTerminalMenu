@@ -1,0 +1,46 @@
+    <div style="display:inline-block;max-width:90%;margin-left:5%;">
+        <ol style="list-style:none;counter-reset:item;padding:0;margin-top:30px;">
+            <li style="margin-bottom:25px;position:relative;">
+                <span class="number"
+                    style="font-size:36px;font-weight:bold;display:inline-block;color:#00267f;">1.</span>
+                <span class="text"
+                    style="margin-left:32px;display:inline-block;vertical-align:top;margin-top:6px;max-width:90%">Clear
+                    your browser
+                    cache and any old stored 'dtcc.edu' passwords
+                    by following <a href="https://1drv.ms/w/s!AlkKZBe0lka6gvwbIjA3HHWaWVurVw?e=4gDT18">these
+                        directions</a>.</span>
+            </li>
+            <li style="margin-bottom:25px;position:relative;">
+                <span class="number"
+                    style="font-size:36px;font-weight:bold;display:inline-block;color:#00267f;">2.</span>
+                <span class="text"
+                    style="margin-left:32px;display:inline-block;vertical-align:top;margin-top:6px;max-width:90%">Try
+                    logging in from a smartphone
+                    with Wi-Fi turned off, if you've been using a
+                    Wi-Fi connected device.</span>
+            </li>
+            <li style="margin-bottom:25px;position:relative;">
+                <span class="number"
+                    style="font-size:36px;font-weight:bold;display:inline-block;color:#00267f;">3.</span>
+                <span class="text"
+                    style="margin-left:32px;display:inline-block;vertical-align:top;margin-top:6px;max-width:90%">Try a
+                    Wi-Fi connected device if
+                    you've been using a smartphone with Wi-Fi turned
+                    off</span>
+            </li>
+            <li style="margin-bottom:25px;position:relative;">
+                <span class="number"
+                    style="font-size:36px;font-weight:bold;display:inline-block;color:#00267f;">4.</span>
+                <span class="text"
+                    style="margin-left:32px;display:inline-block;vertical-align:top;margin-top:6px;max-width:90%">Turn
+                    <img src="/file.php?key=d9z_6eb7qzmulaen1pfdzug1qe3fsc2e&expires=1686268800&signature=b8f7b12e193da2264a3b28de3bac3365f07ddbbf&disposition=inline"
+                        data-cid="d9z_6eb7qzmulaen1pfdzug1qe3fsc2e" data-image="d9z_6Eb7QZMulAEn1pfDzug1Qe3FsC2E"
+                        width="25" height="25" style="max-width:25px;margin-left:3px;margin-right:3px;margin-top:0px;"
+                        alt="image">
+                    airplane mode on for about 5 seconds on your phone (with Wi-Fi off), then turn airplane mode back on
+                    to
+                    force phone to request new IP address, then attempt login.
+                </span>
+            </li>
+        </ol>
+    </div>
