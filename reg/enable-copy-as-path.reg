@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\Allfilesystemobjects\shell\windows.copyaspath]
+@="Copy &as path"
+"Icon"="imageres.dll,-5302"
+"InvokeCommandOnSelection"=dword:00000001
+"VerbHandler"="{f3d06e7c-1e45-4a26-847e-f9fcdee59be0}"
+"VerbName"="copyaspath"
