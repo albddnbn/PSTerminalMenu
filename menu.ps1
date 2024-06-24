@@ -277,7 +277,7 @@ while ($exit_program -eq $false) {
                 Write-Host "s-client-" -nonewline -foregroundcolor Yellow
                 Write-Host " will create a list of all hostnames that start with s-client-."
                 $target_computers = read-host "Enter target computer value"
-                $target_computers = Get-Targets -TargetComputer $target_computers
+                $target_computers = Get-Targets -TargetComputer $target_computers | sort
                 #$target_computers = [String[]]$target_computers
             }
             else {
