@@ -159,7 +159,7 @@ function Run-SophosScan {
             $TargetPaths = $TargetPaths -split ','
         }
         else {
-            $TargetPaths = =Paths = @($TargetPaths)
+            $TargetPaths = @($TargetPaths)
         }
     }
 
@@ -172,7 +172,7 @@ function Run-SophosScan {
             ## 1. empty Targetcomputer values will cause errors to display during test-connection / rest of code
             if ($single_computer) {
                 ## 2. Check if computer is repsonsive on the network.
-                if ([System.IO.Directory]::Exists("\\$single_computer\c$")) {
+                if (Test-Connection $single_computer -count 1 -erroraction SilentlyContinue) {
 
 
                     ## ---------------------------------------------------------------------------
@@ -194,10 +194,19 @@ function Run-SophosScan {
                         }
                         else {
                             $obj.SophosInstalled = $true
+                            Write-Host "Sophos is installed."
+                            $user_directories = Get-ChildItem -Path "C:\Users" -Directory
 
+                            ForEach($single_user_dir in $user_directories) {
+
+                                Write-Host "Scanning $($single_user_dir.fullname) on $env:COMPUTERNAME"
                             ## run sophos scan
-                            $scan_results = Start-Process -FilePath "$($sophos_scanner.fullname)" -ArgumentList "scan --noui --system --expand_archives" -Wait -PassThru
-                        
+                            # $scan_results = Start-Process -FilePath "$($sophos_scanner.fullname)" -ArgumentList "scan --noui --system --expand_archives" -Wait -PassThru
+                            # $scan_results = Start-Process -FilePath "$($sophos_scanner.fullname)" -ArgumentList "scan --noui $($single_user_dir.fullname)" -Wait -PassThru
+                            # Start-Process -FilePath "$($sophos_scanner.fullname)" -ArgumentList "scan --noui $($single_user_dir.fullname)"
+                            Set-Location "C:\Program Files\Sophos\Endpoint Defense"
+                            ./Sophosinterceptxcli.exe scan --noui "$($single_user_dir.fullname)" | out-file "$env:PUBLIC\test.txt" -append
+                            }
                             $obj.ScanResults = $scan_results
                         }
                         return $obj
