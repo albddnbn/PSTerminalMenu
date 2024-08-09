@@ -105,9 +105,9 @@ function Copy-RemoteFiles {
         }
 
         ## If being run with terminal menu - use full output path
-        if ($env:PSMENU_DIR) {
-            $OutputFolder = "$env:PSMENU_DIR\output\$thedate\$OutputFolder"
-        }
+        # if ($env:PSMENU_DIR) {
+        #     $OutputFolder = "$env:PSMENU_DIR\output\$thedate\$OutputFolder"
+        # }
 
         ## 2. Make sure the outputpath folder exists (remote files are copied here):
 
