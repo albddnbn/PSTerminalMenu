@@ -8,7 +8,6 @@
             "Apply-DellCommandUpdates",
             "Install-ActiveDirectoryModule",
             "Install-Application",
-            "Install-ApplicationNotJob",
             "Install-NewTeams",
             "Install-SMARTNotebookSoftware",
             "Install-VeyonRoom",
@@ -43,7 +42,6 @@
             "Scan-ForSophosEndpointSelfHelp",
             "Scan-Office2021",
             "Scan-SoftwareInventory",
-            "Scan-SoftwareInventoryJob",
             "Scan-SoftwareInventoryTargeted"
         ],
         "users": [
