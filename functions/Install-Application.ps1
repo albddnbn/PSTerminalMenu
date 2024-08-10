@@ -273,8 +273,15 @@ function Install-Application {
                         }
 
                         ## 3.2 Copy PSADT folder to target machine/session
-                        Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "\\$single_computer\c$\temp\" -Recurse -Force
-                
+                        $something_bad = $null
+                        Copy-Item -Path "$($DeploymentFolder.fullname)" -Destination "\\$single_computer\c$\temp\" -Recurse -ErrorAction SilentlyContinue -ErrorVariable something_bad
+                        
+                        if ($something_bad) {
+                            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -Nonewline
+                            Write-Host "ERROR - Couldn't copy $($DeploymentFolder.name) to $single_computer." -Foregroundcolor Red
+                            Continue
+                        }
+
                         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $($DeploymentFolder.name) copied to $single_computer."
                         ## 3.3 Execute PSADT installation script on target mach8ine/session
                         Invoke-Command -Session $single_target_session -scriptblock $install_local_psadt_block -ArgumentList $single_application, $skip_pcs
