@@ -156,6 +156,8 @@ Read-Host "Thank you! Press enter to continue."
 # create variable, when true - exits program loop
 $exit_program = $false
 while ($exit_program -eq $false) {
+    $target_computers = $null
+
     Clear-Host
     # splitting function options into a list - it was string divided by spaces before
     $split_options = [string[]]$config_file.categories.PSObject.Properties.Name
