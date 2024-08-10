@@ -199,8 +199,6 @@ function Get-InstalledDotNetversions {
             ForEach ($single_result in $results) {
                 $single_result
             }
-            read-host "press enter"
-
 
             ## 1. Sort any existing results by computername
             $results = $results | sort -property pscomputername
