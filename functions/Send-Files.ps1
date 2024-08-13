@@ -14,9 +14,8 @@ function Send-Files {
     .PARAMETER DestinationPath
         The path on the target computer where you want to send the file/folder. 
         The script will cut off any preceding drive letters and insert \\hostname\c$ - so destination paths should be on C drive of target computers.
-        ex: C:\users\public\desktop\test.txt
-        If sourcepath is a file, and destinationpath is a folder - the file will be copied to that folder on remote systems.
-        If sourcepath is a folder, and destinationpath is a folder - the source folder will be copied as a subdirectory to folder on remote systems.
+        ex: C:\users\public\desktop\
+        The path should be a destination folder, script should create directories/subdirectories as required.
 
     .PARAMETER TargetComputer
         Target computer or computers of the function.
