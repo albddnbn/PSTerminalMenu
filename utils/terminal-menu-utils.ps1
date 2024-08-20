@@ -426,18 +426,3 @@ function Get-LiveHosts {
     
 
 }
-function Sound-Alarm {
-    param(
-        $absolute_wav_path
-    )
-    if ($absolute_wav_path -eq $null) {
-        # play default windows 'gong'
-        Write-Host "`a"
-    }
-    else {
-        $play_wav = [System.Media.SoundPlayer]::new()
-        $play_wav.SoundLocation = $absolute_wav_path
-        $play_wav.PlaySync()
-    }
-
-}
