@@ -34,17 +34,11 @@ Function Get-Targets {
                 if ([string]::IsNullOrEmpty($searchRoot)) {
                     $searchRoot = $env:USERDNSDOMAIN
                 }
-                $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
-                $searcher.SearchRoot = "LDAP://$searchRoot"
-                [void]$searcher.PropertiesToLoad.Add("name")
-                $list = [System.Collections.Generic.List[String]]@()
-                $results = $searcher.FindAll()
-                foreach ($result in $results) {
-                    $resultItem = $result.Properties
-                    [void]$List.add($resultItem.name)
-                }
-                $NewTargetComputer += $list
+
+                ## Thank you Josh R. for this snippet - it shortened 10 lines of code to the 3 that you see below.
+                $matching_hostnames = (([adsisearcher]"(&(objectclass=computer)(name=$computer*))").findall()).properties
+                $matching_hostnames = $matching_hostnames.name
+                $NewTargetComputer += $matching_hostnames
             }
         }
         $TargetComputer = $NewTargetComputer
