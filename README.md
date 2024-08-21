@@ -4,33 +4,35 @@
 
 ## Description
 
-After I started working as an IT Specialist I in October of 2022, I quickly became captivated by PowerShell and its ability to increase my efficiency as an IT professional. I had a bit of a background with object-oriented programming in Python 3 and Java including what I’d learned during a Programming I course, a large number of codecademy courses, and what I’d managed to teach myself while tutoring for Programming II and III courses.
-By the start of 2023, I had managed to learn a lot of the absolute ‘bare basics’ of PowerShell scripting. I had begun to realize the power behind the scripting language, and I started to take note of different tasks and issues that I would come across that had programmatic resolutions.
+Working as an IT Support Specialist in 2022, I quickly became captivated with Powershell and it's ability to increase my efficiency.
 
-This powershell menu was created to aid in the efficient access and execution of scripts that can resolve a variety of issues, gather information, and more.
+I was amazed at the variety of Powershell modules that make it possible to interact with nearly every aspect of a Windows computer/network environment.
 
-**Repository with PSADT installation scripts**: [https://github.com/albddnbn/powershellnexusone/tree/main/installs](https://github.com/albddnbn/powershellnexusone/tree/main/installs)
+I already had a bit of a background in Java, Python, and object-oriented programming. While performing my duties, I began to take note of tasks or issues that had programmatic resolutions. I started to create scripts to perform tasks and implement resolutions, and I eventually reached a point where I realized that I needed to have all of these useful scripts in a single location, able to be executed on-demand at any given moment throughout my work day.
+
+It was from this realization that the PSTerminalMenu tool was born - it's evolved into a collection of useful functions centered around the menu.ps1 script, which allows for their interactive selection and execution.
+
+<b>This is an ongoing project, I appreciate any feedback or contributions!</b>
 
 ## Table of Contents
 
 - [Startup](#startup)
 - [Usage](#usage)
 - [Search](#search)
-- [Config](#config)
-- [Credits](#credits)
+- [Configuration](#configuration)
+- [SupportFiles](#supportfiles)
+- [Functions](#functions)
+- [Resources](#resources)
 - [License](#license)
 
 ## Startup
 
-After cloning or downloading the repository to your computer, open an Admin powershell window and change directory to where the menu.ps1 file is located. Then run the following:
+Download the repository .zip folder or download latest release and execute the menu.ps1 script.
 
-    ```
-    ## Testing best way to deal with execution policy prompts
-    ## Set-ExecutionPolicy Unrestricted
-    ./menu.ps1
-    ```
-
-At this point in time, if you're computer doesn't have access to the Internet to download the modules - you may have to install the ps-menu module in supportfiles using the install-module.ps1 script.
+```powershell
+## Execute the PSTerminalMenu main script
+Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
+```
 
 ## Usage
 
@@ -63,22 +65,28 @@ Search will return any functions containing the keyword submitted and present th
 
 **Return to Previous Menu**: After searching or choosing a category, you can return to the category selection menu by choosing this option.
 
-## Config
+## Configuration
 
-## To add a category:
+<b>Menu.ps1 is the central script of PSTerminalMenu.</b>
+
+The menu layout can be configured through the <b>SupportFiles/config.json</b> file.
+
+
+
+## To add a category
 
 1. Write the name of the category into `config.json`, similar to what's shown in the image below.
 
 <img src="docs\img\config-002-new-category.png" alt="Adding category to config" width="450" height="450">
 
-## To add an option to the menu:
+## To add an option to the menu
 
 1. Write the name of the file (without extension) into `config.json`, similar to the picture below.
 2. If you add the filename into the "scans" section of the config file, it will appear after choosing the 'scans' category in the terminal menu.
 
 <img src="docs\img\config-004-adding-function-name-to-config.png" alt="Adding function name to config" width="500" height="450">
 
-## To add a function to the menu:
+## To add a function to the menu
 
 1. Create a new .ps1 file in the functions directory. The function name should match the file name.
 
@@ -109,29 +117,98 @@ Function Function-Name {
 }
 ```
 
-## Credits
+## SupportFiles
 
-This project was created by Alex B. in 2023.
+This is a listing of the files in the SupportFiles directory with a brief description of their purpose.
 
-### Powershell modules used:
 
-**PS-MENU**: https://github.com/chrisseroka/ps-menu
+  <tr>
+    <td><strong>config.json</strong></td>
+    <td>Contains the menu categories and functions.</td>
+  </tr>
+  <tr>
+    <td><strong>drivemap.ico</strong></td>
+    <td>Used in the New-DriveMappingExe function to create generic icon for shortcut.</td>
+  </tr>
+  <tr>
+    <td><strong>function_template.ps1</strong></td>
+    <td>Template for creating new functions. Contains the begin and end blocks - most important part to add to the function is the scriptblock that is executed on each target computer.</td>
+  </tr>
+  <tr>
+    <td><strong>Get-WindowsAutoPilotInfo.ps1</strong></td>
+    <td>Used in Get-IntuneHardwareIDs function as an alternative to Importing the Get-WindowsAutoPilotInfo script from the Internet.</td>
+  </tr>
+  <tr>
+    <td><strong>IntuneWinAppUtil.exe</strong></td>
+    <td>Used in the New-IntuneWinApp function to create .intunewin package from a PSADT deployment folder.</td>
+  </tr>
+  <tr>
+    <td><strong>inventory_database_api_response.json</strong></td>
+    <td>A sample of a response from upcitemdb.com's UPC code lookup API, gives information about specified product.</td>
+  </tr>
+  <tr>
+    <td><strong>it-logo.png</strong></td>
+    <td>Used in New-BrandedHTMLReport function (currently in testing dir) to add generic IT Dept. logo.</td>
+  </tr>
+  <tr>
+    <td><strong>negativebeep.wav</strong></td>
+    <td>Used in the Scan-Inventory function to play audible negative sounding beep when something bad happens.</td>
+  </tr>
+  <tr>
+    <td><strong>positivebeep.wav</strong></td>
+    <td>Used in the Scan-Inventory function to play audible positive sounding beep when something good happens.</td>
+  </tr>
+  <tr>
+    <td><strong>ps1avatar.ico</strong></td>
+    <td>Generic/cool-looking Powershell avatar icon that can be used with compiled executables/etc. if nothing more appropriate available.</td>
+  </tr>
+  <tr>
+    <td><strong>teamsbootstrapper.exe</strong></td>
+    <td>Used in the New-TeamsInstaller function to install Teams on a remote computer.</td>
+  </tr>
+  <tr>
+    <td><strong>w3.css</strong></td>
+    <td>Used in the New-BrandedHTMLReport function to add styling to the HTML report.</td>
+  </tr>
+</table>
 
-**IMPORTEXCEL**: https://github.com/dfinke/ImportExcel
+## Functions
 
-**PSADT**: https://psappdeploytoolkit.com/
+Each function in the functions directory of PSTerminalMenu should also work as a 'standalone' function. This means that you should be able to copy/paste the function into a terminal, and execute it with appropriate parameters.
 
-### Scripts:
+For example:
 
-**Get-WindowsAutoPilotInfo.ps1**: https://github.com/Dattics/GetWindowsAutopilot
+<b>Get-ComputerDetails.ps1</b>
 
-## License
+```powershell
+## Gather computer details from computers w/hostnames starting with s-a231- or s-a230-, output to GridView
+Get-ComputerDetails -TargetComputer 's-a231-,s-a230-' -OutputFile n
 
----
+## Gather two computers' details, output to computer-info.csv/xlsx file:
+'s-a231-01,s-a231-02' | Get-ComputerDetails -OutputFile computer-info
+```
 
-## A few of the features
+## Resources
 
-1. Gather details from groups of computers and generate reports.
-2. Run scripts to perform software installations and maintenance tasks.
-3. Search for specific details across groups of computers.
-4. Easily incorporate new functions into the menu.
+<table>
+  <tr>
+    <td><strong>Get-WindowsAutoPilotInfo.ps1</strong></td>
+    <td><a href="https://github.com/Dattics/GetWindowsAutopilot">https://github.com/Dattics/GetWindowsAutopilot</a></td>
+  </tr>
+  <tr>
+    <td><strong>IntuneWinAppUtil.exe</strong></td>
+    <td><a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool</a></td>
+  </tr>
+  <tr>
+    <td><strong>PS-MENU</strong></td>
+    <td><a href="https://github.com/chrisseroka/ps-menu">https://github.com/chrisseroka/ps-menu</a></td>
+  </tr>
+  <tr>
+    <td><strong>IMPORTEXCEL</strong></td>
+    <td><a href="https://github.com/dfinke/ImportExcel">https://github.com/dfinke/ImportExcel</a></td>
+  </tr>
+  <tr>
+    <td><strong>PSADT</strong></td>
+    <td><a href="https://psappdeploytoolkit.com/">https://psappdeploytoolkit.com/</a></td>
+  </tr>
+</table>

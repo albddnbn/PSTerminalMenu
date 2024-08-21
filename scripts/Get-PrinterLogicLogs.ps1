@@ -1,3 +1,6 @@
+## Function was built to target a group of computers and sort through each one of the computers' PrinterLogic log files
+## to look for a specific error message. I was attempting to diagnose an issue that was affecting most computers in
+## a subnet, when trying to communicate the PrinterLogic cloud instance.
 function Get-PrinterLogicLogs {
     [CmdletBinding()]
     param (
@@ -18,6 +21,4 @@ function Get-PrinterLogicLogs {
             }
         }
     }
-    ## --
-
 }

@@ -12,18 +12,18 @@ function Install-NeededModules {
 .NOTES
     Additional notes about the file.
 #>
+    $module_depenedencies = @('ps-menu', 'importexcel', 'ps2exe')
+
     # Check for internet connectivity:
     $TestConnection = Test-Connection google.com -Count 2 -Quiet
     if ($TestConnection) {
         # make sure nuget is available
-        $Nugetcheck = Get-PackageProvider | where-object { $_.Name -eq 'Nuget' }
-        if (-not $Nugetcheck) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Nuget package provider not found, installing now..."
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+            Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+            Install-PackageProvider -Name NuGet -MinimumVersion -Force
         }
 
         # Set-Location "$env:SUPPORTFILES_DIR"
-        $module_depenedencies = @('ps-menu', 'importexcel', 'ps2exe')
         ForEach ($modulename in $module_depenedencies) {
             $module_check = Get-Module -Name $modulename -ListAvailable -erroraction SilentlyContinue
             if ($module_check) {
@@ -56,15 +56,15 @@ function Install-NeededModules {
     }
 
     # ACTIVEDIRECTORY MODULE:
-    $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
-    if ($ad_module_check) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
-    }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
-        . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
-        Install-ActiveDirectoryModule
-        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
-        # ipmo ActiveDirectory
-    }
+    # $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
+    # if ($ad_module_check) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
+    # }
+    # else {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
+    #     . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
+    #     Install-ActiveDirectoryModule
+    #     # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
+    #     # ipmo ActiveDirectory
+    # }
 }

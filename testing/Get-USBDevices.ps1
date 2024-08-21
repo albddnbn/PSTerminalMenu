@@ -88,17 +88,10 @@ function Get-USBDevices {
                         if ([string]::IsNullOrEmpty($searchRoot)) {
                             $searchRoot = $env:USERDNSDOMAIN
                         }
-                        $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                        $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
-                        $searcher.SearchRoot = "LDAP://$searchRoot"
-                        [void]$searcher.PropertiesToLoad.Add("name")
-                        $list = [System.Collections.Generic.List[String]]@()
-                        $results = $searcher.FindAll()
-                        foreach ($result in $results) {
-                            $resultItem = $result.Properties
-                            [void]$List.add($resultItem.name)
-                        }
-                        $NewTargetComputer += $list
+
+                        $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
+                        $matching_hostnames = $matching_hostnames.name
+                        $NewTargetComputer += $matching_hostnames
                     }
                 }
                 $TargetComputer = $NewTargetComputer
@@ -202,6 +195,9 @@ function Get-USBDevices {
                 # if ($outputfile.tolower() -ne 'n') {
                 if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
                     Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
+                
+                
+                
                 }
                 else {
                     $computers_results | Export-Csv -Path "$outputfile-$unique_hostname.csv" -NoTypeInformation -Force

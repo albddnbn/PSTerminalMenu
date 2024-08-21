@@ -82,6 +82,7 @@ function Scan-SoftwareInventory {
                         if ([string]::IsNullOrEmpty($searchRoot)) {
                             $searchRoot = $env:USERDNSDOMAIN
                         }
+                        
                         $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
                         $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
                         $searcher.SearchRoot = "LDAP://$searchRoot"

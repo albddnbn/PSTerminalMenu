@@ -1,27 +1,8 @@
 Function Get-Targets {
-    # Standalone 'get target machines' function
-    ## Tested with single/multiple hostnames and hostname substrings, as well as localhost values.
-
     param(
         [String[]]$TargetComputer
     )
 
-    # if ($null -eq $TargetComputer) {
-    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
-    # }
-    # else {
-
-    ## Do we have to add if targetcomputer eq $null? Will function ever be used like: Get-Targets
-
-    # if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
-    #     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
-    #         $TargetComputer = @('127.0.0.1')
-    #     }
-    #     else {
-    #         $null
-    #     }
-    # }
-    # elseif ($TargetComputer -is [string[]]) {
     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
         $TargetComputer = @('127.0.0.1')
     }
