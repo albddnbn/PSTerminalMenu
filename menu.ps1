@@ -92,6 +92,10 @@ if (-not $InstallNeededModulesPS1) {
     Write-Host "Couldn't find Install-NeededModules.ps1 file in $env:MENU_UTILS, exiting." -foregroundcolor red
     exit
 }
+## Unblock file
+Unblock-File -Path "$($InstallNeededModulesPS1.fullname)"
+
+
 . "$($InstallNeededModulesPS1.FullName)"
 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found Install-NeededModules.ps1 file in $env:MENU_UTILS, " -NoNewline
 Write-Host "attempting to install dependencies" -NoNewline -ForegroundColor Yellow
@@ -118,6 +122,7 @@ $allfiles = get-childitem -path "$env:PSMENU_DIR\functions" -filter "*.ps1" -fil
 $allfiles = $allfiles + $(Get-ChildItem -Path "$env:PSMENU_DIR\experimental" -Filter "*.ps1" -File -ErrorAction SilentlyContinue)
 
 ForEAch ($ps1file in $allfiles) {
+    Unblock-File -Path "$($ps1file.fullname)"
     . "$($ps1file.fullname)"
     Write-Host "Dot sourced " -nonewline
     Write-Host "$($ps1file.basename)" -Foregroundcolor Green
