@@ -55,16 +55,16 @@ function Install-NeededModules {
         }
     }
 
-    # ACTIVEDIRECTORY MODULE:
-    # $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
-    # if ($ad_module_check) {
-    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
-    # }
-    # else {
-    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
-    #     . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
-    #     Install-ActiveDirectoryModule
-    #     # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
-    #     # ipmo ActiveDirectory
-    # }
+    #ACTIVEDIRECTORY MODULE:
+    $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
+    if ($ad_module_check) {
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
+    }
+    else {
+        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
+        . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
+        Install-ActiveDirectoryModule
+        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
+        # ipmo ActiveDirectory
+    }
 }
