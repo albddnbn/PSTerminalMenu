@@ -11,7 +11,7 @@ This powershell menu was created to aid in the efficient access and execution of
 
 **Repository with PSADT installation scripts**: [https://github.com/albddnbn/powershellnexusone/tree/main/installs](https://github.com/albddnbn/powershellnexusone/tree/main/installs)
 
-## Table of Contents (Optional)
+## Table of Contents
 
 - [Startup](#startup)
 - [Usage](#usage)
