@@ -36,7 +36,7 @@ Function Get-Targets {
                 }
 
                 ## Thank you Josh R. for this snippet - it shortened 10 lines of code to the 3 that you see below.
-                $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
+                $matching_hostnames = (([adsisearcher]"(&(objectclass=computer)(name=$computer*))").findall()).properties
                 $matching_hostnames = $matching_hostnames.name
                 $NewTargetComputer += $matching_hostnames
             }
