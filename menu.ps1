@@ -18,7 +18,7 @@ PSADT: https://psappdeploytoolkit.com/
 
 #>
 function Read-HostNoColon {
-    # Read-HostNoColon is just Read-Host except it doesn't automatically add the colon at the end, and the writing is blue!
+    # Read-HostNoColon is just Read-Host except it doesn't automatically add the colon at the end
     param (
         [Parameter(Mandatory = $true)]
         [string]$Prompt
@@ -29,6 +29,8 @@ function Read-HostNoColon {
 
 Try { Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'Process' -Force -ErrorAction 'Stop' } Catch {}
 
+# Set window title:
+$host.ui.RawUI.WindowTitle = "Menu - $(Get-Date -Format 'MM-dd-yyyy')"
 
 ########################################################################################################
 ## CONFIG.JSON file --> found in ./supportfiles. It's where the script gets categories/function listings 
@@ -36,12 +38,8 @@ Try { Set-ExecutionPolicy -ExecutionPolicy 'Unrestricted' -Scope 'Process' -Forc
 ########################################################################################################
 $CONFIG_FILENAME = "config.json"
 
-# Set window title:
-$host.ui.RawUI.WindowTitle = "Menu - $(Get-Date -Format 'MM-dd-yyyy')"
-
 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -nonewline
 Write-Host "Loading $CONFIG_FILENAME.." -ForegroundColor Yellow
-
 
 ## $env:SUPPORTFILES_DIR --> Directory of supportfiles folder, which contains config.json
 ## ./SupportFiles            Also contains other files used by the menu, including the PS2exe, 
@@ -52,7 +50,13 @@ Write-Host " environment variable to $((Get-Item './supportfiles').FullName)."
 $env:SUPPORTFILES_DIR = (Get-Item './supportfiles').FullName
 
 # SupportFiles env var is necessary to actually 'grab' the config.json file
-$config_file = Get-Content -Path "$env:SUPPORTFILES_DIR\$CONFIG_FILENAME" | ConvertFrom-Json
+$config_file = Get-Content -Path "$env:SUPPORTFILES_DIR\$CONFIG_FILENAME" -ErrorAction SilentlyContinue
+if (-not $config_file) {
+    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -nonewline
+    Write-Host "Couldn't find $CONFIG_FILENAME in $env:SUPPORTFILES_DIR, exiting." -foregroundcolor red
+    exit
+}
+$config_file = $config_file | ConvertFrom-Json
 
 ## $env:PSMENU_DIR --> Base directory of terminal menu.
 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Setting " -nonewline
@@ -72,25 +76,6 @@ Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Setting " -NoNewline
 Write-Host "`$env:LOCAL_SCRIPTS" -foregroundcolor green -NoNewline
 Write-Host " environment variable to $((Get-Item .\localscripts).FullName)."
 $env:LOCAL_SCRIPTS = (Get-Item .\localscripts).FullName
-
-## Good & Bad alarm beep .wav file paths - used in the ScanInventory function for alert sounds (success or fail at 
-## linking a scanned upc code to an item in sheet or online).
-Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Setting " -NoNewline
-Write-Host "`$env:GOOD_ALARM and `$env:BAD_ALARM (absolute paths to .wav files)`r" -foregroundcolor green
-$good_alarm_wav = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "positivebeep.wav" -File -ErrorAction SilentlyContinue
-$bad_alarm_wav = Get-ChildItem -Path "$env:SUPPORTFILES_DIR" -Filter "negativebeep.wav" -File -ErrorAction SilentlyContinue
-Foreach ($wavfile in @($good_alarm_wav, $bad_alarm_wav)) {
-    if (-not $wavfile) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -NoNewline
-        Write-Host "Couldn't find $wavfile in $env:SUPPORTFILES_DIR, terminal menu won't play some or all of alert sounds." -foregroundcolor red
-        Read-Host "Press enter to continue."
-    }
-}
-$env:GOOD_ALARM = $good_alarm_wav.FullName
-$env:BAD_ALARM = $bad_alarm_wav.FullName
-
-# GUIDE / HELP (not used)
-# $env:HELP_FILE = $config_file.help_file
 
 $functions = @{}
 # Keys = Category Names
@@ -114,15 +99,15 @@ Write-Host "."
 Install-NeededModules
 
 ## Try to make sure the ps-menu module gets installed:
-if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
-    Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
-    if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
-        Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
-        Install-PackageProvider -Name NuGet -MinimumVersion -Force
-    }
-    Install-Module -Name PS-Menu -Force
-}
-Import-Module -Name PS-Menu -Force | Out-Null
+# if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
+#     Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
+#     if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+#         Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
+#         Install-PackageProvider -Name NuGet -MinimumVersion -Force
+#     }
+#     Install-Module -Name PS-Menu -Force
+# }
+# Import-Module -Name PS-Menu -Force | Out-Null
 
 
 
