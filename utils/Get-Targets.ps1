@@ -1,27 +1,8 @@
 Function Get-Targets {
-    # Standalone 'get target machines' function
-    ## Tested with single/multiple hostnames and hostname substrings, as well as localhost values.
-
     param(
         [String[]]$TargetComputer
     )
 
-    # if ($null -eq $TargetComputer) {
-    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
-    # }
-    # else {
-
-    ## Do we have to add if targetcomputer eq $null? Will function ever be used like: Get-Targets
-
-    # if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
-    #     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
-    #         $TargetComputer = @('127.0.0.1')
-    #     }
-    #     else {
-    #         $null
-    #     }
-    # }
-    # elseif ($TargetComputer -is [string[]]) {
     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
         $TargetComputer = @('127.0.0.1')
     }
@@ -53,17 +34,11 @@ Function Get-Targets {
                 if ([string]::IsNullOrEmpty($searchRoot)) {
                     $searchRoot = $env:USERDNSDOMAIN
                 }
-                $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
-                $searcher.SearchRoot = "LDAP://$searchRoot"
-                [void]$searcher.PropertiesToLoad.Add("name")
-                $list = [System.Collections.Generic.List[String]]@()
-                $results = $searcher.FindAll()
-                foreach ($result in $results) {
-                    $resultItem = $result.Properties
-                    [void]$List.add($resultItem.name)
-                }
-                $NewTargetComputer += $list
+
+                ## Thank you Josh R. for this snippet - it shortened 10 lines of code to the 3 that you see below.
+                $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
+                $matching_hostnames = $matching_hostnames.name
+                $NewTargetComputer += $matching_hostnames
             }
         }
         $TargetComputer = $NewTargetComputer

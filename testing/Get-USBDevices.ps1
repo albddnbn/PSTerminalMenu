@@ -195,6 +195,9 @@ function Get-USBDevices {
                 # if ($outputfile.tolower() -ne 'n') {
                 if (Get-Command -Name 'Output-Reports' -ErrorAction SilentlyContinue) {
                     Output-Reports -Filepath "$outputfile-$unique_hostname" -Content $computers_results -ReportTitle "$REPORT_TITLE - $thedate" -CSVFile $true -XLSXFile $true
+                
+                
+                
                 }
                 else {
                     $computers_results | Export-Csv -Path "$outputfile-$unique_hostname.csv" -NoTypeInformation -Force

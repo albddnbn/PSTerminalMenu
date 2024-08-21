@@ -1,27 +1,8 @@
 Function Get-Targets {
-    # Standalone 'get target machines' function
-    ## Tested with single/multiple hostnames and hostname substrings, as well as localhost values.
-
     param(
         [String[]]$TargetComputer
     )
 
-    # if ($null -eq $TargetComputer) {
-    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
-    # }
-    # else {
-
-    ## Do we have to add if targetcomputer eq $null? Will function ever be used like: Get-Targets
-
-    # if (($TargetComputer -is [System.Collections.IEnumerable]) -and ($TargetComputer -isnot [string[]])) {
-    #     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
-    #         $TargetComputer = @('127.0.0.1')
-    #     }
-    #     else {
-    #         $null
-    #     }
-    # }
-    # elseif ($TargetComputer -is [string[]]) {
     if ($TargetComputer -in @('', '127.0.0.1', 'localhost')) {
         $TargetComputer = @('127.0.0.1')
     }
@@ -53,19 +34,8 @@ Function Get-Targets {
                 if ([string]::IsNullOrEmpty($searchRoot)) {
                     $searchRoot = $env:USERDNSDOMAIN
                 }
-                # $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                # $searcher.Filter = "(&(objectclass=computer)(cn=$computer*))"
-                # $searcher.SearchRoot = "LDAP://$searchRoot"
-                # [void]$searcher.PropertiesToLoad.Add("name")
-                # $list = [System.Collections.Generic.List[String]]@()
-                # $results = $searcher.FindAll()
-                # foreach ($result in $results) {
-                #     $resultItem = $result.Properties
-                #     [void]$List.add($resultItem.name)
-                # }
-                # $NewTargetComputer += $list
 
-                ## Thank you Josh R. for cutting the above 10 lines down to 3!
+                ## Thank you Josh R. for this snippet - it shortened 10 lines of code to the 3 that you see below.
                 $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
                 $matching_hostnames = $matching_hostnames.name
                 $NewTargetComputer += $matching_hostnames
@@ -83,129 +53,6 @@ Function Get-Targets {
     # }
     return $TargetComputer
 }
-
-function Get-TargetComputers {
-    <#
-    .SYNOPSIS
-        Takes user input and returns a list of hostnames.
-        Input can be:
-            1. Single hostname string, ex: 's-a227-01'
-            2. Comma-separated list of hostnames, ex: s-a227-01,s-a227-02
-            3. Path to text file containing one hostname per line, ex: 'D:\computers.txt'
-            4. First section of a hostname to generate a list, ex: s-a227- will create a list of all hostnames that start with s-a227-.
-
-    .NOTES
-        Author :    abuddenb
-        Date   :    1-14-2024
-    #>
-    param(
-        $TargetComputerInput
-    )
-    $gettargetcomputers = get-childitem -path "$env:PSMENU_DIR" -Filter "Get-ComputersLDAP.ps1" -File -Recurse
-    . "$($gettargetcomputers.fullname)"
-    Write-Verbose "`$Targetcomputerinput : $TargetComputerInput"
-    if ($TargetComputerInput -eq '') {
-        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No TargetComputer value provided, assigning '127.0.0.1'."
-        $TargetComputerInput = @('127.0.0.1')
-    }
-    ## Deal with TargetComputer input:
-    else {
-        
-        if ($TargetComputerInput -is [string]) {
-            ## if its a file:
-            if (Test-Path $TargetComputerInput -Erroraction SilentlyContinue) {
-                $TargetComputerInput = Get-Content $TargetComputerInput
-            }
-            elseif ($TargetComputerInput -like "*,*") {
-                $TargetComputerInput = $TargetComputerInput -split ',' | sort
-            }
-            else {
-
-                ## Try pinging and getting ad computer
-                # $ping_result = Test-Connection -ComputerName $TargetComputerInput -Count 1 -Quiet
-
-                # # try {
-                # #     $ad_check = get-adcomputer -computername $TargetComputerInput
-                # # }
-                # # catch {
-
-                # #     $null
-                # # }
-
-                # ## If Targetcomputer input can be pinged, or is an AD Computer object
-                # if ($ping_result) {
-                #     $TargetComputerInput = @($TargetComputerInput)
-                # }
-                # else {
-                #     try {
-
-                ## Gets all AD Computer names that start with the input string (TargetComputerInput)                    
-                ## CREDITS FOR The code this was adapted from: https://intunedrivemapping.azurewebsites.net/DriveMapping
-                if ([string]::IsNullOrEmpty($env:USERDNSDOMAIN) -and [string]::IsNullOrEmpty($searchRoot)) {
-                    Write-Error "LDAP query `$env:USERDNSDOMAIN is not available!"
-                    Write-Warning "You can override your AD Domain in the `$overrideUserDnsDomain variable"
-                }
-                else {
-
-                    # if no domain specified fallback to PowerShell environment variable
-                    if ([string]::IsNullOrEmpty($searchRoot)) {
-                        $searchRoot = $env:USERDNSDOMAIN
-                    }
-
-                    $searcher = New-Object -TypeName System.DirectoryServices.DirectorySearcher
-                    $searcher.Filter = "(&(objectclass=computer)(cn=$TargetComputerInput*))"
-                    $searcher.SearchRoot = "LDAP://$searchRoot"
-                    # $distinguishedName = $searcher.FindOne().Properties.distinguishedname
-                    # $searcher.Filter = "(member:1.2.840.113556.1.4.1941:=$distinguishedName)"
-
-                    [void]$searcher.PropertiesToLoad.Add("name")
-
-                    $list = [System.Collections.Generic.List[String]]@()
-
-                    $results = $searcher.FindAll()
-                    foreach ($result in $results) {
-                        $resultItem = $result.Properties
-                        [void]$List.add($resultItem.name)
-                    }
-
-                    $TargetComputerInput = $list
-
-                }
-                # }
-                # catch {
-                #     #Nothing we can do
-                #     Write-Warning $_.Exception.Message
-                #     return $null
-                # }
-                # }
-                $TargetComputerInput = $TargetComputerInput | Sort-Object
-    
-                Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: TargetComputer value determined to be the first section of a hostname, used Get-ADComputer to create hostname list."
-    
-            }
-        }
-
-    }
-
-    $TargetComputerInput = $TargetComputerInput | Where-object { ($_ -ne '') -and ($_ -ne $null) }
-
-    # `a will sound the Windows 'gong' just to get user's attentino so they know they have to enter y/n
-    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Hosts determined:" -Nonewline
-    Write-Host "$($TargetComputerInput -join ', ')" -foregroundcolor green
-
-    # tell user to press enter to accept the list or any other key to deny
-    Write-Host "Press 'y' to accept the list, or 'n' to deny it and end the function." -foregroundcolor yellow
-    $key = $Host.UI.RawUI.ReadKey()
-    [String]$character = $key.Character
-    if ($($character.ToLower()) -ne 'y') {
-        return $null
-    }
-    # elseif - they pressed enter 
-    elseif ($($character.ToLower()) -eq 'y') {
-        return $TargetComputerInput
-    }
-}
-
 function Get-OutputFileString {
     <#
             .SYNOPSIS
