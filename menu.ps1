@@ -130,6 +130,7 @@ ForEAch ($ps1file in $allfiles) {
 
 ## ./UTILS functions - Most importantly - Get-TargetComputers, Get-OutputFileString, general
 ForEach ($utility_function in (Get-ChildItem -Path "$env:MENU_UTILS" -Filter '*.ps1' -File)) {
+    Unblock-File "$($utility_function.fullname)"
     . "$($utility_function.fullname)"
 }
 
