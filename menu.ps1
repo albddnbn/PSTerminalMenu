@@ -107,7 +107,7 @@ Install-NeededModules
 #     Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
 #     if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
 #         Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
-#         Install-PackageProvider -Name NuGet -MinimumVersion -Force
+#         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 #     }
 #     Install-Module -Name PS-Menu -Force
 # }

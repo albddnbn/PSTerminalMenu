@@ -20,7 +20,7 @@ function Install-NeededModules {
         # make sure nuget is available
         if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
             Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
-            Install-PackageProvider -Name NuGet -MinimumVersion -Force
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
         }
 
         # Set-Location "$env:SUPPORTFILES_DIR"
@@ -55,16 +55,16 @@ function Install-NeededModules {
         }
     }
 
-    #ACTIVEDIRECTORY MODULE:
-    $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
-    if ($ad_module_check) {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
-    }
-    else {
-        Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
-        . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
-        Install-ActiveDirectoryModule
-        # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
-        # ipmo ActiveDirectory
-    }
+    #ACTIVEDIRECTORY MODULE should not be necessary.
+    # $ad_module_check = Get-Module -Name 'ActiveDirectory' -ListAvailable
+    # if ($ad_module_check) {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found ActiveDirectory module."
+    # }
+    # else {
+    #     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: ActiveDirectory module unavailable, importing from $env:PSMENU_DIR\supportfiles."
+    #     . "$env:PSMENU_DIR\functions\Install-ActiveDirectoryModule.ps1"
+    #     Install-ActiveDirectoryModule
+    #     # Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished installing ActiveDirectory module, importing now."
+    #     # ipmo ActiveDirectory
+    # }
 }
