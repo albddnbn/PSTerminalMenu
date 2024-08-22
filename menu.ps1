@@ -303,10 +303,11 @@ while ($exit_program -eq $false) {
         ## if output file = 'n' or its in notjobfunctions - run the function without a job
         if (($function_selection -in $notjobfunctions) -or ($splat.ContainsKey('OutputFile') -and $splat['OutputFile'] -eq 'n')) {
             if ($target_computers) {
-                $target_computers | & $command @splat
+                
+                $no_terminal_output = $target_computers | & $command @splat
             }
             else {
-                & $command @splat
+                $no_terminal_output = & $command @splat
             }
         }
         else {
@@ -355,10 +356,10 @@ while ($exit_program -eq $false) {
             }
             else {
                 if ($target_computers) {
-                    $target_computers | & $command @splat
+                    $no_terminal_output = $target_computers | & $command @splat
                 }
                 else {
-                    & $command @splat
+                    $no_terminal_output = & $command @splat
                 }
             }
         }
@@ -366,7 +367,7 @@ while ($exit_program -eq $false) {
     }
     else {
         # execute the command without parameters if it doesn't have any.
-        & $command
+        $no_terminal_output = & $command
     }
 
     ## USER can press x to exit, or enter to return to main menu (category selection)
