@@ -3,12 +3,20 @@
 p {
     font-size: 1.2em;
 }
-
 </style>
+
+<details>
+<summary><b>macOS</b></summary>
+
+| macOS | Build status |
+|--------|--------|
+|macOS SDL Build|[![macOS-sdl](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos.yml/badge.svg)](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos.yml)
+|macOS Qt Build|[![macOS-qt](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos-qt.yml/badge.svg)](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos-qt.yml)
+</details>
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-%235391FE.svg?style=for-the-badge&logo=powershell&logoColor=white)
 
-<h2 style="color:#f0dc00">Introduction</h2>
+<h2>Introduction</h2>
 
 Working as an IT Support Specialist in 2022, I quickly became captivated with Powershell and it's ability to increase my efficiency.
 
@@ -16,12 +24,11 @@ I was amazed at the variety of Powershell modules that make it possible to inter
 
 I already had a bit of a background in Java, Python, and object-oriented programming. While performing my duties, I began to take note of tasks or issues that had programmatic resolutions. I started to create scripts to perform tasks and implement resolutions, and I eventually reached a point where I realized that I needed to have all of these useful scripts in a single location, able to be executed on-demand at any given moment throughout my work day.
 
-<h3 style="color:#1a8cff;">It was from this realization that the PSTerminalMenu tool was born - it's evolved into a collection of useful functions centered around the menu.ps1 script, which allows for their interactive selection and execution.</h3>
+<h3 >It was from this realization that the PSTerminalMenu tool was born - it's evolved into a collection of useful functions centered around the menu.ps1 script, which allows for their interactive selection and execution.</h3>
 
 <b>This is an ongoing project, I appreciate any feedback or contributions!</b>
 
-
-<h2 style="color:#f0dc00">Table of Contents</h2>
+<h2>Table of Contents</h2>
 
 - [Usage](#usage)
 - [Examples](#examples)
@@ -33,7 +40,7 @@ I already had a bit of a background in Java, Python, and object-oriented program
 - [License](#license)
 
 <br>
-<h2 style="color:#f0dc00" id="usage">Usage</h2>
+<h2 id="usage">Usage</h2>
 
 Download the repository .zip folder or download latest release and execute the menu.ps1 script.
 
@@ -42,7 +49,7 @@ Download the repository .zip folder or download latest release and execute the m
 Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 ```
 
-<h3 style="color:#1a8cff;">Module and Function Import</h3>
+<h3 >Module and Function Import</h3>
 
 <p><b>Menu.ps1 will attempt to import all necessary modules and dot source functions from the function directory.</b></p>
 
@@ -61,48 +68,54 @@ Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 <p><b>After successful import of modules and functions, the user must press ENTER to proceed to category menu.</b></p>
 
 <br>
-<h3 style="color:#1a8cff;">Interactive Terminal Menus</h3>
+<h3 >Interactive Terminal Menus</h3>
 
 <p>After executing the menu.ps1 script and modules/functions are imported, the script will <b>display the first terminal menu:</b> Category Selection.</p>
 
 <p>Each category contains a number of functions, <b>configured through <i>SupportFiles/config.json</i></b></p>
 <br>
-<h3 style="color:#1a8cff;">Search Functions</h3>
+<h3 >Search Functions</h3>
 
-<h3 style="color:#1a8cff;">If you're not sure which category holds a function, you can <b>use 'Search'</b>, located in the first menu.</h3>
+<h3 >If you're not sure which category holds a function, you can <b>use 'Search'</b>, located in the first menu.</h3>
 <p>Search will return any functions containing the keyword submitted and present them as a menu.</p>
 
 <br>
-<h3 style="color:#1a8cff;">Return to Previous Menu</h3>
+<h3 >Return to Previous Menu</h3>
 
 <h3>After searching or choosing a category, you can return to the category selection menu by choosing this option.</h3>
 
 <br>
-<h2 style="color:#f0dc00" id="examples">Examples</h2>
+<h2 id="examples">Examples</h2>
 
-<h3 style="color:#1a8cff;">Get basic computer details from single PC and output to file.</h3>
-
-```
+<details>
+<summary><b>Get basic computer details from single PC and output to file.</b></summary>
+<br>
+<code>
 ./menu.ps1 > Scans > Get-ComputerDetails
-```
-
+</code>
+<br>
 <table>
 <tr><td><b>TargetComputer</b></td><td>t-client-01</td></tr>
 <tr><td><b>OutputFile</b></td><td>client-01-details</td></tr>
 </table>
-
-<h3 style="color:#1a8cff;">Search for any functions containing the word 'Intune'</h3>
-
-```
+</details>
+<br>
+<details>
+<summary><b>Search for any functions containing the word 'Intune'</b></summary>
+<br>
+<code>
 ./menu.ps1 > Search > 'Intune'
-```
-
-<h3 style="color:#1a8cff;">Get Intune hardware IDs from all devices with hostnames starting with 's-pc-', include DeviceGroupTag in HWID.</h3>
-
-```
+</code>
+<br>
+</details>
+<br>
+<details>
+<summary><b>Get Intune hardware IDs from all devices with hostnames starting with 's-pc-', include DeviceGroupTag in HWID.</b></summary>
+<br>
+<code>
 ./menu.ps1 > Search > 'Intune' > Get-IntuneHardwareIDs
-```
-
+</code>
+<br>
 <table>
     <tr>
         <td><b>TargetComputer</b></td><td>s-pc-</td>
@@ -114,12 +127,13 @@ Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
         <td><b>OutputFile</b></td><td>s-pc-hwids</td>
     </tr>
 </table>
+</details>
 
 <br>
-<h2 style="color:#f0dc00" id="editingmenu">Editing the Menu through config.json</h2>
+<h2 id="editingmenu">Editing the Menu through config.json</h2>
 
 <table style="margin: 0 150px;">
-<tr><td style=""><h2 style="color:#1a8cff;">To add a category to the menu..</h2><p>Write the name of the category into `config.json`, similar to what's shown in the image to the right.</p></td>
+<tr><td style=""><h2 >To add a category to the menu..</h2><p>Write the name of the category into `config.json`, similar to what's shown in the image to the right.</p></td>
 <td style="min-width:400px;"><img src="docs\img\config-002-new-category.png" alt="Adding category to config"></td>
 </tr>
 </table>
@@ -128,7 +142,7 @@ Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 <hr>
 
 <table style="margin: 0 150px;">
-<tr><td style=""><h2 style="color:#1a8cff;">To add an option to the menu..</h2><p>Write the name of the file (without extension) into `config.json`, similar to what's shown in the image to the right.</p>
+<tr><td style=""><h2 >To add an option to the menu..</h2><p>Write the name of the file (without extension) into `config.json`, similar to what's shown in the image to the right.</p>
 <p>If you add the filename into the "scans" section of the config file, it will appear after choosing the 'scans' category in the terminal menu.</p></td>
 <td style="min-width:400px;"><img src="docs\img\config-004-adding-function-name-to-config.png" alt="Adding function name to config">
 </td>
@@ -139,7 +153,7 @@ Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 <hr>
 
 <table style="margin: 0 150px;">
-<tr><td style=""><h2 style="color:#1a8cff;">To add a function to the menu..</h2><p>Create a new .ps1 file in the functions directory. The function name should match the file name.</p>
+<tr><td style=""><h2 >To add a function to the menu..</h2><p>Create a new .ps1 file in the functions directory. The function name should match the file name.</p>
 <p>The function should have a multi-line comment at the top, containing the function description and parameter descriptions so that they'll display in the terminal when the function is chosen, <b>typical format for the comment is shown in the image to the right</b>.</p></td>
 <td style="min-width:600px;">
 <img src="docs\img\menu004.png" alt="function template picture.">
@@ -147,10 +161,10 @@ Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 </tr>
 </table>
 
-<h3 style="color:#1a8cff;"><b>SupportFiles/function_template.ps1</b> can be helpful as a starting point for developing new functions.</h3>
+<h3 ><b>SupportFiles/function_template.ps1</b> can be helpful as a starting point for developing new functions.</h3>
 
 <br>
-<h2 style="color:#f0dc00" id="supportfiles">SupportFiles Explanation</h2>
+<h2 id="supportfiles">SupportFiles Explanation</h2>
 
 This is a listing of the files in the SupportFiles directory with a brief description of their purpose.
 
@@ -206,7 +220,7 @@ This is a listing of the files in the SupportFiles directory with a brief descri
 </table>
 
 <br>
-<h2 style="color:#f0dc00" id="functions">Stand-alone Functions</h2>
+<h2 id="functions">Stand-alone Functions</h2>
 
 Each function in the functions directory of PSTerminalMenu should also work as a 'standalone' function. This means that you should be able to copy/paste the function into a terminal, and execute it with appropriate parameters.
 
@@ -225,7 +239,7 @@ Get-ComputerDetails -TargetComputer 's-a231-,s-a230-' -OutputFile n
 <p>Note that there are a couple functions that interact with BIOS/firmware of Dell computers - these functions likely need to have the Dell BIOS password inserted to function correctly. At the moment, functions should have a blank variable called $BIOS_PWD that can be filled in until a more secure method is implemented.</p>
 
 <br>
-<h2 style="color:#f0dc00" id="modules">Modules</h2>
+<h2 id="modules">Modules</h2>
 
 PSTerminalMenu uses the following modules for core operation:
 
@@ -244,7 +258,7 @@ PSTerminalMenu uses the following modules for core operation:
   </tr>
 </table>
 
-<h2 style="color:#f0dc00" id="resources">Resources</h2>
+<h2 id="resources">Resources</h2>
 
 <table>
   <tr>
@@ -269,7 +283,7 @@ PSTerminalMenu uses the following modules for core operation:
   </tr>
 </table>
 <br>
-<h2 style="color:#f0dc00" id="license">License</h2>
+<h2 id="license">License</h2>
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
