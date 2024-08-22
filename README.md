@@ -1,18 +1,4 @@
 # PS Terminal Menu
-<style>
-p {
-    font-size: 1.2em;
-}
-</style>
-
-<details>
-<summary><b>macOS</b></summary>
-
-| macOS | Build status |
-|--------|--------|
-|macOS SDL Build|[![macOS-sdl](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos.yml/badge.svg)](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos.yml)
-|macOS Qt Build|[![macOS-qt](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos-qt.yml/badge.svg)](https://github.com/shadps4-emu/shadPS4/actions/workflows/macos-qt.yml)
-</details>
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-%235391FE.svg?style=for-the-badge&logo=powershell&logoColor=white)
 
