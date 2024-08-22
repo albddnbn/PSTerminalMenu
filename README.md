@@ -121,7 +121,7 @@ Function Function-Name {
 
 This is a listing of the files in the SupportFiles directory with a brief description of their purpose.
 
-
+<table>
   <tr>
     <td><strong>config.json</strong></td>
     <td>Contains the menu categories and functions.</td>

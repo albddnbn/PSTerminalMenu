@@ -197,7 +197,7 @@ function Get-InstalledDotNetversions {
             $results = $results | sort -property pscomputername
             ## 2. Output to gridview if user didn't choose report output.
             if ($outputfile.tolower() -eq 'n') {
-                $results | out-gridview -"Installed .NET Versions"
+                $results | out-gridview -Title "Installed .NET Versions"
             }
             else {
                 ## 3. Create .csv/.xlsx reports if possible

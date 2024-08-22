@@ -12,7 +12,7 @@ function Install-NeededModules {
 .NOTES
     Additional notes about the file.
 #>
-    $module_depenedencies = @('ps-menu', 'importexcel', 'ps2exe')
+    $module_dependencies = @('ps-menu', 'importexcel', 'ps2exe')
 
     # Check for internet connectivity:
     $TestConnection = Test-Connection google.com -Count 2 -Quiet
@@ -24,7 +24,7 @@ function Install-NeededModules {
         }
 
         # Set-Location "$env:SUPPORTFILES_DIR"
-        ForEach ($modulename in $module_depenedencies) {
+        ForEach ($modulename in $module_dependencies) {
             $module_check = Get-Module -Name $modulename -ListAvailable -erroraction SilentlyContinue
             if ($module_check) {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $modulename"
@@ -38,7 +38,7 @@ function Install-NeededModules {
         }
     }
     elseif (-not $TestConnection) {
-        ForEach ($modulename in $module_depenedencies) {
+        ForEach ($modulename in $module_dependencies) {
             $module_check = Get-Module -Name $modulename -ListAvailable
             if (-not $module_check) {
                 # get the installmodule.ps1 file:
@@ -49,8 +49,13 @@ function Install-NeededModules {
                 }
                 else {
                     Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found InstallModule.ps1 file for $modulename, running now..."
-                    &"$InstallModulePS1File"
+                    &"$($InstallModulePS1File.fullname)"
                 }
+            }
+            else {
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Found $modulename"
+                ipmo $modulename | out-null
+                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Finished importing $modulename"
             }
         }
     }
