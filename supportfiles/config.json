@@ -1,7 +1,9 @@
 {
     "categories": {
         "files": [
-            "Copy-Remotefiles",
+            "Copy-RemoteFiles",
+            "Copy-CannedResponse",
+            "Copy-SnippetToClipboard",
             "Send-Files"
         ],
         "installs & updates": [
@@ -20,7 +22,7 @@
         "network": [
             "Ping-TestReport",
             "Test-ConnectivityQuick",
-            "Stop-WifiAdapters"
+            "Open-RDP"
         ],
         "policies": [
             "Set-ChromeClearDataOnExit"
@@ -33,34 +35,28 @@
         "scans": [
             "Get-AssetInformation",
             "Get-ComputerDetails",
-            "Get-ConnectedPrinters",
             "Get-CurrentUser",
             "Get-InstalledDotNetVersions",
-            "Get-USBDevices",
-            "List-Dotnets",
+            "Get-InventoryDetails",
             "Scan-ForAppOrFilePath",
-            "Scan-ForSophosEndpointSelfHelp",
-            "Scan-Office2021",
-            "Scan-SoftwareInventory",
-            "Scan-SoftwareInventoryTargeted"
+            "Scan-Inventory",
+            "Scan-SoftwareInventory"
         ],
         "users": [
-            "Clear-ChromeBrowsingData",
             "Clear-CorruptProfiles",
             "Clear-FirefoxProfile",
-            "Get-CurrentUser"
+            "Count-TempProfiles",
+            "Get-CurrentUser",
+            "Send-Reboots"
         ],
         "utilities": [
             "Convert-ImgToBitmap",
             "Convert-PNGtoICO",
-            "Copy-CannedResponse",
-            "Copy-SnippetToClipboard",
             "New-CannedResponse",
             "New-DriveMappingExe",
+            "New-PSADTFolder",
             "Open-Guide",
-            "Open-RDP",
-            "Scan-Inventory",
-            "Send-Reboots"
+            "Stop-WifiAdapters"
         ]
     },
     "notjobfunctions": [

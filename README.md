@@ -222,6 +222,8 @@ Get-ComputerDetails -TargetComputer 's-a231-,s-a230-' -OutputFile n
 's-a231-01,s-a231-02' | Get-ComputerDetails -OutputFile computer-info
 ```
 
+<p>Note that there are a couple functions that interact with BIOS/firmware of Dell computers - these functions likely need to have the Dell BIOS password inserted to function correctly. At the moment, functions should have a blank variable called $BIOS_PWD that can be filled in until a more secure method is implemented.</p>
+
 <br>
 <h2 style="color:#f0dc00" id="modules">Modules</h2>
 
