@@ -1,8 +1,18 @@
 function New-PSADTFolder {
+    <#
+    .SYNOPSIS
+        Downloads specified (hopefully latest) version of Powershell App Deployment Toolkit and creates directory structure for application deployment.
+
+    .DESCRIPTION
+        Creates basic directory structure for PSADT deployment after downloading specified PSADT.zip folder from Github.
+
+    .NOTES
+        ---
+        Author: albddnbn (Alex B.)
+        Project Site: https://github.com/albddnbn/PSTerminalMenu
+    #>
 
     $PSADT_DOWNLOAD_URL = "https://github.com/PSAppDeployToolkit/PSAppDeployToolkit/releases/download/3.10.2/PSAppDeployToolkit_3.10.2.zip"
-
-
     ## Downloads the PSADT Toolkit and extracts it
     ## Renames Toolkit folder to the given Application Name.
 
@@ -18,7 +28,7 @@ function New-PSADTFolder {
     }
 
     ## Download the PSADT .zip folder (current latest):
-    Invoke-WebRequest "$PSADT_DOWNLOAD_URL" -Outputfile "$env:USERPROFILE\PSADT.zip"
+    Invoke-WebRequest "$PSADT_DOWNLOAD_URL" -Outfile "$env:USERPROFILE\PSADT.zip"
 
     Expand-Archive -Path "$env:USERPROFILE\PSADT.zip" -DestinationPath "$env:USERPROFILE\PSADT"
 
@@ -29,4 +39,7 @@ function New-PSADTFolder {
 
     ## Delete everything not needed:
     REmove-Item -Path "$env:USERPROFILE\PSADT*" -Recurse -Force -ErrorAction SilentlyContinue
+
+    ## Rename the Deploy-Application.ps1 file
+    Rename-Item -Path "$DeploymentFolder_Destination\Deploy-Application.ps1" -NewName "Deploy-$ApplicationName.ps1"
 }

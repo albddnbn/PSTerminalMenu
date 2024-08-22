@@ -1,8 +1,14 @@
 # PS Terminal Menu
+<style>
+p {
+    font-size: 1.2em;
+}
+
+</style>
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-%235391FE.svg?style=for-the-badge&logo=powershell&logoColor=white)
 
-## Description
+<h2 style="color:#f0dc00">Introduction</h2>
 
 Working as an IT Support Specialist in 2022, I quickly became captivated with Powershell and it's ability to increase my efficiency.
 
@@ -10,22 +16,24 @@ I was amazed at the variety of Powershell modules that make it possible to inter
 
 I already had a bit of a background in Java, Python, and object-oriented programming. While performing my duties, I began to take note of tasks or issues that had programmatic resolutions. I started to create scripts to perform tasks and implement resolutions, and I eventually reached a point where I realized that I needed to have all of these useful scripts in a single location, able to be executed on-demand at any given moment throughout my work day.
 
-It was from this realization that the PSTerminalMenu tool was born - it's evolved into a collection of useful functions centered around the menu.ps1 script, which allows for their interactive selection and execution.
+<h3 style="color:#1a8cff;">It was from this realization that the PSTerminalMenu tool was born - it's evolved into a collection of useful functions centered around the menu.ps1 script, which allows for their interactive selection and execution.</h3>
 
 <b>This is an ongoing project, I appreciate any feedback or contributions!</b>
 
-## Table of Contents
 
-- [Startup](#startup)
+<h2 style="color:#f0dc00">Table of Contents</h2>
+
 - [Usage](#usage)
-- [Search](#search)
-- [Configuration](#configuration)
+- [Examples](#examples)
+- [Editing the Menu through config.json](#editingmenu)
 - [SupportFiles](#supportfiles)
 - [Functions](#functions)
+- [Modules](#modules)
 - [Resources](#resources)
 - [License](#license)
 
-## Startup
+<br>
+<h2 style="color:#f0dc00" id="usage">Usage</h2>
 
 Download the repository .zip folder or download latest release and execute the menu.ps1 script.
 
@@ -34,90 +42,115 @@ Download the repository .zip folder or download latest release and execute the m
 Powershell.exe -ExecutionPolicy Bypass ./Menu.ps1
 ```
 
-## Usage
+<h3 style="color:#1a8cff;">Module and Function Import</h3>
 
-1. Get basic computer details from single computer: t-client-01, and output report to file containing 'client-01-details' as part of filename.
+<p><b>Menu.ps1 will attempt to import all necessary modules and dot source functions from the function directory.</b></p>
+
+<table>
+<tr>
+<td>
+<p>The script will either attempt to install/import modules from the Internet, or use local copies of the modules found in the SupportFiles directory.</p>
+
+<p>In some niche cases, user may receive prompts or modules may have to be installed manually.</p>
+</td>
+<td>
+<p><img src="docs/img/menu003.png" alt="Ideally, the user will see output indicating successful import/install of dependencies." style="min-width:350px;"></p>
+</td>
+</tr>
+</table>
+<p><b>After successful import of modules and functions, the user must press ENTER to proceed to category menu.</b></p>
+
+<br>
+<h3 style="color:#1a8cff;">Interactive Terminal Menus</h3>
+
+<p>After executing the menu.ps1 script and modules/functions are imported, the script will <b>display the first terminal menu:</b> Category Selection.</p>
+
+<p>Each category contains a number of functions, <b>configured through <i>SupportFiles/config.json</i></b></p>
+<br>
+<h3 style="color:#1a8cff;">Search Functions</h3>
+
+<h3 style="color:#1a8cff;">If you're not sure which category holds a function, you can <b>use 'Search'</b>, located in the first menu.</h3>
+<p>Search will return any functions containing the keyword submitted and present them as a menu.</p>
+
+<br>
+<h3 style="color:#1a8cff;">Return to Previous Menu</h3>
+
+<h3>After searching or choosing a category, you can return to the category selection menu by choosing this option.</h3>
+
+<br>
+<h2 style="color:#f0dc00" id="examples">Examples</h2>
+
+<h3 style="color:#1a8cff;">Get basic computer details from single PC and output to file.</h3>
 
 ```
 ./menu.ps1 > Scans > Get-ComputerDetails
 ```
 
-Parameter input:
-| TargetComputer | OutputFile |
-| --- | --- |
-| t-client-01 | client-01-details |
+<table>
+<tr><td><b>TargetComputer</b></td><td>t-client-01</td></tr>
+<tr><td><b>OutputFile</b></td><td>client-01-details</td></tr>
+</table>
 
-2. Search for any functions offered in the menu containing the word 'Intune'. Select the **Get-IntuneHardwareIDs** function and enter parameter values to collect Intune hardware IDs from all devices with hostnames starting with 's-pc-'.<br><br>Add GroupTag 'EmployeePCs' to all device hwids. Output to file containing 's-pc-hwids'.
+<h3 style="color:#1a8cff;">Search for any functions containing the word 'Intune'</h3>
+
+```
+./menu.ps1 > Search > 'Intune'
+```
+
+<h3 style="color:#1a8cff;">Get Intune hardware IDs from all devices with hostnames starting with 's-pc-', include DeviceGroupTag in HWID.</h3>
 
 ```
 ./menu.ps1 > Search > 'Intune' > Get-IntuneHardwareIDs
 ```
 
-Parameter input:
-| TargetComputer | DeviceGroupTag | OutputFile |
-| --- | ---| --- |
-| s-pc- | EmployeePCs | s-pc-hwids |
+<table>
+    <tr>
+        <td><b>TargetComputer</b></td><td>s-pc-</td>
+    </tr>
+    <tr>
+        <td><b>DeviceGroupTag</b></td><td>EmployeePCs</td>
+    </tr>
+    <tr>
+        <td><b>OutputFile</b></td><td>s-pc-hwids</td>
+    </tr>
+</table>
 
-## Search
+<br>
+<h2 style="color:#f0dc00" id="editingmenu">Editing the Menu through config.json</h2>
 
-**Search**: if you're not sure which category holds a function, you can use 'Search', located in the first menu.
-Search will return any functions containing the keyword submitted and present them as a menu.
+<table style="margin: 0 150px;">
+<tr><td style=""><h2 style="color:#1a8cff;">To add a category to the menu..</h2><p>Write the name of the category into `config.json`, similar to what's shown in the image to the right.</p></td>
+<td style="min-width:400px;"><img src="docs\img\config-002-new-category.png" alt="Adding category to config"></td>
+</tr>
+</table>
 
-**Return to Previous Menu**: After searching or choosing a category, you can return to the category selection menu by choosing this option.
+<br>
+<hr>
 
-## Configuration
+<table style="margin: 0 150px;">
+<tr><td style=""><h2 style="color:#1a8cff;">To add an option to the menu..</h2><p>Write the name of the file (without extension) into `config.json`, similar to what's shown in the image to the right.</p>
+<p>If you add the filename into the "scans" section of the config file, it will appear after choosing the 'scans' category in the terminal menu.</p></td>
+<td style="min-width:400px;"><img src="docs\img\config-004-adding-function-name-to-config.png" alt="Adding function name to config">
+</td>
+</tr>
+</table>
 
-<b>Menu.ps1 is the central script of PSTerminalMenu.</b>
+<br>
+<hr>
 
-The menu layout can be configured through the <b>SupportFiles/config.json</b> file.
+<table style="margin: 0 150px;">
+<tr><td style=""><h2 style="color:#1a8cff;">To add a function to the menu..</h2><p>Create a new .ps1 file in the functions directory. The function name should match the file name.</p>
+<p>The function should have a multi-line comment at the top, containing the function description and parameter descriptions so that they'll display in the terminal when the function is chosen, <b>typical format for the comment is shown in the image to the right</b>.</p></td>
+<td style="min-width:600px;">
+<img src="docs\img\menu004.png" alt="function template picture.">
+</td>
+</tr>
+</table>
 
+<h3 style="color:#1a8cff;"><b>SupportFiles/function_template.ps1</b> can be helpful as a starting point for developing new functions.</h3>
 
-
-## To add a category
-
-1. Write the name of the category into `config.json`, similar to what's shown in the image below.
-
-<img src="docs\img\config-002-new-category.png" alt="Adding category to config" width="450" height="450">
-
-## To add an option to the menu
-
-1. Write the name of the file (without extension) into `config.json`, similar to the picture below.
-2. If you add the filename into the "scans" section of the config file, it will appear after choosing the 'scans' category in the terminal menu.
-
-<img src="docs\img\config-004-adding-function-name-to-config.png" alt="Adding function name to config" width="500" height="450">
-
-## To add a function to the menu
-
-1. Create a new .ps1 file in the functions directory. The function name should match the file name.
-
-2. The function should have a multi-line comment at the top, containing the function description and parameter descriptions so that they'll display in the terminal when the function is chosen, **typical format for the comment is shown in the image below**.
-
-```powershell
-Function Function-Name {
-    <#
-    .SYNOPSIS
-    Checks for a user logged in to a remote computer using the get-process cmdlet to check explorer.exe.
-
-    .DESCRIPTION
-    If the process doesn't exist, it returns false, because any user currently logged in to the PC will have explorer.exe running.
-
-    .PARAMETER ComputerName
-    DNS Hostname of remote computer. Ex: 's-a227-26'
-
-    .EXAMPLE
-    Get-User
-
-    .EXAMPLE
-    Get-User -ComputerName "s-a227-28"
-
-    .NOTES
-    Additional notes about the function.
-    #>
-    Write-Host "This is the function code"
-}
-```
-
-## SupportFiles
+<br>
+<h2 style="color:#f0dc00" id="supportfiles">SupportFiles Explanation</h2>
 
 This is a listing of the files in the SupportFiles directory with a brief description of their purpose.
 
@@ -172,7 +205,8 @@ This is a listing of the files in the SupportFiles directory with a brief descri
   </tr>
 </table>
 
-## Functions
+<br>
+<h2 style="color:#f0dc00" id="functions">Stand-alone Functions</h2>
 
 Each function in the functions directory of PSTerminalMenu should also work as a 'standalone' function. This means that you should be able to copy/paste the function into a terminal, and execute it with appropriate parameters.
 
@@ -188,7 +222,27 @@ Get-ComputerDetails -TargetComputer 's-a231-,s-a230-' -OutputFile n
 's-a231-01,s-a231-02' | Get-ComputerDetails -OutputFile computer-info
 ```
 
-## Resources
+<br>
+<h2 style="color:#f0dc00" id="modules">Modules</h2>
+
+PSTerminalMenu uses the following modules for core operation:
+
+<table>
+  <tr>
+    <td><strong>ImportExcel</strong></td>
+    <td>for creating XLSX reports from results or data gathered. PSTerminalMenu will also create CSV reports, but XLSX reports are easier to deal with in some cases.</td>
+  </tr>
+  <tr>
+    <td><strong>PSMenu</strong></td>
+    <td>for displaying the interactive terminal menu for category and function selection. Some functions actually use this module as well (for ex: Install-Application).</td>
+  </tr>
+  <tr>
+    <td><strong>PS2EXE</strong></td>
+    <td>Some functions will create scripts dynamically and compile them into executables using this module.</td>
+  </tr>
+</table>
+
+<h2 style="color:#f0dc00" id="resources">Resources</h2>
 
 <table>
   <tr>
@@ -212,3 +266,11 @@ Get-ComputerDetails -TargetComputer 's-a231-,s-a230-' -OutputFile n
     <td><a href="https://psappdeploytoolkit.com/">https://psappdeploytoolkit.com/</a></td>
   </tr>
 </table>
+<br>
+<h2 style="color:#f0dc00" id="license">License</h2>
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program. If not, see [https://www.gnu.org/licenses/](https://www.gnu.org/licenses/).
+
+For more information on the GNU General Public License, please visit [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html).
