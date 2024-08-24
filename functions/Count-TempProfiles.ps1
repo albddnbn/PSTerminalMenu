@@ -116,7 +116,7 @@ function Count-TempProfiles {
         }
 
         ## 2. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
-        $str_title_var = "CurrentUsers"
+        $str_title_var = "TempProfiles"
         if ($Outputfile.tolower() -eq 'n') {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected 'N' input for outputfile, skipping creation of outputfile."
         }
