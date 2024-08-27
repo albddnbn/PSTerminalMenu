@@ -111,7 +111,8 @@ function Install-VeyonRoom {
         $install_veyon_scriptblock = {
             param(
                 $MasterInstall,
-                $VeyonDirectory
+                $VeyonDirectory,
+                $DeleteFolder
             )
             Get-ChildItem $VeyonDirectory -Recurse | Unblock-File
             Set-Location $VeyonDirectory
@@ -126,8 +127,9 @@ function Install-VeyonRoom {
             else {
                 Powershell.exe -ExecutionPolicy Bypass "$($DeployVeyonPs1.Fullname)" -DeploymentType "Install" -DeployMode "Silent"
             }
-
-            Remove-Item -Path $VeyonDirectory -Recurse -Force
+            if ($DeleteFolder -eq 'y') {
+                Remove-Item -Path $VeyonDirectory -Recurse -Force
+            }
         }
 
         ## MASTER INSTALLATIONS:
@@ -135,10 +137,11 @@ function Install-VeyonRoom {
         Write-Host "[1] Veyon Master, [2] Veyon Student, [3] No Veyon"
         $reply = Read-Host "Would you like your local computer to be installed with Veyon?"
         if ($reply -eq '1') {
-            Invoke-Command  -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', $VeyonDeploymentFolder.FullName
+            Invoke-Command  -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', $VeyonDeploymentFolder.FullName, 'n'
+            $master_computer_selection += @($env:COMPUTERNAME)
         }
         elseif ($reply -eq '2') {
-            Invoke-Command  -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', $VeyonDeploymentFolder.FullName
+            Invoke-Command  -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', $VeyonDeploymentFolder.FullName, 'n'
         }
 
         ## Missed computers container
@@ -169,20 +172,22 @@ function Install-VeyonRoom {
                 if ($pingreply) {
                     ## Create Session
                     $target_session = New-PSSession -ComputerName $single_computer
-
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $single_computer is responsive to ping, proceeding." -foregroundcolor green
                     ## Remove any existing veyon folder
                     Invoke-Command -Session $target_session -Scriptblock {
                         Remove-Item -Path "C:\temp\Veyon" -Recurse -Force -ErrorAction SilentlyContinue
                     }
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Copying Veyon source files to $single_computer." -foregroundcolor green
                     ## 3. Copy source files
                     Copy-Item -Path "$($VeyonDeploymentFolder.fullname)" -Destination C:\temp\ -ToSession $target_session -Recurse -Force
 
+                    Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Installing Veyon on $single_computer." -foregroundcolor green
                     ## If its a master computer:
                     if ($single_computer -in $master_computer_selection) {
-                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon'
+                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'y', 'C:\Temp\Veyon', 'y'
                     }
                     else {
-                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\Temp\Veyon'
+                        Invoke-Command -Session $target_session -ScriptBlock $install_veyon_scriptblock -ArgumentList 'n', 'C:\Temp\Veyon', 'y'
                         $Student_Computers.Add($single_computer) | Out-Null
                     }
                 }

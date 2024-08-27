@@ -1,4 +1,4 @@
-function Scan-SoftwareInventory {
+function Scan-SoftwareInventoryTargeted {
     <#
     .SYNOPSIS
         Scans a group of computers for installed applications and exports results to .csv/.xlsx - one per computer.
@@ -15,6 +15,10 @@ function Scan-SoftwareInventory {
 
     .PARAMETER Outputfile
         A string used to create the output .csv and .xlsx files. If not specified, a default filename is created.
+
+    .PARAMETER AppsToLookFor
+        Comma-separated list.
+        Optional parameter to specify a list of applications/strings to look for. If not specified, all applications are scanned.
 
     .EXAMPLE
         Scan-SoftwareInventory -TargetComputer "t-client-28" -Title "tclient-28-details"
@@ -34,19 +38,25 @@ function Scan-SoftwareInventory {
         [String[]]$TargetComputer,
         [Parameter(
             Mandatory = $true)]
-        [string]$OutputFile
+        [string]$OutputFile,
+        $AppsToLookFor
     )
     ## 1. Define title, date variables
     ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
     ## 3. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     ## 4. Create empty results container
     BEGIN {
+        $AppsToLookFor = $AppsToLookFor.split(",")
+        if ($AppsToLookFor -isnot [array]) {
+            $AppsToLookFor = @($AppsToLookFor)
+        }
+
         ## 1. Define title, date variables
         $REPORT_TITLE = 'SoftwareScan'
         $thedate = Get-Date -Format 'yyyy-MM-dd'
         ## 2. Handle TargetComputer input if not supplied through pipeline (will be $null in BEGIN if so)
         if ($null -eq $TargetComputer) {
-            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline input for targetcomputer." -Foregroundcolor Yellow
+            Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Detected pipeline for targetcomputer." -Foregroundcolor Yellow
         }
         else {
             ## Assigns localhost value
@@ -151,6 +161,8 @@ function Scan-SoftwareInventory {
                 $pingreply = Test-Connection $single_computer -Count 1 -Quiet
                 if ($pingreply) {
                     $target_software_inventory = invoke-command -computername $single_computer -scriptblock {
+
+                        $targetapps = ($using:AppsToLookFor)
                         $registryPaths = @(
                             "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
                             "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
@@ -174,6 +186,20 @@ function Scan-SoftwareInventory {
                                 $installdate = (Get-ItemProperty -Path $keyPath -Name "installdate" -ErrorAction SilentlyContinue).installdate
             
                                 if (($displayname -ne '') -and ($null -ne $displayname)) {
+                                    # if a target app list was provided, cycle through it and see if we're dealing with an app installation that is being searched for.
+                                    if ($targetapps) {
+                                        $matched_app = $false
+
+                                        $targetapps | % {
+                                            if ($displayname -like "*$_*") {
+                                                $matched_app = $true
+                                            }
+                                        }
+                                        ## If a search list was provided and there was no match, skip this app listing and move on to next
+                                        if (-not $matched_app) {
+                                            continue
+                                        }
+                                    }
 
                                     $obj = [pscustomobject]@{
                                         DisplayName     = $displayName

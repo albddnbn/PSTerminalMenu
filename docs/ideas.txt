@@ -1,1 +1,0 @@
-1. Make the functions list at top clickable so you can click to jump to each functions section on the page.
