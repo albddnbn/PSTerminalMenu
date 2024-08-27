@@ -68,9 +68,8 @@
         "New-DriveMappingExe",
         "Send-Reboots",
         "Apply-DellCommandUpdates",
-        "Format-SecondaryDrive",
         "Open-RDP",
         "Add-PrinterLogicPrinter",
-        "Build-PrinterConnectionExe"
+        "New-PrinterConnectionExe"
     ]
 }
