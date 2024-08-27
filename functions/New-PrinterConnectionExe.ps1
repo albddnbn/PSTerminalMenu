@@ -1,4 +1,4 @@
-function Build-PrinterConnectionExe {
+function New-PrinterConnectionExe {
     <#
     .SYNOPSIS
         Generates executable using the PS2exe powershell module that will map a printer.

@@ -29,7 +29,7 @@
         ],
         "printers": [
             "Add-PrinterLogicPrinter",
-            "Build-PrinterConnectionExe",
+            "New-PrinterConnectionExe",
             "Get-ConnectedPrinters"
         ],
         "scans": [
