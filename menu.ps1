@@ -11,7 +11,7 @@ function, and then the function will attempt to execute based on the input value
 .\Menu.ps1
 
 .NOTES
-abuddenb - 02/21/2024
+Alex B. - 08/25/2024
 References for menu: https://michael-casey.com/2019/07/03/powershell-terminal-menu-template/ 
 PS-Menu module: https://github.com/chrisseroka/ps-menu
 PSADT: https://psappdeploytoolkit.com/
@@ -102,19 +102,6 @@ Write-Host "attempting to install dependencies" -NoNewline -ForegroundColor Yell
 Write-Host "."
 Install-NeededModules
 
-## Try to make sure the ps-menu module gets installed:
-# if (-not (Get-Module -Name PS-Menu -ListAvailable)) {
-#     Write-Host "Installing PS-Menu module..." -ForegroundColor Yellow
-#     if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
-#         Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
-#         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-#     }
-#     Install-Module -Name PS-Menu -Force
-# }
-# Import-Module -Name PS-Menu -Force | Out-Null
-
-
-
 ## Dot Source ALL .PS1 Files in ./functions and ./experimental
 ## *IMPORTANT* --> if a .ps1 file is not structured into a function - the .ps1 code in file will be executed during 
 ##                 dot source attempt
@@ -182,7 +169,7 @@ while ($exit_program -eq $false) {
             continue
         }
     }
-    ## Open HTML Guide / Help file.
+    ## Open HTML Guide / Help file. This is done so the user won't have to select the Open-Guide function after selecting Help.
     elseif ($chosen_category -eq 'Help') {
         Write-Host "Opening $env:PSMENU_DIR\docs\index.html in default browser."
 
@@ -263,7 +250,7 @@ while ($exit_program -eq $false) {
                 Write-Host "Please input value for TargetComputer." -foregroundcolor yellow
                 Write-Host "Input can be:"
                 Write-Host "    1. Single hostname string, ex: 's-client-01'"
-                Write-Host "    2. Comma-separated list of hostnames, ex: s-client-01,s-client-02"
+                Write-Host "    2. Comma-separated list of hostnames, ex: s-client-01, s-client-02"
                 Write-Host "    3. Path to text file containing one hostname per line, ex:" -NoNewline
                 Write-Host " 'D:\computers.txt'" -Foregroundcolor Yellow
                 Write-Host "    4. First section of a hostname to generate a list, ex: " -nonewline
