@@ -1,4 +1,4 @@
-function Scan-SoftwareInventoryTargeted {
+function Scan-SoftwareInventory {
     <#
     .SYNOPSIS
         Scans a group of computers for installed applications and exports results to .csv/.xlsx - one per computer.
@@ -184,7 +184,9 @@ function Scan-SoftwareInventoryTargeted {
                                 $installLocation = (Get-ItemProperty -Path $keyPath -Name "InstallLocation" -ErrorAction SilentlyContinue).InstallLocation
                                 $productcode = (Get-ItemProperty -Path $keyPath -Name "productcode" -ErrorAction SilentlyContinue).productcode
                                 $installdate = (Get-ItemProperty -Path $keyPath -Name "installdate" -ErrorAction SilentlyContinue).installdate
-            
+                                $application_size = $null ## define as null for each loopthru
+
+
                                 if (($displayname -ne '') -and ($null -ne $displayname)) {
                                     # if a target app list was provided, cycle through it and see if we're dealing with an app installation that is being searched for.
                                     if ($targetapps) {
@@ -201,6 +203,13 @@ function Scan-SoftwareInventoryTargeted {
                                         }
                                     }
 
+                                    ## Attempt to get approx 'size' of install location folder:
+                                    if ($installlocation) {
+                                        $application_size = (Get-ChildItem -Path "$installLocation" -Recurse -ErrorAction SilentlyContinue | MEasure-Object -Property Length -Sum -ErrorAction SilentlyContinue).sum / 1GB
+                                        $application_size = [Math]::Round($application_size, 2)
+                                        $application_size = "$application_size GB"
+                                    }
+
                                     $obj = [pscustomobject]@{
                                         DisplayName     = $displayName
                                         UninstallString = $uninstallString
@@ -209,6 +218,7 @@ function Scan-SoftwareInventoryTargeted {
                                         InstallLocation = $installLocation
                                         ProductCode     = $productcode
                                         InstallDate     = $installdate
+                                        ApplicationSize = $application_size
                                     }
                                     $obj    
                                 }        
