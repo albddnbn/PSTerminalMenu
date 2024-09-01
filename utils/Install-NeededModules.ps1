@@ -18,7 +18,7 @@ function Install-NeededModules {
     $TestConnection = Test-Connection google.com -Count 2 -Quiet
     if ($TestConnection) {
         # make sure nuget is available
-        if (-not (Get-PackageProvider -Name NuGet -ListAvailable)) {
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
             Write-Host "Installing NuGet package provider..." -ForegroundColor Yellow
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
         }
