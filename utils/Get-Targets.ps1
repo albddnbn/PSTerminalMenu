@@ -35,7 +35,7 @@ Function Get-Targets {
                     $searchRoot = $env:USERDNSDOMAIN
                 }
 
-                ## Thank you Josh R. for this snippet - it shortened 10 lines of code to the 3 that you see below.
+                ## Thank you https://github.com/Jreece321 for this snippet - it shortened 10 lines of code to the 3 that you see below.
                 $matching_hostnames = (([adsisearcher]"(&(objectCategory=Computer)(name=$computer*))").findall()).properties
                 $matching_hostnames = $matching_hostnames.name
                 $NewTargetComputer += $matching_hostnames
