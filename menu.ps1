@@ -182,7 +182,7 @@ while ($exit_program -eq $false) {
 
         try {
             $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
-            Start-Process "$($chrome_exe.fullname)" "$HELP_URL"
+            Start-Process "$($chrome_exe.fullname)" -argumentlist "$HELP_URL"
         }
         catch {
             Start-Process "msedge.exe" -argumentlist "$HELP_URL"
