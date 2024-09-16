@@ -165,29 +165,27 @@ while ($exit_program -eq $false) {
 
         ## if there are no results - allow user to continue back to original menu
         if (-not $function_list) {
-            Write-Host "No results found for search term: $search_term."
+            Write-Host "No results found for search term: " -NoNewLine
+            Write-Host "$search_term" -ForegroundColor Red
             Read-Host "Press enter to return to original menu."
             continue
         }
     }
     ## Open HTML Guide / Help file. This is done so the user won't have to select the Open-Guide function after selecting Help.
     elseif ($chosen_category -eq 'Help') {
-        Write-Host "Opening $env:PSMENU_DIR\docs\index.html in default browser."
 
-        $GuideHtmlFile = Get-ChildItem -Path "$env:PSMENU_DIR\docs" -Filter "index.html" -File -Recurse -ErrorAction SilentlyContinue
+        $HELP_URL = "https://github.com/albddnbn/PSTerminalMenu/wiki"
+        Write-Host "Attempting to open " -nonewline
+        Write-Host "$HELP_URL" -Foregroundcolor Yellow -NoNewline
+        Write-Host " in default browser."
+
 
         try {
-            Invoke-Expression "$($guidehtmlfile.fullname)"
+            $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
+            Start-Process "$($chrome_exe.fullname)" "$HELP_URL"
         }
         catch {
-            $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
-            if ($chrome_exe) {
-                &"$($chrome_exe.fullname)" "$($GuideHtmlFile.fullname)"
-            }
-            else {
-                Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: Unable to open in default browser or Chrome, opening docs folder." -Foregroundcolor Red
-                Invoke-Item "$env:PSMENU_DIR\docs"
-            }
+            Start-Process "msedge.exe" -argumentlist "$HELP_URL"
         }
         Read-Host "Press enter to continue."
         continue
