@@ -173,21 +173,7 @@ while ($exit_program -eq $false) {
     }
     ## Open HTML Guide / Help file. This is done so the user won't have to select the Open-Guide function after selecting Help.
     elseif ($chosen_category -eq 'Help') {
-
-        $HELP_URL = "https://github.com/albddnbn/PSTerminalMenu/wiki"
-        Write-Host "Attempting to open " -nonewline
-        Write-Host "$HELP_URL" -Foregroundcolor Yellow -NoNewline
-        Write-Host " in default browser."
-
-
-        try {
-            $chrome_exe = Get-ChildItem -Path "C:\Program Files\Google\Chrome\Application" -Filter "chrome.exe" -File -ErrorAction SilentlyContinue
-            Start-Process "$($chrome_exe.fullname)" -argumentlist "$HELP_URL"
-        }
-        catch {
-            Start-Process "msedge.exe" -argumentlist "$HELP_URL"
-        }
-        Read-Host "Press enter to continue."
+        Open-Guide
         continue
     } ## If the user chooses to exit, the program will exit
     else {
