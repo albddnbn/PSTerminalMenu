@@ -8,20 +8,24 @@
     Specifies whether the script will actually make changes to filesytem (perform deletions), or if script will just make note of signs of corruption.
 #>
 param(
-    $WhatIf_Setting
+    $WhatIf_Setting,
+    $DomainName
 )
+
 # if whatif is disabled - script checks for logged in user
 if (-not $whatif_setting) {
     $check_for_user = (get-process -name 'explorer' -includeusername -erroraction silentlycontinue).username
     if ($check_for_user) {
-        $check_for_user = $check_for_user -replace 'DTCC\\', ''
+        # $check_for_user = $check_for_user -replace 'DTCC\\', ''
+        $check_for_user = $check_for_user -replace "$DomainName\\", ''
+
         Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: " -Nonewline
         Write-Host "$check_for_user is logged in to $env:COMPUTERNAME and -WHATIF is disabled, skipping this computer." -Foregroundcolor Yellow
         return            
     }
 }
 
-$AllCorruptFolders = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | Where-Object { ($_.Name -like "*.DTCC*") -and ($_.NAme -notlike "*.old") }
+$AllCorruptFolders = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | Where-Object { ($_.Name -like "*.$DomainName*") -and ($_.NAme -notlike "*.old") }
 $UniqueCorruptUsers = [System.Collections.ArrayList]::new()
         
 # if there are no corrupt folders, continue to next computer
@@ -34,7 +38,7 @@ Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [$env:COMPUTERNAME] :: "
 Write-Host "Found $($AllCorruptFolders.count) temporary user folders on computer." -Foregroundcolor Yellow
 ForEach ($Fname in $($AllCorruptFolders | Select -Exp Name)) {
     # split / grab real username
-    $Fname = $Fname.split(".DTCC")
+    $Fname = $Fname.split(".$DomainName")
     $Fname = $Fname[0]
     if ($UniqueCorruptUsers -notcontains $Fname) {
         $UniqueCorruptUsers.Add($Fname) | Out-Null

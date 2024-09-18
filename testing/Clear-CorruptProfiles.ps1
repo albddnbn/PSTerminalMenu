@@ -54,11 +54,15 @@ function Clear-CorruptProfiles {
     ## 5. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
     ## 6. Create empty results container
     BEGIN {
+
+        ## create domain suffix variable:
+        $Domain_name = (Get-ADDomain).Name
+
         if ($SkipOCcupiedComputers -eq '') {
             $SkipOccupiedComputers = 'y'
         }
         ## 1. Set date and report title variables to be used in output filename creation
-        $REPORT_TITLE = 'TempProfiles' # used to create the output filename, .xlsx worksheet title, and folder name inside the report\yyyy-MM-dd folder for today
+        # $REPORT_TITLE = 'TempProfiles' # used to create the output filename, .xlsx worksheet title, and folder name inside the report\yyyy-MM-dd folder for today
         $thedate = Get-Date -Format 'yyyy-MM-dd'
 
         ## 2. Check for clear-corruptprofiles.ps1 script in ./localscripts
@@ -136,9 +140,9 @@ function Clear-CorruptProfiles {
 
         ## 5. Outputfile handling - either create default, create filenames using input, or skip creation if $outputfile = 'n'.
         $str_title_var = "TempProfiles"
+        $REPORT_DIRECTORY = "$str_title_var"
 
         if ((Get-Command -Name "Get-OutputFileString" -ErrorAction SilentlyContinue) -and ($null -ne $env:PSMENU_DIR)) {
-            $REPORT_DIRECTORY = "$str_title_var"
             $OutputFile = Get-OutputFileString -TitleString $REPORT_DIRECTORY -Rootdirectory $env:PSMENU_DIR -FolderTitle $REPORT_DIRECTORY -ReportOutput
         }
         else {
@@ -155,8 +159,6 @@ function Clear-CorruptProfiles {
                 }
             }
 
-
-            
             try {
                 $outputdir = $outputfile | split-path -parent
                 if (-not (Test-Path $outputdir -ErrorAction SilentlyContinue)) {
@@ -167,10 +169,8 @@ function Clear-CorruptProfiles {
                 Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: $Outputfile has no parent directory." -Foregroundcolor Yellow
             }
 
-
         }
         
-
         ## 6. Create empty results container
         $results = [system.collections.arraylist]::new()
     }
@@ -198,7 +198,7 @@ function Clear-CorruptProfiles {
                         }
                     }
                     ## 3. Run script
-                    $temp_profile_results = Invoke-Command -ComputerName $single_computer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting
+                    $temp_profile_results = Invoke-Command -ComputerName $single_computer -FilePath "$($get_corrupt_profiles_ps1.fullname)" -ArgumentList $whatif_setting,$Domain_name
                     $results.add($temp_profile_results) | Out-Null
                 }
                 else {
@@ -242,9 +242,6 @@ function Clear-CorruptProfiles {
             Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] :: No results to output."
         }
 
-        ## This is included for menu purposes, so there's a pause before the function ends and terminal window reverts
-        ## to opening menu options.
-        # read-host "Press enter to return results."
         return $results
     }
 }
