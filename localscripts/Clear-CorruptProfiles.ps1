@@ -71,8 +71,10 @@ ForEach ($IndividualUser in $UniqueCorruptUsers) {
     # $deleted_folders = [System.Collections.ArrayList]::new()
 
     # clear all profiles for user from registry:
-    ## FIX THIS ---------------->
-    $users_profiles = Get-Ciminstance -class win32_userprofile | where-object { $_.LocalPath.split('\')[-1] -like "*$IndividualUser*" }
+    # $users_profiles = Get-Ciminstance -class win32_userprofile | where-object { $_.LocalPath.split('\')[-1] -like "*$IndividualUser*" }
+
+    $users_profiles = Get-Ciminstance -class win32_userprofile | % { $_.localpath.split('\')[-1] } | ? { ($_ -eq "$IndividualUser") -or ($_ -like "$IndividualUser.*")}
+
     if ($users_profiles) {
         ForEach ($profile in $users_profiles) {
             $user_sid = $profile.sid
