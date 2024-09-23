@@ -178,10 +178,12 @@ function Run-BitdefenderScan {
                 ## 2. Check if computer is repsonsive on the network.
                 # if ([System.IO.Directory]::Exists("\\$single_computer\c$")) {
                 if (Test-Connection $single_computer -count 1 -quiet) {
+
+                    Write-Host "Testing connection to $single_computer"
                     ## ---------------------------------------------------------------------------
                     ## Insert function code here (code that gets run on for each target computer)
                     $single_results = Invoke-Command -ComputerName $single_computer -ScriptBlock {
-
+                        Write-Host "Invoking command on single_computer"
                         $RemoteTargetFolders = $using:TargetFolders
 
                         $obj = [pscustomobject]@{
@@ -195,9 +197,11 @@ function Run-BitdefenderScan {
                             ## get scan executable:
                             $scan_exe = Get-Item "C:\Program Files\Bitdefender\Endpoint Security\product.console.exe" -ErrorAction Stop
                             $obj.BFInstalled = $true
-
+                            Write-Host "$env:COMPUTERNAME :: Found Bitdefender executable."
                             $RemoteTargetFolders | % {
-                                $obj.ScanResults += Start-Process "$($scan_exe.fullname)" -ArgumentList "/c FileScan.OnDemand.RunScanTask custom path=$_" -Wait
+                                $scan_results = Start-Process "$($scan_exe.fullname)" -ArgumentList "/c FileScan.OnDemand.RunScanTask custom path=$_"
+                                $scan_results
+                                $obj.ScanResults += $scan_results
                             }
 
                         } catch {
