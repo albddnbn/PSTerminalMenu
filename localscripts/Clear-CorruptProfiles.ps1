@@ -65,15 +65,15 @@ ForEach ($IndividualUser in $UniqueCorruptUsers) {
     $renamed_folders = ""
     # Step 1. List of all folders (temp/normal) that pertain to a specific user on a PC
     # $Folders_for_current_user = Get-ChildItem -Path "C:\Users" -Filter "$($IndividualUser)*" -Directory -ErrorAction SilentlyContinue
-    $Folders_for_current_user = Get-Item -Path "C:\Users\*" -Include $IndividualUser,"$IndividualUser.*" | ? {$_.mode -eq 'd-----'}
+    $Folders_for_current_user = Get-Item -Path "C:\Users\*" -Include $IndividualUser, "$IndividualUser.$DomainName*" | ? { $_.mode -eq 'd-----' }
 
     ## EMPTY FOLDERS
     # $deleted_folders = [System.Collections.ArrayList]::new()
 
     # clear all profiles for user from registry:
     # $users_profiles = Get-Ciminstance -class win32_userprofile | where-object { $_.LocalPath.split('\')[-1] -like "*$IndividualUser*" }
-
-    $users_profiles = Get-Ciminstance -class win32_userprofile | % { $_.localpath.split('\')[-1] } | ? { ($_ -eq "$IndividualUser") -or ($_ -like "$IndividualUser.*")}
+    ## tune line below - like may be unnecessary
+    $users_profiles = Get-Ciminstance -class win32_userprofile | % { $_.localpath.split('\')[-1] } | ? { ($_ -eq "$IndividualUser") -or ($_ -like "$IndividualUser.$DomainName*") }
 
     if ($users_profiles) {
         ForEach ($profile in $users_profiles) {
