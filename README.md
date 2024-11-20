@@ -1,6 +1,11 @@
 # PS Terminal Menu
 ![Powershell](https://img.shields.io/badge/language-Powershell-0078D4)  
 
+### NOTE: I will be getting _replacing_ this repository soon with a more streamlined version, hopefully in the form of a module that centers around the scans and report-generating functions but still allows addition of functions.
+### The function structure/template will also be replaced with a simpler one that does not use begin/process/end - it adds unnecessary complexity. 11-19-24
+
+### I expect this repo to be up as is for another month or two.
+
 <h2>Introduction</h2>
 
 Working as an IT Support Specialist in 2022, I quickly became captivated with Powershell and it's ability to increase my efficiency.
