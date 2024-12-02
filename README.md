@@ -6,7 +6,7 @@
 
 To clarify - the begin/process/end structure was used so functions would accept pipeline input of TargetComputer parameter, and non-pipeline. Functions were structured this way so they could be pasted into the terminal and used without the menu/etc.
 
-I'm hoping the module will let me shorten the functions a bit, without sacrificing functionality. The copy/paste method may not work with the module since functions will rely on get-targgets.ps1/etc.
+I'm hoping the module will let me shorten the functions a bit, without sacrificing functionality. The copy/paste method may not work with the module since functions will rely on get-targets.ps1/etc.
 
 ### I expect this repo to be up as is for another month or two.
 
