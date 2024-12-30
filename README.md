@@ -1,14 +1,11 @@
 # PS Terminal Menu
 ![Powershell](https://img.shields.io/badge/language-Powershell-0078D4)  
 
-### NOTE: I will be getting _replacing_ this repository soon with a more streamlined version, hopefully in the form of a module that centers around the scans and report-generating functions but still allows addition of functions.
-### The function structure/template will also be replaced with a simpler one that does not use begin/process/end - it adds unnecessary complexity. 11-19-24
+#### Note: I'm working on a new version of this repository that focuses on commands from modules, rather than single functions.
 
-To clarify - the begin/process/end structure was used so functions would accept pipeline input of TargetComputer parameter, and non-pipeline. Functions were structured this way so they could be pasted into the terminal and used without the menu/etc.
+I'm combining like functions into modules, for example, the 'report generating' functions in this menu can be found in a new **PSTechReports** module. These are all works in progress that will be continually developed in my spare time. Thank you!
 
-I'm hoping the module will let me shorten the functions a bit, without sacrificing functionality. The copy/paste method may not work with the module since functions will rely on get-targets.ps1/etc.
-
-### I expect this repo to be up as is for another month or two.
+PSTechReports: https://github.com/albddnbn/PSTechReports
 
 <h2>Introduction</h2>
 
